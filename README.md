@@ -10,8 +10,11 @@ PyQuest is an academic thesis project developed as an adaptive educational game 
 ### Required Software
 To run, edit, or evaluate this project, you must install three software components:
 * **Unity Hub:** The official management application used to handle different Unity Editor versions and project instances.
-* **Unity Editor Version:** `2022.3.x LTS` (Long Term Support). You must use a version within the 2022.3 release cycle to ensure complete API compatibility and prevent compilation script failures.
-* **Microsoft Visual Studio 2022:** The designated integrated development environment (IDE) used for writing, debugging, and compiling the C# scripts for the game logic.
+* **Unity Editor Version:** `2022.3.18f1 . You must use a version within the 2022.3 release cycle to ensure complete API compatibility and prevent compilation script failures.
+* **Microsoft Visual Studio 2022.17.14.29:** The designated integrated development environment (IDE) used for writing, debugging, and compiling the C# scripts for the game logic.
+* **Blender 5.1:** This is for the asset building of the game's environment.
+* **Photoshop/GIMP:** This is for texturing and UI designing for the game's assets and design. 
+
 
 ### Repository Architecture (What You Are Downloading)
 When you clone or download this branch, your local machine will receive only the essential structural directories:
