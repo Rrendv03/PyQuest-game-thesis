@@ -8,8 +8,10 @@ using UnityEngine.UI;
 public class TrueOrFalsePuzzleFormat : IPuzzleFormat
 {
     public void RenderPuzzle(FillInTheBlankUIController uiController) { }
-
+    public void RenderPuzzle(LineScrambleUIController uiController) { }
     public void RenderPuzzle(PredictTheOutputUIController uiController) { }
+    public void RenderPuzzle(SpotTheBugUIController uiController) { }
+    public int GetOptionCount() => 2;
 
     public PuzzleType FormatType => PuzzleType.TrueOrFalse;
 

@@ -29,6 +29,9 @@ public class FillInTheBlankPuzzleFormat : IPuzzleFormat
 
     public void RenderPuzzle(PairACodeUIController uiController) { }
     public void RenderPuzzle(PredictTheOutputUIController uiController) { }
+    public void RenderPuzzle(SpotTheBugUIController uiController) { }
+    public void RenderPuzzle(LineScrambleUIController uiController) { }
+    public int GetOptionCount() => tokens.Count;
     public void RenderPuzzle(FillInTheBlankUIController uiController)
     {
         if (uiController == null)

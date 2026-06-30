@@ -20,7 +20,9 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
     public void RenderPuzzle(Text displayField) { }
     public void RenderPuzzle(PairACodeUIController uiController) { }
     public void RenderPuzzle(FillInTheBlankUIController uiController) { }
-
+    public void RenderPuzzle(SpotTheBugUIController uiController) { }
+    public void RenderPuzzle(LineScrambleUIController uiController) { }
+    public int GetOptionCount() => options.Count;
     public void RenderPuzzle(PredictTheOutputUIController uiController)
     {
         if (uiController == null)
@@ -56,7 +58,6 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
 
     private void GeneratePuzzle()
     {
-        // Detect error variant by checking if correctAnswer is an error type
         correctAnswer = template.correctAnswer;
         isErrorVariant = correctAnswer == "NameError"
                       || correctAnswer == "TypeError"
@@ -64,23 +65,81 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
                       || correctAnswer == "IndexError"
                       || correctAnswer == "ValueError";
 
-        // Build options: correct + distractors
+        // Build options
         options = new List<string>();
         options.Add(correctAnswer);
 
-        if (template.distractors != null)
-            foreach (string d in template.distractors)
-                options.Add(d);
+        // Generate distractors dynamically instead of using stale template distractors
+        if (isErrorVariant)
+        {
+            string[] errorTypes = new string[] { "NameError", "TypeError", "SyntaxError", "IndexError", "ValueError" };
+            foreach (string e in errorTypes)
+                if (e != correctAnswer && options.Count < 3)
+                    options.Add(e);
+        }
+        else
+        {
+            // Generate plausible wrong answers based on correct answer type
+            int parsedInt;
+            if (int.TryParse(correctAnswer, out parsedInt))
+            {
+                // Numeric distractors: nearby values
+                options.Add((parsedInt + Random.Range(1, 10)).ToString());
+                options.Add((parsedInt - Random.Range(1, 10)).ToString());
+            }
+            else if (correctAnswer.Contains("\n"))
+            {
+                // Multiline output: shuffle the lines as distractors
+                string[] lines = correctAnswer.Split('\n');
+                List<string> shuffled = new List<string>(lines);
+                ShuffleList(shuffled);
+                options.Add(string.Join("\n", shuffled));
 
-        // Pad to exactly 3 options
-        while (options.Count < 3)
-            options.Add(GenerateFallbackDistractor());
+                List<string> reversed = new List<string>(lines);
+                reversed.Reverse();
+                options.Add(string.Join("\n", reversed));
+            }
+            else
+            {
+                // String output: use mutated variable name and value as distractors
+                if (!string.IsNullOrEmpty(template.variableName))
+                    options.Add(template.variableName);
+                if (!string.IsNullOrEmpty(template.variableValue)
+                    && template.variableValue != correctAnswer)
+                    options.Add("'" + template.variableValue + "'");
 
-        // Trim to 3 if somehow over
+                // Pad with themed fallbacks
+                string[] themedFallbacks = new string[]
+                {
+                "None", "True", "False", "0",
+                "Error", template.variableName + " = " + template.variableValue
+                };
+                foreach (string f in themedFallbacks)
+                    if (!options.Contains(f) && options.Count < 3)
+                        options.Add(f);
+            }
+        }
+
+        // Trim to exactly 3
         while (options.Count > 3)
             options.RemoveAt(options.Count - 1);
 
+        // Pad to exactly 3
+        while (options.Count < 3)
+            options.Add(GenerateFallbackDistractor());
+
         Debug.Log($"[PredictTheOutputPuzzleFormat] Correct: {correctAnswer} | Options: {string.Join(", ", options)}");
+    }
+
+    private void ShuffleList(List<string> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            string temp = list[i];
+            list[i] = list[j];
+            list[j] = temp;
+        }
     }
 
     private string GenerateFallbackDistractor()

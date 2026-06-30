@@ -506,6 +506,506 @@
         "distractors": ["Hello", "NameError"],
         "variableName": "",
         "variableValue": ""
+      },
+      {
+        "id": "pto_011_concat_string",
+        "knowledgeComponent": "print_statements",
+        "puzzleType": 4,
+        "difficulty": 1,
+        "codeLines": [
+          "first = 'Hello'",
+          "second = 'World'",
+          "print(first + ' ' + second)"
+        ],
+        "correctAnswer": "Hello World",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "first",
+        "variableValue": "Hello"
+      },
+      {
+        "id": "pto_012_boolean_check",
+        "knowledgeComponent": "conditionals",
+        "puzzleType": 4,
+        "difficulty": 1,
+        "codeLines": [
+          "x = 10",
+          "print(x > 5)"
+        ],
+        "correctAnswer": "True",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "x",
+        "variableValue": "10"
+      },
+      {
+        "id": "pto_013_conditional_false",
+        "knowledgeComponent": "conditionals",
+        "puzzleType": 4,
+        "difficulty": 1,
+        "codeLines": [
+          "score = 50",
+          "if score > 80:",
+          "    print('Pass')",
+          "else:",
+          "    print('Fail')"
+        ],
+        "correctAnswer": "Fail",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "score",
+        "variableValue": "50"
+      },
+      {
+        "id": "pto_014_print_label_value",
+        "knowledgeComponent": "print_statements",
+        "puzzleType": 4,
+        "difficulty": 0,
+        "codeLines": [
+          "level = 5",
+          "print('Level:', level)"
+        ],
+        "correctAnswer": "Level: 5",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "level",
+        "variableValue": "5"
+      },
+      {
+        "id": "pto_015_while_loop",
+        "knowledgeComponent": "loops",
+        "puzzleType": 4,
+        "difficulty": 2,
+        "codeLines": [
+          "x = 0",
+          "while x < 3:",
+          "    print(x)",
+          "    x += 1"
+        ],
+        "correctAnswer": "0\n1\n2",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "x",
+        "variableValue": "0"
+      },
+      {
+        "id": "pto_016_indexerror",
+        "knowledgeComponent": "variables",
+        "puzzleType": 4,
+        "difficulty": 2,
+        "codeLines": [
+          "items = [1, 2, 3]",
+          "print(items[5])"
+        ],
+        "correctAnswer": "IndexError",
+        "bugLineIndex": 1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "items",
+        "variableValue": "5"
+      },
+      {
+        "id": "pto_017_multiplication",
+        "knowledgeComponent": "basic_operations",
+        "puzzleType": 4,
+        "difficulty": 1,
+        "codeLines": [
+          "a = 6",
+          "b = 7",
+          "print(a * b)"
+        ],
+        "correctAnswer": "42",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "a",
+        "variableValue": "6"
+      },
+      {
+        "id": "pto_018_input_label",
+        "knowledgeComponent": "input_handling",
+        "puzzleType": 4,
+        "difficulty": 1,
+        "codeLines": [
+          "hp = 75",
+          "print('HP:', hp)"
+        ],
+        "correctAnswer": "HP: 75",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "hp",
+        "variableValue": "75"
+      },
+      {
+        "id": "stb_001_conditionals",
+        "knowledgeComponent": "conditionals",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "score = 75",
+          "if score != 80:",
+          "    print('Pass')"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "score",
+        "variableValue": "75"
+      },
+      {
+        "id": "stb_002_loops",
+        "knowledgeComponent": "loops",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "for i in range(5):",
+          "    print(i)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "i",
+        "variableValue": "5"
+      },
+      {
+        "id": "stb_003_variables",
+        "knowledgeComponent": "variables",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "health = 100",
+          "if health > 0:",
+          "    print('Alive')",
+          "else:",
+          "    print('Dead')"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "health",
+        "variableValue": "100"
+      },
+      {
+        "id": "stb_004_basic_operations",
+        "knowledgeComponent": "basic_operations",
+        "puzzleType": 1,
+        "difficulty": 2,
+        "codeLines": [
+          "a = 10",
+          "b = 5",
+          "result = a + b",
+          "print(result)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "a",
+        "variableValue": "10"
+      },
+      {
+        "id": "stb_005_print_statements",
+        "knowledgeComponent": "print_statements",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "name = 'Hero'",
+          "print(name)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "name",
+        "variableValue": "Hero"
+      },
+      {
+        "id": "stb_006_loops_range",
+        "knowledgeComponent": "loops",
+        "puzzleType": 1,
+        "difficulty": 2,
+        "codeLines": [
+          "total = 0",
+          "for i in range(5):",
+          "    total += i",
+          "print(total)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "total",
+        "variableValue": "0"
+      },
+      {
+        "id": "stb_007_conditionals_compare",
+        "knowledgeComponent": "conditionals",
+        "puzzleType": 1,
+        "difficulty": 2,
+        "codeLines": [
+          "age = 20",
+          "if age == 18:",
+          "    print('Adult')"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "age",
+        "variableValue": "20"
+      },
+      {
+        "id": "stb_008_variables_print",
+        "knowledgeComponent": "variables",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "mana = 50",
+          "print(mana)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "mana",
+        "variableValue": "50"
+      },
+      {
+        "id": "stb_009_print_variable",
+        "knowledgeComponent": "print_statements",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "message = 'Hello'",
+          "print(message)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "message",
+        "variableValue": "Hello"
+      },
+      {
+        "id": "stb_010_print_label",
+        "knowledgeComponent": "print_statements",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "level = 5",
+          "print('Level:', level)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "level",
+        "variableValue": "5"
+      },
+      {
+        "id": "stb_011_input_handling",
+        "knowledgeComponent": "input_handling",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "name = input('Enter name: ')",
+          "print(name)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "name",
+        "variableValue": "name"
+      },
+      {
+        "id": "stb_012_basic_math",
+        "knowledgeComponent": "basic_operations",
+        "puzzleType": 1,
+        "difficulty": 1,
+        "codeLines": [
+          "x = 8",
+          "y = 4",
+          "print(x * y)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "x",
+        "variableValue": "8"
+      },
+      {
+        "id": "stb_013_while_loop",
+        "knowledgeComponent": "loops",
+        "puzzleType": 1,
+        "difficulty": 2,
+        "codeLines": [
+          "count = 0",
+          "while count < 5:",
+          "    count += 1",
+          "print(count)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [],
+        "distractors": [],
+        "variableName": "count",
+        "variableValue": "0"
+      },
+      {
+        "id": "ls_001_print_variable",
+        "knowledgeComponent": "print_statements",
+        "puzzleType": 2,
+        "difficulty": 0,
+        "codeLines": [
+          "name = 'Hero'",
+          "print(name)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [0, 1],
+        "distractors": [],
+        "variableName": "name",
+        "variableValue": "Hero"
+      },
+      {
+        "id": "ls_002_conditional",
+        "knowledgeComponent": "conditionals",
+        "puzzleType": 2,
+        "difficulty": 1,
+        "codeLines": [
+          "score = 85",
+          "if score > 80:",
+          "    print('Pass')",
+          "else:",
+          "    print('Fail')"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [0, 1, 2, 3, 4],
+        "distractors": [],
+        "variableName": "score",
+        "variableValue": "85"
+      },
+      {
+        "id": "ls_003_loop",
+        "knowledgeComponent": "loops",
+        "puzzleType": 2,
+        "difficulty": 1,
+        "codeLines": [
+          "total = 0",
+          "for i in range(5):",
+          "    total += i",
+          "print(total)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [0, 1, 2, 3],
+        "distractors": [],
+        "variableName": "total",
+        "variableValue": "0"
+      },
+      {
+        "id": "ls_004_variables",
+        "knowledgeComponent": "variables",
+        "puzzleType": 2,
+        "difficulty": 0,
+        "codeLines": [
+          "health = 100",
+          "damage = 25",
+          "health = health - damage",
+          "print(health)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [0, 1, 2, 3],
+        "distractors": [],
+        "variableName": "health",
+        "variableValue": "100"
+      },
+      {
+        "id": "ls_005_input_handling",
+        "knowledgeComponent": "input_handling",
+        "puzzleType": 2,
+        "difficulty": 1,
+        "codeLines": [
+          "name = input('Enter name: ')",
+          "greeting = 'Hello ' + name",
+          "print(greeting)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [0, 1, 2],
+        "distractors": [],
+        "variableName": "name",
+        "variableValue": "name"
+      },
+      {
+        "id": "ls_006_basic_operations",
+        "knowledgeComponent": "basic_operations",
+        "puzzleType": 2,
+        "difficulty": 1,
+        "codeLines": [
+          "a = 10",
+          "b = 5",
+          "result = a + b",
+          "print(result)"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [0, 1, 2, 3],
+        "distractors": [],
+        "variableName": "a",
+        "variableValue": "10"
+      },
+      {
+        "id": "ls_007_while_loop",
+        "knowledgeComponent": "loops",
+        "puzzleType": 2,
+        "difficulty": 2,
+        "codeLines": [
+          "count = 0",
+          "while count < 3:",
+          "    print(count)",
+          "    count += 1"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [0, 1, 2, 3],
+        "distractors": [],
+        "variableName": "count",
+        "variableValue": "0"
+      },
+      {
+        "id": "ls_008_nested_conditional",
+        "knowledgeComponent": "conditionals",
+        "puzzleType": 2,
+        "difficulty": 2,
+        "codeLines": [
+          "level = 10",
+          "if level >= 10:",
+          "    print('Advanced')",
+          "elif level >= 5:",
+          "    print('Intermediate')",
+          "else:",
+          "    print('Beginner')"
+        ],
+        "correctAnswer": "",
+        "bugLineIndex": -1,
+        "correctOrder": [0, 1, 2, 3, 4, 5, 6],
+        "distractors": [],
+        "variableName": "level",
+        "variableValue": "10"
       }
   ]
 }

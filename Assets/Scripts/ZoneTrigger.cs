@@ -39,9 +39,11 @@ public class ZoneTrigger : MonoBehaviour
     {
         PuzzleType[] available = new PuzzleType[]
         {
-            PuzzleType.TrueOrFalse,
-            PuzzleType.PairACode,
-            PuzzleType.FillInTheBlank
+        PuzzleType.TrueOrFalse,
+        PuzzleType.PairACode,
+        PuzzleType.FillInTheBlank,
+        PuzzleType.PredictTheOutput,
+        PuzzleType.SpotTheBug
         };
         return available[Random.Range(0, available.Length)];
     }

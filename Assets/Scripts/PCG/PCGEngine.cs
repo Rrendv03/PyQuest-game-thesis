@@ -239,7 +239,31 @@ public class PCGEngine : MonoBehaviour
         };
 
         string[] operatorPairs = new string[] { "+", "-", "*" };
+        if (!string.IsNullOrEmpty(original.variableName))
+        {
+            string newName = nameVariantPool[Random.Range(0, nameVariantPool.Length)];
 
+            string newValue;
+            int parsedInt;
+            if (int.TryParse(original.variableValue, out parsedInt))
+                newValue = intValuePool[Random.Range(0, intValuePool.Length)];
+            else
+                newValue = stringValuePool[Random.Range(0, stringValuePool.Length)]
+                           .Replace("'", "");
+
+            for (int i = 0; i < m.codeLines.Count; i++)
+            {
+                m.codeLines[i] = m.codeLines[i]
+                    .Replace(original.variableName, newName)
+                    .Replace(original.variableValue, newValue);
+            }
+                        
+            if (m.correctAnswer == original.variableValue)
+                m.correctAnswer = newValue;
+
+            m.variableName = newName;
+            m.variableValue = newValue;
+        }
         // --- Strategy 1: Variable name + value swap ---
         if (!string.IsNullOrEmpty(original.variableName))
         {

@@ -10,10 +10,13 @@ public class PuzzleManager : MonoBehaviour
 
     [Header("UI Component Bindings")]
     public GameObject trueOrFalseCanvasPanel;
+    public Text codeDisplayTextField_ToF;
     public GameObject pairACodeCanvasPanel;
     public GameObject fillInTheBlankCanvasPanel;
     public GameObject predictTheOutputCanvasPanel;
-    public Text codeDisplayTextField_ToF;
+    public GameObject spotTheBugCanvasPanel;
+    public GameObject lineScrambleCanvasPanel;
+
 
     private GameObject currentPuzzleCanvasPanel;
     private string currentActiveComponent;
@@ -77,6 +80,24 @@ public class PuzzleManager : MonoBehaviour
                 else
                     Debug.LogError("[PuzzleManager] PredictTheOutputUIController not found");
                 break;
+            case PuzzleType.SpotTheBug:
+                currentPuzzleCanvasPanel = spotTheBugCanvasPanel;
+                SpotTheBugUIController stbUI = spotTheBugCanvasPanel
+                    .GetComponent<SpotTheBugUIController>();
+                if (stbUI != null)
+                    currentPuzzle.formatHandler.RenderPuzzle(stbUI);
+                else
+                    Debug.LogError("[PuzzleManager] SpotTheBugUIController not found");
+                break;
+            case PuzzleType.LineScramble:
+                currentPuzzleCanvasPanel = lineScrambleCanvasPanel;
+                LineScrambleUIController lsUI = lineScrambleCanvasPanel
+                    .GetComponent<LineScrambleUIController>();
+                if (lsUI != null)
+                    currentPuzzle.formatHandler.RenderPuzzle(lsUI);
+                else
+                    Debug.LogError("[PuzzleManager] LineScrambleUIController not found");
+                break;
             default:
                 Debug.LogError("[PuzzleManager] No canvas for puzzle type: " + currentPuzzle.formatHandler.FormatType);
                 return;
@@ -90,21 +111,25 @@ public class PuzzleManager : MonoBehaviour
     /// Evaluates the player's answer and updates the BKT mastery model.
     /// </summary>
     public void UserSubmission(object playerAnswerChoice)
-{
-    if (currentPuzzle == null)
     {
-        Debug.LogError("[PuzzleManager] No active puzzle to evaluate");
-        return;
+        if (currentPuzzle == null)
+        {
+            Debug.LogError("[PuzzleManager] No active puzzle to evaluate");
+            return;
+        }
+
+        bool isCorrect = currentPuzzle.IsAnswerCorrect(playerAnswerChoice);
+
+        int optionCount = currentPuzzle.formatHandler.GetOptionCount();
+        float pGuessOverride = optionCount > 0 ? 1f / optionCount : 0f;
+
+        Debug.Log($"[PuzzleManager] Player answered: {playerAnswerChoice} | Correct: {isCorrect} | " +
+                  $"Format option count: {optionCount} | p_guess override: {pGuessOverride:F4}");
+
+        BKTEngine.Instance.UpdateMastery(currentActiveComponent, isCorrect, pGuessOverride);
+
+        currentPuzzleCanvasPanel.SetActive(false);
+        currentPuzzle = null;
+        currentActiveComponent = null;
     }
-
-    bool isCorrect = currentPuzzle.IsAnswerCorrect(playerAnswerChoice);
-
-    Debug.Log($"[PuzzleManager] Player answered: {playerAnswerChoice} | Correct: {isCorrect}");
-
-    BKTEngine.Instance.UpdateMastery(currentActiveComponent, isCorrect);
-
-    currentPuzzleCanvasPanel.SetActive(false);
-    currentPuzzle = null;
-    currentActiveComponent = null;
-}
 }

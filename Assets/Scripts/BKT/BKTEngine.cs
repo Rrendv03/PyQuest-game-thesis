@@ -40,37 +40,44 @@ public class BKTEngine : MonoBehaviour
     }
 
     /// Call after every puzzle attempt. Returns updated P(L).
-    public float UpdateMastery(string componentName, bool isCorrect)
+    /// pGuessOverride: pass the actual guess probability for the puzzle
+    /// format that was just answered (1 / option count). If null, falls
+    /// back to the static p_guess from bkt_params.json.
+    public float UpdateMastery(string componentName, bool isCorrect, float? pGuessOverride = null)
     {
         if (!parameters.ContainsKey(componentName)) return 0f;
-        
+
         KnowledgeComponent kc = parameters[componentName];
         float pL = masteryProbabilities[componentName];
+
+        float effectivePGuess = pGuessOverride ?? kc.p_guess;
 
         // Bayesian update
         float pLGivenObs;
         if (isCorrect)
         {
             float numerator = pL * (1 - kc.p_slip);
-            float denominator = numerator + (1 - pL) * kc.p_guess;
+            float denominator = numerator + (1 - pL) * effectivePGuess;
             pLGivenObs = numerator / denominator;
         }
         else
         {
             float numerator = pL * kc.p_slip;
-            float denominator = numerator + (1 - pL) * (1 - kc.p_guess);
+            float denominator = numerator + (1 - pL) * (1 - effectivePGuess);
             pLGivenObs = numerator / denominator;
         }
 
         // Learning transition
         float newPL = pLGivenObs + (1f - pLGivenObs) * kc.p_transit;
         newPL = Mathf.Clamp01(newPL);
-
         masteryProbabilities[componentName] = newPL;
-        Debug.Log($"[BKT] Updated mastery for {componentName}: {pL:F4} -> {newPL:F4} (Correct={isCorrect})");
+
+        Debug.Log($"[BKT] Updated mastery for {componentName}: {pL:F4} -> {newPL:F4} " +
+                  $"(Correct={isCorrect}, p_guess used={effectivePGuess:F3})");
+
         return newPL;
     }
-    
+
     public float GetMastery(string componentName)
         => masteryProbabilities.ContainsKey(componentName) ? masteryProbabilities[componentName] : 0f;
 

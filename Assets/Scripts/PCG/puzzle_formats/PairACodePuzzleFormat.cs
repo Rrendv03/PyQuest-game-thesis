@@ -19,6 +19,9 @@ public class PairACodePuzzleFormat : IPuzzleFormat
 
     public void RenderPuzzle(FillInTheBlankUIController uiController) { }
     public void RenderPuzzle(PredictTheOutputUIController uiController) { }
+    public void RenderPuzzle(SpotTheBugUIController uiController) { }
+    public void RenderPuzzle(LineScrambleUIController uiController) { }
+    public int GetOptionCount() => options.Count;
     public void RenderPuzzle(Text displayField) { }
 
     public void RenderPuzzle(PairACodeUIController uiController)
