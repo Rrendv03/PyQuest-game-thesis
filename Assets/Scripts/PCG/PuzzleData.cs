@@ -15,7 +15,7 @@ public class PuzzleData
 
     public string knowledgeComponent => template?.knowledgeComponent ?? "";
     public PuzzleType puzzleType => template?.puzzleType ?? PuzzleType.SpotTheBug;
-    public DifficultyTier difficulty => template?.difficulty ?? DifficultyTier.Remembering;
+    public DifficultyTier difficulty => template?.difficulty ?? DifficultyTier.Beginner;
 
     public PuzzleData(PuzzleTemplate template, IPuzzleFormat formatHandler)
     {

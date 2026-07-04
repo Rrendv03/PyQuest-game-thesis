@@ -126,10 +126,22 @@ public class PuzzleManager : MonoBehaviour
         Debug.Log($"[PuzzleManager] Player answered: {playerAnswerChoice} | Correct: {isCorrect} | " +
                   $"Format option count: {optionCount} | p_guess override: {pGuessOverride:F4}");
 
-        BKTEngine.Instance.UpdateMastery(currentActiveComponent, isCorrect, pGuessOverride);
-
+        // Hide puzzle canvas
         currentPuzzleCanvasPanel.SetActive(false);
         currentPuzzle = null;
-        currentActiveComponent = null;
+
+        // Route result depending on context
+        if (EncounterManager.Instance != null &&
+            EncounterManager.Instance.IsEncounterActive())
+        {
+            // Encounter mode: defer BKT update to EncounterManager batch
+            EncounterManager.Instance.OnPuzzleResolved(isCorrect);
+        }
+        else
+        {
+            // Exploration mode: update BKT immediately as before
+            BKTEngine.Instance.UpdateMastery(currentActiveComponent, isCorrect, pGuessOverride);
+            currentActiveComponent = null;
+        }
     }
 }

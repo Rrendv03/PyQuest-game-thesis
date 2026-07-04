@@ -11,7 +11,7 @@ public enum PuzzleType
     PredictTheOutput = 4,
     PairACode = 5
 }
-public enum DifficultyTier { Remembering, Understanding, Applying, Analyzing}
+public enum DifficultyTier { Beginner, Intermediate, Advanced }
 
 [Serializable]
 public class PuzzleTemplate

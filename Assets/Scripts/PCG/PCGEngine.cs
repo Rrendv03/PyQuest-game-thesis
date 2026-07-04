@@ -180,10 +180,9 @@ public class PCGEngine : MonoBehaviour
 
     DifficultyTier GetTierForMastery(float mastery)
     {
-        if (mastery < 0.35f) return DifficultyTier.Remembering;
-        if (mastery < 0.55f) return DifficultyTier.Understanding;
-        if (mastery < 0.70f) return DifficultyTier.Applying;
-        return DifficultyTier.Analyzing;
+        if (mastery < 0.50f) return DifficultyTier.Beginner;
+        if (mastery < 0.75f) return DifficultyTier.Intermediate;
+        return DifficultyTier.Advanced;
     }
 
     public PuzzleTemplate MutatePuzzlePublic(PuzzleTemplate original)
