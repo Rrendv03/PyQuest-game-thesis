@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -17,7 +16,6 @@ public class PuzzleManager : MonoBehaviour
     public GameObject spotTheBugCanvasPanel;
     public GameObject lineScrambleCanvasPanel;
 
-
     private GameObject currentPuzzleCanvasPanel;
     private string currentActiveComponent;
     private PuzzleData currentPuzzle;
@@ -29,8 +27,7 @@ public class PuzzleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Activated instantly when a player crosses a map boundary zone event.
-    /// Generates an adaptive puzzle and displays it to the player.
+    /// Exploration mode: generates a puzzle using live BKT mastery for tier selection.
     /// </summary>
     public void OnZoneEntered(string zone, PuzzleType puzzleType)
     {
@@ -41,13 +38,43 @@ public class PuzzleManager : MonoBehaviour
         currentPuzzle = PCGEngine.Instance.GeneratePuzzle(zone, puzzleType);
 
         Debug.Log($"[PuzzleManager] currentPuzzle: {currentPuzzle} | formatHandler: {currentPuzzle?.formatHandler} | FormatType: {currentPuzzle?.formatHandler?.FormatType}");
-        
+
         if (currentPuzzle == null || currentPuzzle.formatHandler == null)
         {
             Debug.LogError("[PuzzleManager] Failed to generate puzzle for zone: " + zone);
             return;
         }
 
+        ActivatePuzzleCanvas();
+    }
+
+    /// <summary>
+    /// Encounter mode: generates a puzzle using a locked difficulty tier
+    /// so mid-encounter BKT updates do not shift the puzzle difficulty.
+    /// </summary>
+    public void OnZoneEntered(string zone, PuzzleType puzzleType, DifficultyTier forcedTier)
+    {
+        currentActiveComponent = zone;
+        Debug.Log($"[PuzzleManager] Zone: {zone} | PuzzleType: {puzzleType} | ForcedTier: {forcedTier}");
+
+        currentPuzzle = PCGEngine.Instance.GeneratePuzzle(zone, puzzleType, forcedTier);
+
+        Debug.Log($"[PuzzleManager] currentPuzzle: {currentPuzzle} | formatHandler: {currentPuzzle?.formatHandler} | FormatType: {currentPuzzle?.formatHandler?.FormatType}");
+
+        if (currentPuzzle == null || currentPuzzle.formatHandler == null)
+        {
+            Debug.LogError("[PuzzleManager] Failed to generate puzzle for zone: " + zone);
+            return;
+        }
+
+        ActivatePuzzleCanvas();
+    }
+
+    /// <summary>
+    /// Shared canvas activation logic for both exploration and encounter modes.
+    /// </summary>
+    private void ActivatePuzzleCanvas()
+    {
         switch (currentPuzzle.formatHandler.FormatType)
         {
             case PuzzleType.TrueOrFalse:
@@ -57,20 +84,24 @@ public class PuzzleManager : MonoBehaviour
 
             case PuzzleType.PairACode:
                 currentPuzzleCanvasPanel = pairACodeCanvasPanel;
-                PairACodeUIController pairUI = pairACodeCanvasPanel.GetComponent<PairACodeUIController>();
+                PairACodeUIController pairUI = pairACodeCanvasPanel
+                    .GetComponent<PairACodeUIController>();
                 if (pairUI != null)
                     currentPuzzle.formatHandler.RenderPuzzle(pairUI);
                 else
                     Debug.LogError("[PuzzleManager] PairACodeUIController not found");
                 break;
+
             case PuzzleType.FillInTheBlank:
                 currentPuzzleCanvasPanel = fillInTheBlankCanvasPanel;
-                FillInTheBlankUIController fitbUI = fillInTheBlankCanvasPanel.GetComponent<FillInTheBlankUIController>();
+                FillInTheBlankUIController fitbUI = fillInTheBlankCanvasPanel
+                    .GetComponent<FillInTheBlankUIController>();
                 if (fitbUI != null)
                     currentPuzzle.formatHandler.RenderPuzzle(fitbUI);
                 else
                     Debug.LogError("[PuzzleManager] FillInTheBlankUIController not found");
                 break;
+
             case PuzzleType.PredictTheOutput:
                 currentPuzzleCanvasPanel = predictTheOutputCanvasPanel;
                 PredictTheOutputUIController ptoUI = predictTheOutputCanvasPanel
@@ -80,6 +111,7 @@ public class PuzzleManager : MonoBehaviour
                 else
                     Debug.LogError("[PuzzleManager] PredictTheOutputUIController not found");
                 break;
+
             case PuzzleType.SpotTheBug:
                 currentPuzzleCanvasPanel = spotTheBugCanvasPanel;
                 SpotTheBugUIController stbUI = spotTheBugCanvasPanel
@@ -89,6 +121,7 @@ public class PuzzleManager : MonoBehaviour
                 else
                     Debug.LogError("[PuzzleManager] SpotTheBugUIController not found");
                 break;
+
             case PuzzleType.LineScramble:
                 currentPuzzleCanvasPanel = lineScrambleCanvasPanel;
                 LineScrambleUIController lsUI = lineScrambleCanvasPanel
@@ -98,8 +131,10 @@ public class PuzzleManager : MonoBehaviour
                 else
                     Debug.LogError("[PuzzleManager] LineScrambleUIController not found");
                 break;
+
             default:
-                Debug.LogError("[PuzzleManager] No canvas for puzzle type: " + currentPuzzle.formatHandler.FormatType);
+                Debug.LogError("[PuzzleManager] No canvas for puzzle type: " +
+                               currentPuzzle.formatHandler.FormatType);
                 return;
         }
 
@@ -107,8 +142,8 @@ public class PuzzleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Input collection endpoint hooked directly up to your Canvas buttons.
-    /// Evaluates the player's answer and updates the BKT mastery model.
+    /// Input collection endpoint hooked directly up to Canvas buttons.
+    /// Routes result to BKT (exploration) or EncounterManager (encounter).
     /// </summary>
     public void UserSubmission(object playerAnswerChoice)
     {
@@ -126,10 +161,30 @@ public class PuzzleManager : MonoBehaviour
         Debug.Log($"[PuzzleManager] Player answered: {playerAnswerChoice} | Correct: {isCorrect} | " +
                   $"Format option count: {optionCount} | p_guess override: {pGuessOverride:F4}");
 
-        BKTEngine.Instance.UpdateMastery(currentActiveComponent, isCorrect, pGuessOverride);
-
         currentPuzzleCanvasPanel.SetActive(false);
         currentPuzzle = null;
-        currentActiveComponent = null;
+
+        if (EncounterManager.Instance != null &&
+            EncounterManager.Instance.IsEncounterActive())
+        {
+            // Encounter mode: pass result and p_guess to EncounterManager
+            // BKT update is batched and applied after the encounter ends
+            EncounterManager.Instance.OnPuzzleResolved(isCorrect, pGuessOverride);
+            currentActiveComponent = null;
+        }
+        else
+        {
+            // Exploration mode: update BKT immediately
+            BKTEngine.Instance.UpdateMastery(currentActiveComponent, isCorrect, pGuessOverride);
+            currentActiveComponent = null;
+        }
+    }
+
+    /// <summary>
+    /// Bool overload for SpotTheBug and LineScramble which submit bool directly.
+    /// </summary>
+    public void UserSubmission(bool isCorrect)
+    {
+        UserSubmission((object)isCorrect);
     }
 }
