@@ -47,31 +47,30 @@ public class PCGEngine : MonoBehaviour
     /// </summary>
     /// <param name="componentName">The knowledge component to generate a puzzle for</param>
     /// <returns>A fully initialized PuzzleData object with format handler, or null if generation fails</returns>
+    // Two-parameter overload: exploration mode, uses live BKT mastery
     public PuzzleData GeneratePuzzle(string componentName, PuzzleType puzzleType)
     {
-        Debug.Log($"[PCG] GeneratePuzzle called | Component: {componentName} | Type: {puzzleType} ({(int)puzzleType})");
-
-        foreach (var t in allTemplates.Where(t => t.knowledgeComponent == componentName))
-            Debug.Log($"[PCG] Candidate: {t.id} | puzzleType: {t.puzzleType} ({(int)t.puzzleType})");
-
         float mastery = BKTEngine.Instance.GetMastery(componentName);
         DifficultyTier targetTier = GetTierForMastery(mastery);
+        return GeneratePuzzle(componentName, puzzleType, targetTier);
+    }
 
-        // Filter by component + tier + puzzle type
+    // Three-parameter overload: encounter mode, uses locked tier
+    public PuzzleData GeneratePuzzle(string componentName, PuzzleType puzzleType,
+                                      DifficultyTier forcedTier)
+    {
         List<PuzzleTemplate> candidates = allTemplates
             .Where(t => t.knowledgeComponent == componentName
-                     && t.difficulty == targetTier
+                     && t.difficulty == forcedTier
                      && t.puzzleType == puzzleType)
             .ToList();
 
-        // Fallback: any template matching component + puzzle type
         if (candidates.Count == 0)
             candidates = allTemplates
                 .Where(t => t.knowledgeComponent == componentName
                          && t.puzzleType == puzzleType)
                 .ToList();
 
-        // Fallback: any template for this component
         if (candidates.Count == 0)
             candidates = allTemplates
                 .Where(t => t.knowledgeComponent == componentName)
@@ -79,7 +78,7 @@ public class PCGEngine : MonoBehaviour
 
         if (candidates.Count == 0)
         {
-            Debug.LogWarning($"[PCG] No templates for {componentName} | Type: {puzzleType}");
+            Debug.LogWarning($"[PCG] No templates for {componentName} | Type: {puzzleType} | Tier: {forcedTier}");
             return null;
         }
 
@@ -93,6 +92,7 @@ public class PCGEngine : MonoBehaviour
             return null;
         }
 
+        Debug.Log($"[PCG] Puzzle generated | Component: {componentName} | Type: {puzzleType} | Tier: {forcedTier}");
         return new PuzzleData(mutated, formatHandler);
     }
 
@@ -183,6 +183,11 @@ public class PCGEngine : MonoBehaviour
         if (mastery < 0.50f) return DifficultyTier.Beginner;
         if (mastery < 0.75f) return DifficultyTier.Intermediate;
         return DifficultyTier.Advanced;
+    }
+
+    public DifficultyTier GetTierForMasteryPublic(float mastery)
+    {
+        return GetTierForMastery(mastery);
     }
 
     public PuzzleTemplate MutatePuzzlePublic(PuzzleTemplate original)

@@ -40,9 +40,11 @@ public class EncounterManager : MonoBehaviour
     private float currentEscalationMultiplier;
     private string currentKnowledgeComponent;
     private List<bool> roundResults = new List<bool>();
+    private List<float> roundPGuessValues = new List<float>();
     private bool encounterActive = false;
     private bool standardVictoryOutcome = false;
     private GameObject spawnedEnemyInstance;
+    private DifficultyTier lockedEncounterTier;
 
     private PlayerMovement activePlayerMovement;
     private Vector3 playerInitialPosition;
@@ -99,10 +101,14 @@ public class EncounterManager : MonoBehaviour
         Vector3 playerCombatPos,
         Quaternion playerCombatRot,
         ZoneTrigger sourceZone)
+
     {
         activePlayerMovement = playerMove;
         activeSourceZone = sourceZone;
         standardVictoryOutcome = false;
+        roundResults = new List<bool>();
+        roundPGuessValues = new List<float>();
+        roundPGuessValues = new List<float>();
 
         if (activePlayerMovement != null)
         {
@@ -158,6 +164,8 @@ public class EncounterManager : MonoBehaviour
         currentRound = 0;
         currentEscalationMultiplier = 1.0f;
         currentKnowledgeComponent = knowledgeComponent;
+        lockedEncounterTier = PCGEngine.Instance.GetTierForMasteryPublic(
+            BKTEngine.Instance.GetMastery(knowledgeComponent));
         roundResults = new List<bool>();
         encounterActive = true;
 
@@ -221,14 +229,19 @@ public class EncounterManager : MonoBehaviour
         currentRound++;
         UpdateRoundInfo();
         PuzzleType randomFormat = GetRandomPuzzleFormat();
-        PuzzleManager.Instance.OnZoneEntered(currentKnowledgeComponent, randomFormat);
+        PuzzleManager.Instance.OnZoneEntered(
+            currentKnowledgeComponent, randomFormat, lockedEncounterTier);
     }
 
-    public void OnPuzzleResolved(bool playerAnsweredCorrectly)
+    public void OnPuzzleResolved(bool playerAnsweredCorrectly, float pGuessOverride)
     {
         if (!encounterActive) return;
+
         roundResults.Add(playerAnsweredCorrectly);
-        Animator enemyAnimator = spawnedEnemyInstance != null ? spawnedEnemyInstance.GetComponent<Animator>() : null;
+        roundPGuessValues.Add(pGuessOverride);
+
+        Animator enemyAnimator = spawnedEnemyInstance != null
+            ? spawnedEnemyInstance.GetComponent<Animator>() : null;
 
         if (playerAnsweredCorrectly)
         {
@@ -258,12 +271,16 @@ public class EncounterManager : MonoBehaviour
 
         if (currentRound >= currentEnemy.escalationStartRound)
         {
-            currentEscalationMultiplier = Mathf.Min(currentEnemy.escalationCap, currentEscalationMultiplier + currentEnemy.escalationPerRound);
+            currentEscalationMultiplier = Mathf.Min(
+                currentEnemy.escalationCap,
+                currentEscalationMultiplier + currentEnemy.escalationPerRound);
         }
 
         UpdateHPDisplay();
+
         if (currentEnemyHP <= 0) { EndEncounter(true); return; }
         if (playerStats.currentHP <= 0) { EndEncounter(false); return; }
+
         StartNextRound();
     }
 
@@ -285,18 +302,30 @@ public class EncounterManager : MonoBehaviour
     {
         encounterActive = false;
         standardVictoryOutcome = playerWon;
-        int correct = 0; int incorrect = 0;
-        foreach (bool result in roundResults) { if (result) correct++; else incorrect++; }
-        foreach (bool result in roundResults) { BKTEngine.Instance.UpdateMastery(currentKnowledgeComponent, result); }
 
-        Animator enemyAnimator = spawnedEnemyInstance != null ? spawnedEnemyInstance.GetComponent<Animator>() : null;
-        if (enemyAnimator != null)
+        // Batch BKT update: replay each round result in sequence
+        // using the actual p_guess for the format that produced it
+        for (int i = 0; i < roundResults.Count; i++)
         {
-            string deathAnimationTrigger = playerWon ? "Die" : "Victory";
-            enemyAnimator.SetTrigger(deathAnimationTrigger);
+            BKTEngine.Instance.UpdateMastery(
+                currentKnowledgeComponent,
+                roundResults[i],
+                roundPGuessValues[i]);
         }
 
-        string outcomeMessage = playerWon ? $"Victory! You defeated the {currentEnemy.enemyName}!" : $"Defeated! The {currentEnemy.enemyName} won this round.";
+        Animator enemyAnimator = spawnedEnemyInstance != null
+            ? spawnedEnemyInstance.GetComponent<Animator>() : null;
+
+        if (enemyAnimator != null)
+        {
+            string trigger = playerWon ? "Die" : "Victory";
+            enemyAnimator.SetTrigger(trigger);
+        }
+
+        string outcomeMessage = playerWon
+            ? $"Victory! You defeated the {currentEnemy.enemyName}!"
+            : $"Defeated! The {currentEnemy.enemyName} won this round.";
+
         UpdateCombatLog(outcomeMessage);
         StartCoroutine(CleanUpEncounterAssets());
     }
