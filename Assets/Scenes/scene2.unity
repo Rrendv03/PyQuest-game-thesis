@@ -48825,6 +48825,63 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1246591176}
   m_Mesh: {fileID: -5495902117074765545, guid: e83a34c430db696479805788e63532af, type: 3}
+--- !u!1001 &1246646534
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -7.780628
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 52.306747
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_Name
+      value: cyber_spider_Entity
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 948da4def5d785a498edf900e074c284, type: 3}
 --- !u!1 &1247915606
 GameObject:
   m_ObjectHideFlags: 0
@@ -53392,6 +53449,63 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1378525855}
   m_Mesh: {fileID: -8678823145569952518, guid: 00809f7053ca7dc4ca4760dd00d6ed58, type: 3}
+--- !u!1001 &1379551142
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.9509642
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 54.739555
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 948da4def5d785a498edf900e074c284, type: 3}
+      propertyPath: m_Name
+      value: cyber_spider_Entity (1)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 948da4def5d785a498edf900e074c284, type: 3}
 --- !u!1 &1381661276
 GameObject:
   m_ObjectHideFlags: 0
@@ -83436,3 +83550,5 @@ SceneRoots:
   - {fileID: 50677836}
   - {fileID: 690978370}
   - {fileID: 933944180}
+  - {fileID: 1246646534}
+  - {fileID: 1379551142}
