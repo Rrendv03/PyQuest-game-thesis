@@ -1,0 +1,93 @@
+{
+  "sequences": [
+    {
+      "sequenceID": "intro_prologue",
+      "endBehavior": "none",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "intro_complete",
+      "lines": [
+        { "speakerName": "", "dialogueText": "It is an ordinary night.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "Glyph sits at a desk in a room that smells like old books and cold coffee. A single lamp throws yellow light across a notebook filled with half-finished thoughts. Outside, rain moves quietly against the window.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "Nothing about this night suggests it will be the last ordinary one.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "Then, across the room, in the space between the bookshelf and the wall where nothing has ever happened before, something tears.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "Light bleeds through the gap. Not warm light. Not cold light. The light of something ancient being accessed for the first time in a very long time, pale, flickering, threaded through with lines of glowing script."},
+        { "speakerName": "", "dialogueText": "A portal. It pulls, not like a storm. Like a question that demands an answer. Like a blank line in a program waiting to be filled." },
+
+        { "speakerName": "", "dialogueText": "There is no tunnel. No countdown. No gentle transition.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "There is the room, and then there is not the room. Falling through something that is not quite darkness and not quite light, surrounded by cascading script streaming past like rain in reverse.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "Then, ground. Stone. Cold. Real.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "A sound. Ragged. Close. Breathing.", "isCinematic": true },
+
+        { "speakerName": "", "dialogueText": "She is kneeling at the edge of the portal, one hand pressed flat against the stone to keep herself upright. Dressed in layered robes the color of deep water, threaded with the same glowing script, except here, the script is fractured. Lines broken mid-character. Symbols fading at the edges.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "She is wounded. Not in the way of cuts or bruises. Structural. As though the thing that holds her together has been partially unmade.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "But her eyes, when they find Glyph, are completely clear.", "isCinematic": true },
+        { "speakerName": "Pythariel", "dialogueText": "You came through. Good." },
+        { "speakerName": "Glyph", "dialogueText": "What, where is this." },
+        { "speakerName": "Pythariel", "dialogueText": "Aethelscript. The world beneath the language of all things. You would not have been pulled here if you were not meant to come." },
+        { "speakerName": "Pythariel", "dialogueText": "I don't have much time to explain. So I need you to listen carefully, and I need you to believe what I tell you even though none of it will sound possible. Can you do that?" },
+        { "speakerName": "Glyph", "dialogueText": "I think I have to." },
+
+        { "speakerName": "Pythariel", "dialogueText": "Aethelscript is governed by the Codewardens. We were its keepers, twelve of us, each one responsible for maintaining a different layer of the world's foundational logic. We kept the language running. We kept the runes clean. We kept the Sanctums stable." },
+        { "speakerName": "Pythariel", "dialogueText": "Were. Past tense." },
+        { "speakerName": "Pythariel", "dialogueText": "It started small. A single undefined variable in the oldest rune of the First Sanctum, a flaw so minor that for centuries, nothing noticed it. Not us. Not the Sanctums. Not the runes themselves." },
+        { "speakerName": "Pythariel", "dialogueText": "But something noticed." },
+        { "speakerName": "Pythariel", "dialogueText": "We call it the Null Wraith. It is not a creature. It is not a force. It is what grows in the space left by a thing that was never named, an absence that learned to move. It found that undefined variable and it fed on it." },
+        { "speakerName": "Pythariel", "dialogueText": "It reached the Echoing Atrium first. Erased the inscriptions from the stone tablets. Then the Vault of Essence, severed the bindings between names and values. Then the Whitewake Mist, corrupted the communication stream. And then the Labyrinth of Logic." },
+        { "speakerName": "Pythariel", "dialogueText": "By then, we were fighting. Eleven Codewardens against something that does not fight back, it simply erases. You cannot battle an absence." },
+        { "speakerName": "Pythariel", "dialogueText": "One by one, they were unmade. Not killed. Unmade. Erased the way the inscriptions were erased, not destroyed, just removed. As though they had never been assigned." },
+        { "speakerName": "Pythariel", "dialogueText": "I am the last one." },
+
+        { "speakerName": "", "dialogueText": "She reaches inside her robes and withdraws a book. Its cover is the deep blue of old ink, worn smooth at the corners. The moment it is out, the glowing script in the air gravitates toward it slightly, as if recognizing something.", "isCinematic": true },
+        { "speakerName": "Pythariel", "dialogueText": "Everything I know is in here. Every lesson the Codewardens learned across centuries of maintaining Aethelscript, the logic of variables, the art of asking and being answered, the discipline of conditions and loops. All of it." },
+        { "speakerName": "Pythariel", "dialogueText": "It will not give you everything at once. Knowledge given faster than understanding is just noise. The Spellbook knows this. It will open to you one chapter at a time, each one unlocked when you have proven you can carry what came before it." },
+        { "speakerName": "Pythariel", "dialogueText": "Guard it. Not because it is rare, though it is. Guard it because what is inside it is the only thing standing between the Null Wraith and a world with no names left in it." },
+
+        { "speakerName": "Pythariel", "dialogueText": "There are four Sanctums. Each one is a layer of Aethelscript's foundation, and each one has been corrupted by the Null Wraith. At the heart of each Sanctum is a Rune Crystal. If the Wraith reaches them before they are restored, what that Sanctum governs will collapse permanently." },
+        { "speakerName": "Pythariel", "dialogueText": "The Echoing Atrium, where all spoken truths are inscribed. The Crystal there governs manifestation. Words made real." },
+        { "speakerName": "Pythariel", "dialogueText": "The Vault of Essence, where all things are named and given value. The Crystal there governs identity. The difference between something and nothing." },
+        { "speakerName": "Pythariel", "dialogueText": "The Whitewake Mist, where questions reach the system and the system answers. The Crystal there governs communication." },
+        { "speakerName": "Pythariel", "dialogueText": "And the Labyrinth of Logic, where decisions are made and time is driven forward. The Crystal there governs order. Without it, nothing in Aethelscript can sequence correctly." },
+        { "speakerName": "Pythariel", "dialogueText": "Restore the four Crystals. The guides inside each Sanctum are already there, waiting, holding on. Echo, Lyra, Auralis, Selvara. They have been holding the line alone for a long time. They are ready for you." },
+
+        { "speakerName": "Pythariel", "dialogueText": "Before the Null Wraith came, the oldest rune in the First Sanctum produced something unusual. Not an error. Not a warning. A line of output that none of us inscribed and none of us could explain." },
+        { "speakerName": "Pythariel", "dialogueText": "A mind unbound by error shall rewrite the broken world." },
+        { "speakerName": "Pythariel", "dialogueText": "We did not understand it then. We argued about it, catalogued it, filed it away as an anomaly. The Codewardens were precise people. We did not trust things we could not explain." },
+        { "speakerName": "Pythariel", "dialogueText": "I understand it now." },
+        { "speakerName": "Glyph", "dialogueText": "Wait, you're." },
+        { "speakerName": "Pythariel", "dialogueText": "I knew this was coming. I held on long enough to find you. That was what I had left to give." },
+        { "speakerName": "Pythariel", "dialogueText": "Do not be afraid of errors, Glyph. Every error is a thing that can be fixed. That is what makes you different from the Wraith, it only knows how to create absence. You will learn to create presence." },
+        { "speakerName": "Pythariel", "dialogueText": "Rewrite it. All of it. Give everything back its name." },
+        { "speakerName": "", "dialogueText": "And then, like an inscription that has been erased cleanly and completely, she is gone.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "Glyph stands alone, holding a Spellbook and a fractured map and the weight of a prophecy spoken by someone who is no longer there to explain it.", "isCinematic": true },
+        { "speakerName": "", "dialogueText": "Ahead, faint, distant, pulsing in four directions, the four Sanctums wait.", "isCinematic": true }
+      ]
+    },
+    {
+      "sequenceID": "EXAMPLE_npc_first_meeting",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
+      "questIDToComplete": "EXAMPLE_echoing_atrium_first_talk",
+      "lines": [
+        { "speakerName": "Echo", "dialogueText": "PLACEHOLDER: first-meeting line for Echo goes here. Delete this sequence once real content exists." }
+      ]
+    },
+    {
+      "sequenceID": "EXAMPLE_npc_repeat_summary",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
+      "questIDToComplete": "",
+      "lines": [
+        { "speakerName": "Echo", "dialogueText": "PLACEHOLDER: summarized reminder of the player's current objective goes here." }
+      ]
+    },
+    {
+      "sequenceID": "001",
+      "endBehavior": "none",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "",
+      "lines": [
+        { "speakerName": "Bruh", "dialogueText": "Suprise, Motherfucker" }
+      ]
+    }
+  ]
+}

@@ -4,5 +4,26 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/epilogue_Glyph's_House.unity
+    guid: a2518ce52d9490f4484a702b4b176936
+  - enabled: 1
+    path: Assets/Scenes/MainMap.unity
+    guid: 441bf2c78e6f9644aa9c9a33c12fb8fc
+  - enabled: 1
+    path: Assets/Scenes/act_001_Echoing_Atrium.unity
+    guid: 7ff7fa62a128484498320dab57910730
+  - enabled: 1
+    path: Assets/Scenes/act_002_Vault_of_Essence.unity
+    guid: 785e13c6f200fd547ab3079263b4f78b
+  - enabled: 1
+    path: Assets/Scenes/act_003_Whitewake_Mist.unity
+    guid: 94bc839a59d2bfd429ad054916a8d90b
+  - enabled: 1
+    path: Assets/Scenes/act_004_Labyrinth_of_Logic.unity
+    guid: e240b36190b1c084291a0f72289ace5c
+  - enabled: 1
+    path: Assets/Scenes/MainMenuScene.unity
+    guid: a35c03bc55b91cc4abf222861460b99d
   m_configObjects: {}
