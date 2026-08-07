@@ -108,7 +108,6 @@ public class EncounterManager : MonoBehaviour
         standardVictoryOutcome = false;
         roundResults = new List<bool>();
         roundPGuessValues = new List<float>();
-        roundPGuessValues = new List<float>();
 
         if (activePlayerMovement != null)
         {
