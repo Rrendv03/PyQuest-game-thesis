@@ -221,4 +221,25 @@ public class SaveSlotUI : MonoBehaviour
         int s = Mathf.FloorToInt(seconds % 60f);
         return $"{h:00}:{m:00}:{s:00}";
     }
+
+    // --- ADD THIS TO YOUR VARIABLES ---
+    [Header("Navigation")]
+    [Tooltip("The panel to return to when the Back button is clicked (e.g., Main Menu Panel)")]
+    public GameObject previousPanel;
+    // -------------------------------
+
+    // --- ADD THIS METHOD AT THE BOTTOM ---
+    /// <summary>
+    /// Hook this up to your Back Button's OnClick event in the Inspector.
+    /// </summary>
+    public void OnBackButtonClicked()
+    {
+        // Re-enable whatever panel was hiding behind this one
+        if (previousPanel != null)
+            previousPanel.SetActive(true);
+
+        // Hide this save/load screen
+        gameObject.SetActive(false);
+    }
+    // -------------------------------------
 }

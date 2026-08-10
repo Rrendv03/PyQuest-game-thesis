@@ -128,33 +128,6 @@
       ]
     },
     {
-      "sequenceID": "EXAMPLE_npc_first_meeting",
-      "endBehavior": "stay",
-      "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
-      "questIDToComplete": "EXAMPLE_echoing_atrium_first_talk",
-      "lines": [
-        { "speakerName": "Echo", "dialogueText": "PLACEHOLDER: first-meeting line for Echo goes here. Delete this sequence once real content exists." }
-      ]
-    },
-    {
-      "sequenceID": "EXAMPLE_npc_repeat_summary",
-      "endBehavior": "stay",
-      "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
-      "questIDToComplete": "",
-      "lines": [
-        { "speakerName": "Echo", "dialogueText": "PLACEHOLDER: summarized reminder of the player's current objective goes here." }
-      ]
-    },
-    {
-      "sequenceID": "001",
-      "endBehavior": "none",
-      "nextSequenceIfStay": "",
-      "questIDToComplete": "",
-      "lines": [
-        { "speakerName": "Bruh", "dialogueText": "Suprise, Motherfucker" }
-      ]
-    },
-    {
       "sequenceID": "echo_mission_reminder",
       "endBehavior": "stay",
       "nextSequenceIfStay": "echo_mission_reminder",
@@ -203,6 +176,33 @@
           "dialogueText": "Behind them, the Echoing Atrium breathes, full and humming and whole.",
           "isCinematic": true
         }
+      ]
+    },
+    {
+      "sequenceID": "EXAMPLE_npc_first_meeting",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
+      "questIDToComplete": "EXAMPLE_echoing_atrium_first_talk",
+      "lines": [
+        { "speakerName": "Echo", "dialogueText": "PLACEHOLDER: first-meeting line for Echo goes here. Delete this sequence once real content exists." }
+      ]
+    },
+    {
+      "sequenceID": "EXAMPLE_npc_repeat_summary",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
+      "questIDToComplete": "",
+      "lines": [
+        { "speakerName": "Echo", "dialogueText": "PLACEHOLDER: summarized reminder of the player's current objective goes here." }
+      ]
+    },
+    {
+      "sequenceID": "001",
+      "endBehavior": "none",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "",
+      "lines": [
+        { "speakerName": "Bruh", "dialogueText": "Suprise, Motherfucker" }
       ]
     }
   ]

@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/epilogue_Glyph's_House.unity
+    path: Assets/Scenes/prologue_Glyph's_House.unity
     guid: a2518ce52d9490f4484a702b4b176936
   - enabled: 1
     path: Assets/Scenes/MainMap.unity
