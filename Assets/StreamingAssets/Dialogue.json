@@ -63,6 +63,71 @@
       ]
     },
     {
+      "sequenceID": "echo_first_meeting",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "echo_mission_reminder",
+      "questIDToComplete": "echoing_atrium_speak_echo",
+      "lines": [
+        {
+          "speakerName": "",
+          "dialogueText": "At the center of the atrium stands a figure unlike anything Glyph has seen before, translucent, robed in shifting script, her form appearing to be made not of flesh but of written words that slowly rearrange themselves as she moves.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "Another traveler who has come to read the walls."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "You will find very little to read here, I am afraid. The Null Wraith passed through not long ago. It does not destroy, it erases. And there is a cruelty in that distinction that I suspect you will come to understand."
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "What was written here?"
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "Everything. Every command ever spoken in this sanctum. Every instruction, every truth, every answer that was ever confirmed aloud. We called them inscriptions, but they were more than that. They were proof."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "Proof that something had happened. That a word had been spoken, a task completed, a truth made visible. Without them, how does anyone know what is real?"
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "Three missions remain on the Mission Tablet. Complete them, and the Atrium's mechanisms will respond. The path forward will reveal itself."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "The mechanisms here only respond to the language of the old inscribers. Python. The tongue in which truth is written cleanly, and without excess. You will need to know it."
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "I will learn."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "You already are."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "The first thing you must learn is how to make something real. How to take a truth that exists only in your mind and speak it into the world so the world can hear it. This is called a print statement."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "In Python, you write: print(\"your message here\"). The word print tells the system you are about to speak. The parentheses hold what you want to say. The quotation marks tell the system your words are a string of text, not a command."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "For example: print(\"I am here.\") would inscribe those exact words into the world. The Atrium would hear them. They would become real."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "Review the Mission Tablet, traveler. Three tasks await. Complete them, earn your strength, and when the Guardian stirs, you will be ready."
+        }
+      ]
+    },
+    {
       "sequenceID": "EXAMPLE_npc_first_meeting",
       "endBehavior": "stay",
       "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
@@ -87,6 +152,57 @@
       "questIDToComplete": "",
       "lines": [
         { "speakerName": "Bruh", "dialogueText": "Suprise, Motherfucker" }
+      ]
+    },
+    {
+      "sequenceID": "echo_mission_reminder",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "echo_mission_reminder",
+      "questIDToComplete": "",
+      "lines": [
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "The Mission Tablet holds your three tasks. Complete them, build your strength, and the path to the Guardian will open when you are ready."
+        }
+      ]
+    },
+    {
+      "sequenceID": "echo_after_restore",
+      "endBehavior": "depart",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "echoing_atrium_restore_crystal",
+      "lines": [
+        {
+          "speakerName": "",
+          "dialogueText": "Light floods the hall. Every blank tablet in the Echoing Atrium begins to fill, inscriptions returning, words made real again, the record of the sanctum slowly reassembling itself.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "It just needed to know it was done."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "We all do."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "Remember this place, traveler. In the sanctums ahead, there will be moments where you are tempted to move forward without confirming what you have done. Without speaking the answer aloud. Without making it real."
+        },
+        {
+          "speakerName": "Archivist Echo",
+          "dialogueText": "Don't. The world only knows what you tell it."
+        },
+        {
+          "speakerName": "",
+          "dialogueText": "Echo places a hand briefly on Glyph's shoulder. The far door opens, the one that had not moved in years, and beyond it a new path stretches forward.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "",
+          "dialogueText": "Behind them, the Echoing Atrium breathes, full and humming and whole.",
+          "isCinematic": true
+        }
       ]
     }
   ]

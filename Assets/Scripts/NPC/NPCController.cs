@@ -280,4 +280,10 @@ public class NPCController : MonoBehaviour
         if (hasDeparted)
             gameObject.SetActive(false);
     }
+
+    public void SetNextSequence(string sequenceID)
+    {
+        currentSequenceID = sequenceID;
+        Debug.Log($"[NPCController] Sequence set to: {sequenceID}");
+    }
 }

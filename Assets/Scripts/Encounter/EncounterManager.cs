@@ -43,6 +43,7 @@ public class EncounterManager : MonoBehaviour
     private List<float> roundPGuessValues = new List<float>();
     private bool encounterActive = false;
     private bool standardVictoryOutcome = false;
+    private bool isBossEncounter = false;
     private GameObject spawnedEnemyInstance;
     private DifficultyTier lockedEncounterTier;
 
@@ -66,6 +67,7 @@ public class EncounterManager : MonoBehaviour
     public void StartEncounter(
         EnemyDifficultyCategory category,
         string knowledgeComponent,
+        bool isBossZone,
         Vector3 enemyPos,
         Quaternion enemyRot,
         PlayerMovement playerMove,
@@ -73,7 +75,7 @@ public class EncounterManager : MonoBehaviour
         Quaternion playerCombatRot,
         ZoneTrigger sourceZone)
     {
-        StartCoroutine(EncounterSequence(category, knowledgeComponent, enemyPos, enemyRot, playerMove, playerCombatPos, playerCombatRot, sourceZone));
+        StartCoroutine(EncounterSequence(category, knowledgeComponent, isBossZone, enemyPos, enemyRot, playerMove, playerCombatPos, playerCombatRot, sourceZone));
     }
 
     private void BringOverlayToAbsoluteFront()
@@ -95,19 +97,30 @@ public class EncounterManager : MonoBehaviour
     private IEnumerator EncounterSequence(
         EnemyDifficultyCategory category,
         string knowledgeComponent,
+        bool isBossZone,
         Vector3 enemyPos,
         Quaternion enemyRot,
         PlayerMovement playerMove,
         Vector3 playerCombatPos,
         Quaternion playerCombatRot,
         ZoneTrigger sourceZone)
-
     {
         activePlayerMovement = playerMove;
         activeSourceZone = sourceZone;
         standardVictoryOutcome = false;
+        isBossEncounter = isBossZone;
         roundResults = new List<bool>();
         roundPGuessValues = new List<float>();
+
+        // Hide HUD and interact button during encounter
+        if (HUDController.Instance != null)
+            HUDController.Instance.SetVisible(false);
+
+        InteractButtonController interact = FindObjectOfType<InteractButtonController>();
+        if (interact != null)
+            interact.ForceHide();
+
+        SaveLoadManager.IsSafeToSave = false;
 
         if (activePlayerMovement != null)
         {
@@ -302,14 +315,16 @@ public class EncounterManager : MonoBehaviour
         encounterActive = false;
         standardVictoryOutcome = playerWon;
 
-        // Batch BKT update: replay each round result in sequence
-        // using the actual p_guess for the format that produced it
-        for (int i = 0; i < roundResults.Count; i++)
+        // Boss encounters do not affect BKT scores
+        if (!isBossEncounter)
         {
-            BKTEngine.Instance.UpdateMastery(
-                currentKnowledgeComponent,
-                roundResults[i],
-                roundPGuessValues[i]);
+            for (int i = 0; i < roundResults.Count; i++)
+            {
+                BKTEngine.Instance.UpdateMastery(
+                    currentKnowledgeComponent,
+                    roundResults[i],
+                    roundPGuessValues[i]);
+            }
         }
 
         Animator enemyAnimator = spawnedEnemyInstance != null
@@ -356,10 +371,13 @@ public class EncounterManager : MonoBehaviour
         if (spawnedEnemyInstance != null) Destroy(spawnedEnemyInstance);
         if (encounterPanel != null) encounterPanel.SetActive(false);
 
+        // Restore HUD and autosave
+        if (HUDController.Instance != null)
+            HUDController.Instance.SetVisible(true);
+        SaveLoadManager.IsSafeToSave = true;
+
         if (activeSourceZone != null)
-        {
-            activeSourceZone.OnEncounterCompleted(standardVictoryOutcome);
-        }
+            activeSourceZone.OnEncounterCompleted(standardVictoryOutcome, true);
 
         if (activePlayerMovement != null)
         {

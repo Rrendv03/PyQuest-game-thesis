@@ -868,7 +868,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c10186abadd257f4087ce9a16778b57c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainMapSceneName: MainMap
+  mainMapSceneName: act_001_Echoing_Atrium
   introSequenceID: intro_prologue
   pytharielRenderer: {fileID: 906207852}
   fadeDuration: 2.5
