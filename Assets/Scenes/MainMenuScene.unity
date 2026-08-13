@@ -418,6 +418,7 @@ MonoBehaviour:
   continueButton: {fileID: 1524999299}
   settingsButton: {fileID: 1075031649}
   quitButton: {fileID: 17466988}
+  menuBackground: {fileID: 0}
   mainMenuPanel: {fileID: 92279919}
   settingsPanel: {fileID: 1314607230}
   saveLoadPanel: {fileID: 348205493}
@@ -1722,11 +1723,11 @@ MonoBehaviour:
     saveButton: {fileID: 0}
     loadButton: {fileID: 685229807}
     deleteButton: {fileID: 235109311}
+  backButton: {fileID: 1699648385}
   confirmPanel: {fileID: 1384346878}
   confirmMessageText: {fileID: 1963415938}
   confirmYesButton: {fileID: 1750499677}
   confirmNoButton: {fileID: 4294939}
-  previousPanel: {fileID: 0}
 --- !u!114 &348205495
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1740,7 +1741,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.26415092, g: 0.19173221, b: 0.12086151, a: 0.7294118}
+  m_Color: {r: 0.7122642, g: 0.89289814, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3937,7 +3938,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.000030517578, y: 0.000015258789}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -833.07104, y: -423.31616}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1315307674

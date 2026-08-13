@@ -77,7 +77,7 @@ public class InteractableObject : MonoBehaviour
         if (hud != null) hud.ClearInteractable(this);
     }
 
-    public void TriggerInteraction()
+    public virtual void TriggerInteraction()
     {
         if (interactionActive) return;
         interactionActive = true;
@@ -131,6 +131,16 @@ public class InteractableObject : MonoBehaviour
         gameObject.GetComponent<Collider>().enabled = false;
 
         Debug.Log($"[InteractableObject] Rune Crystal restored: {sanctumID}");
+
+        RuneCrystal crystal = GetComponent<RuneCrystal>();
+        if (crystal != null)
+        {
+            crystal.Restore();
+        }
+        else
+        {
+            Debug.LogError("[InteractableObject] RuneCrystal component is missing from this GameObject!");
+        }
     }
 
     private NPCController FindNPCByID(string id)

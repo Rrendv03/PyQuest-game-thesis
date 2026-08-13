@@ -23,6 +23,7 @@ public class FillInTheBlankPuzzleFormat : IPuzzleFormat
     {
         this.template = template;
         GeneratePuzzle();
+
     }
 
     public void RenderPuzzle(Text displayField) { }
@@ -61,6 +62,7 @@ public class FillInTheBlankPuzzleFormat : IPuzzleFormat
 
     private void GeneratePuzzle()
     {
+        Debug.Log($"[FillInTheBlankPuzzleFormat] GeneratePuzzle() called with codeLines: {string.Join(" | ", template.codeLines)}");
         if (template.codeLines == null || template.codeLines.Count == 0)
         {
             Debug.LogError("[FillInTheBlankPuzzleFormat] Template has no code lines");

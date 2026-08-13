@@ -68,4 +68,10 @@ public class StoryProgressionManager : MonoBehaviour
 
     public void ImportActiveQuestID(string questID)
         => currentActiveQuestID = questID ?? "";
+    public void ResetProgression()
+    {
+        completedQuestIDs.Clear();
+        currentActiveQuestID = "";
+        Debug.Log("[StoryProgressionManager] Progression reset.");
+    }
 }

@@ -4,11 +4,6 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Manages three manual save slots and one dedicated autosave slot.
-/// Autosave never overwrites manual slots.
-/// Fires every 5 minutes while IsSafeToSave is true.
-/// </summary>
 public class SaveLoadManager : MonoBehaviour
 {
     public static SaveLoadManager Instance;
@@ -16,18 +11,20 @@ public class SaveLoadManager : MonoBehaviour
 
     [Header("Autosave")]
     public float autosaveIntervalSeconds = 300f;
+    public bool enableAutosave = true;
 
-    [Header("Player Reference")]
+    [Header("Player Reference (for saving position)")]
     public Transform playerTransform;
 
     private float autosaveTimer = 0f;
+    private float sessionPlayTime = 0f;
     private const string AutosaveFilename = "save_autosave.json";
 
-    private static string SlotFilename(int slot)
-        => slot == 0 ? AutosaveFilename : $"save_slot_{slot}.json";
+    private HashSet<string> _defeatedNormalZones = new HashSet<string>();
+    private HashSet<string> _defeatedBossZones = new HashSet<string>();
+    private HashSet<string> _defeatedSanctumBosses = new HashSet<string>();
 
-    private static string SlotPath(int slot)
-        => Path.Combine(Application.persistentDataPath, SlotFilename(slot));
+    private SaveSlotData _pendingLoadData = null;
 
     void Awake()
     {
@@ -44,9 +41,11 @@ public class SaveLoadManager : MonoBehaviour
 
     void Update()
     {
-        if (!IsSafeToSave) return;
+        if (!IsSafeToSave || !enableAutosave) return;
 
-        autosaveTimer += Time.deltaTime;
+        autosaveTimer += Time.unscaledDeltaTime;
+        sessionPlayTime += Time.unscaledDeltaTime;
+
         if (autosaveTimer >= autosaveIntervalSeconds)
         {
             autosaveTimer = 0f;
@@ -54,27 +53,122 @@ public class SaveLoadManager : MonoBehaviour
         }
     }
 
-    // ?? Save ??????????????????????????????????????????????????????????????????
     public void SaveToSlot(int slot)
     {
+        if (!IsSafeToSave)
+        {
+            Debug.LogWarning("[SaveLoadManager] Save blocked: unsafe state.");
+            return;
+        }
+
         if (slot < 0 || slot > 3)
         {
-            Debug.LogWarning($"[SaveLoadManager] Invalid slot {slot}.");
+            Debug.LogWarning("[SaveLoadManager] Invalid slot.");
             return;
         }
 
         SaveSlotData data = BuildSaveData(slot);
         string json = JsonUtility.ToJson(data, true);
+        string path = GetSlotPath(slot);
 
         try
         {
-            File.WriteAllText(SlotPath(slot), json);
-            Debug.Log($"[SaveLoadManager] Saved slot {slot}.");
+            File.WriteAllText(path, json);
+            Debug.Log($"[SaveLoadManager] Saved slot {slot} to {path}");
         }
         catch (Exception e)
         {
-            Debug.LogError($"[SaveLoadManager] Failed to write slot {slot}: {e.Message}");
+            Debug.LogError($"[SaveLoadManager] Save failed: {e.Message}");
         }
+    }
+
+    public SaveSlotData LoadFromSlot(int slot)
+    {
+        string path = GetSlotPath(slot);
+        if (!File.Exists(path)) return null;
+
+        try
+        {
+            string json = File.ReadAllText(path);
+            return JsonUtility.FromJson<SaveSlotData>(json);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[SaveLoadManager] Load failed: {e.Message}");
+            return null;
+        }
+    }
+
+    public void ApplySaveData(SaveSlotData data)
+    {
+        if (data == null) return;
+
+        _pendingLoadData = data;
+
+        RestoreManagerData(data);
+
+        SceneTransition.RespawnPoint = new Vector3(
+            data.playerPositionX, data.playerPositionY, data.playerPositionZ);
+
+        Time.timeScale = 1f;
+        IsSafeToSave = true;
+
+        SceneManager.sceneLoaded += OnSceneLoadedForRestore;
+        SceneManager.LoadScene(data.currentScene);
+    }
+
+    public void StartNewGame()
+    {
+        _defeatedNormalZones.Clear();
+        _defeatedBossZones.Clear();
+        _defeatedSanctumBosses.Clear();
+        sessionPlayTime = 0f;
+
+        if (BKTEngine.Instance != null) BKTEngine.Instance.ResetAllMastery();
+        if (XPManager.Instance != null) XPManager.Instance.ResetXP();
+        if (StoryProgressionManager.Instance != null) StoryProgressionManager.Instance.ResetProgression();
+        if (MissionTabletManager.Instance != null) MissionTabletManager.Instance.ResetMissions();
+
+        SceneManager.LoadScene("IntroScene");
+    }
+
+    public bool SlotExists(int slot) => File.Exists(GetSlotPath(slot));
+
+    public void DeleteSlot(int slot)
+    {
+        string path = GetSlotPath(slot);
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+            Debug.Log($"[SaveLoadManager] Deleted slot {slot}.");
+        }
+    }
+
+    public void RegisterZoneDefeated(string zoneID, bool isBoss, string sanctumID = null)
+    {
+        if (string.IsNullOrEmpty(zoneID)) return;
+
+        if (isBoss)
+        {
+            _defeatedBossZones.Add(zoneID);
+            if (!string.IsNullOrEmpty(sanctumID))
+                _defeatedSanctumBosses.Add(sanctumID);
+        }
+        else
+        {
+            _defeatedNormalZones.Add(zoneID);
+        }
+    }
+
+    public bool IsZoneDefeated(string zoneID, bool isBoss)
+    {
+        if (string.IsNullOrEmpty(zoneID)) return false;
+        return isBoss ? _defeatedBossZones.Contains(zoneID) : _defeatedNormalZones.Contains(zoneID);
+    }
+
+    public bool IsSanctumBossDefeated(string sanctumID)
+    {
+        return !string.IsNullOrEmpty(sanctumID) && _defeatedSanctumBosses.Contains(sanctumID);
     }
 
     private SaveSlotData BuildSaveData(int slot)
@@ -89,7 +183,13 @@ public class SaveLoadManager : MonoBehaviour
             data.playerPositionX = playerTransform.position.x;
             data.playerPositionY = playerTransform.position.y;
             data.playerPositionZ = playerTransform.position.z;
+            data.playerRotY = playerTransform.eulerAngles.y;
         }
+
+        SaveSlotData existing = LoadFromSlot(slot);
+        float previousTime = (existing != null && existing.playTimeSeconds > 0) ? existing.playTimeSeconds : 0f;
+        data.playTimeSeconds = previousTime + sessionPlayTime;
+        sessionPlayTime = 0f;
 
         if (StoryProgressionManager.Instance != null)
         {
@@ -109,111 +209,96 @@ public class SaveLoadManager : MonoBehaviour
             });
         }
 
-        data.missionDisplayName = GetMissionDisplayName(data.activeQuestID);
-        data.locationDisplayName = GetLocationDisplayName(data.currentScene);
+        if (BKTEngine.Instance != null)
+            data.bktMastery = BKTEngine.Instance.ExportMastery();
 
-        SaveSlotData existing = LoadFromSlot(slot);
-        data.playTimeSeconds = existing != null ? existing.playTimeSeconds : 0f;
-
-        // XP
         if (XPManager.Instance != null)
             data.currentXP = XPManager.Instance.ExportXP();
+
+        data.defeatedNormalZoneIDs = new List<string>(_defeatedNormalZones);
+        data.defeatedBossZoneIDs = new List<string>(_defeatedBossZones);
+        data.defeatedSanctumBosses = new List<string>(_defeatedSanctumBosses);
+
+        if (MissionTabletManager.Instance != null)
+            data.completedMissionIDs = MissionTabletManager.Instance.ExportCompletedMissions();
+
+        data.missionDisplayName = GetMissionDisplayName(data.activeQuestID);
+        data.locationDisplayName = GetLocationDisplayName(data.currentScene);
 
         return data;
     }
 
-    // ?? Load ??????????????????????????????????????????????????????????????????
-    public SaveSlotData LoadFromSlot(int slot)
+    private void RestoreManagerData(SaveSlotData data)
     {
-        string path = SlotPath(slot);
-        if (!File.Exists(path)) return null;
+        if (BKTEngine.Instance != null && data.bktMastery != null)
+            BKTEngine.Instance.ImportMastery(data.bktMastery);
 
-        try
-        {
-            string json = File.ReadAllText(path);
-            return JsonUtility.FromJson<SaveSlotData>(json);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[SaveLoadManager] Failed to read slot {slot}: {e.Message}");
-            return null;
-        }
-    }
+        if (XPManager.Instance != null)
+            XPManager.Instance.ImportXP(data.currentXP);
 
-    public void ApplySaveData(SaveSlotData data)
-    {
-        if (data == null) return;
-
-        // Restore story progression
         if (StoryProgressionManager.Instance != null)
         {
             StoryProgressionManager.Instance.ImportCompletedQuestIDs(data.completedQuestIDs);
             StoryProgressionManager.Instance.ImportActiveQuestID(data.activeQuestID);
         }
 
-        // Notify QuestManager to re-evaluate active quest from loaded state
-        if (QuestManager.Instance != null)
-            QuestManager.Instance.OnQuestCompleted(data.activeQuestID);
+        _defeatedNormalZones.Clear();
+        if (data.defeatedNormalZoneIDs != null)
+            foreach (var id in data.defeatedNormalZoneIDs) _defeatedNormalZones.Add(id);
 
-        // Set respawn point before scene load so PlayerMovement.Awake() reads it
-        // Restore XP
-        if (XPManager.Instance != null)
-            XPManager.Instance.ImportXP(data.currentXP);
+        _defeatedBossZones.Clear();
+        if (data.defeatedBossZoneIDs != null)
+            foreach (var id in data.defeatedBossZoneIDs) _defeatedBossZones.Add(id);
 
-        SceneTransition.RespawnPoint = new Vector3(
-            data.playerPositionX,
-            data.playerPositionY,
-            data.playerPositionZ);
+        _defeatedSanctumBosses.Clear();
+        if (data.defeatedSanctumBosses != null)
+            foreach (var id in data.defeatedSanctumBosses) _defeatedSanctumBosses.Add(id);
 
-        // Critical: restore timeScale and save flag before loading.
-        // The pause menu sets timeScale = 0 when open. If we load a scene
-        // while timeScale is 0, SceneEntrance.FadeIn() coroutine never runs
-        // and the black overlay never disappears.
-        Time.timeScale = 1f;
-        IsSafeToSave = true;
-
-        _pendingNPCStates = data.npcStates;
-        SceneManager.sceneLoaded += OnSceneLoaded;
-        SceneManager.LoadScene(data.currentScene);
+        if (MissionTabletManager.Instance != null && data.completedMissionIDs != null)
+            MissionTabletManager.Instance.ImportCompletedMissions(data.completedMissionIDs);
     }
 
-    private List<NPCStateEntry> _pendingNPCStates;
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    private void OnSceneLoadedForRestore(Scene scene, LoadSceneMode mode)
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded -= OnSceneLoadedForRestore;
 
-        if (_pendingNPCStates == null) return;
+        if (_pendingLoadData == null) return;
 
-        NPCController[] npcs = FindObjectsOfType<NPCController>();
-        foreach (var npc in npcs)
+        if (_pendingLoadData.npcStates != null)
         {
-            foreach (var entry in _pendingNPCStates)
+            NPCController[] npcs = FindObjectsOfType<NPCController>();
+            foreach (var npc in npcs)
             {
-                if (entry.npcID == npc.npcID)
+                foreach (var entry in _pendingLoadData.npcStates)
                 {
-                    npc.RestoreState(entry.currentSequenceID, entry.hasDeparted);
-                    break;
+                    if (entry.npcID == npc.npcID)
+                    {
+                        npc.RestoreState(entry.currentSequenceID, entry.hasDeparted);
+                        break;
+                    }
                 }
             }
         }
 
-        _pendingNPCStates = null;
-    }
-
-    public bool SlotExists(int slot) => File.Exists(SlotPath(slot));
-
-    public void DeleteSlot(int slot)
-    {
-        string path = SlotPath(slot);
-        if (File.Exists(path))
+        if (playerTransform != null)
         {
-            File.Delete(path);
-            Debug.Log($"[SaveLoadManager] Deleted slot {slot}.");
+            Vector3 euler = playerTransform.eulerAngles;
+            euler.y = _pendingLoadData.playerRotY;
+            playerTransform.eulerAngles = euler;
         }
+
+        if (MissionTabletUI.Instance != null)
+            MissionTabletUI.Instance.Refresh();
+
+        _pendingLoadData = null;
     }
 
-    // ?? Display Name Lookups ??????????????????????????????????????????????????
+    private static string GetSlotPath(int slot)
+    {
+        string filename = slot == 0 ? AutosaveFilename : $"save_slot_{slot}.json";
+        return Path.Combine(Application.persistentDataPath, filename);
+    }
+
     private string GetMissionDisplayName(string questID)
     {
         if (QuestManager.Instance != null)
@@ -221,26 +306,24 @@ public class SaveLoadManager : MonoBehaviour
             string name = QuestManager.Instance.GetActiveQuestDisplayName();
             if (!string.IsNullOrEmpty(name)) return name;
         }
-
         return string.IsNullOrEmpty(questID) ? "No Active Mission" : questID;
     }
 
     private string GetLocationDisplayName(string sceneName)
     {
-        switch (sceneName)
+        return sceneName switch
         {
-            case "IntroScene": return "Aethelscript - Arrival";
-            case "MainMap": return "Aethelscript";
-            case "EchoingAtrium": return "Echoing Atrium";
-            case "VaultOfEssence": return "Vault of Essence";
-            case "WhitewakeMist": return "Whitewake Mist";
-            case "LabyrinthOfLogic": return "Labyrinth of Logic";
-            default: return string.IsNullOrEmpty(sceneName) ? "Unknown" : sceneName;
-        }
+            "IntroScene" => "Aethelscript - Arrival",
+            "MainMap" => "Aethelscript",
+            "EchoingAtrium" => "Echoing Atrium",
+            "VaultOfEssence" => "Vault of Essence",
+            "WhitewakeMist" => "Whitewake Mist",
+            "LabyrinthOfLogic" => "Labyrinth of Logic",
+            _ => string.IsNullOrEmpty(sceneName) ? "Unknown" : sceneName
+        };
     }
 }
 
-// ?? Data Structures ???????????????????????????????????????????????????????????
 [Serializable]
 public class SaveSlotData
 {
@@ -253,10 +336,16 @@ public class SaveSlotData
     public float playerPositionX;
     public float playerPositionY;
     public float playerPositionZ;
+    public float playerRotY;
     public string currentScene;
     public string activeQuestID;
     public List<string> completedQuestIDs = new List<string>();
     public List<NPCStateEntry> npcStates = new List<NPCStateEntry>();
+    public List<BKTMasteryEntry> bktMastery = new List<BKTMasteryEntry>();
+    public List<string> defeatedNormalZoneIDs = new List<string>();
+    public List<string> defeatedBossZoneIDs = new List<string>();
+    public List<string> completedMissionIDs = new List<string>();
+    public List<string> defeatedSanctumBosses = new List<string>();
 }
 
 [Serializable]
@@ -265,4 +354,11 @@ public class NPCStateEntry
     public string npcID;
     public string currentSequenceID;
     public bool hasDeparted;
+}
+
+[Serializable]
+public class BKTMasteryEntry
+{
+    public string componentName;
+    public float masteryProbability;
 }

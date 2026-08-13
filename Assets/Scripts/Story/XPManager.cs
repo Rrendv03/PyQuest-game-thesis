@@ -55,6 +55,17 @@ public class XPManager : MonoBehaviour
         CurrentXP += amount;
         Debug.Log($"[XPManager] +{amount} XP ({enemyType}). Total: {CurrentXP}");
         OnXPChanged?.Invoke(CurrentXP);
+
+        // ADD THIS: Refresh all gates in case XP threshold was met
+        RefreshAllBossGates();
+    }
+
+    // ADD THIS METHOD:
+    private void RefreshAllBossGates()
+    {
+        BossGate[] gates = FindObjectsOfType<BossGate>();
+        foreach (var gate in gates)
+            gate.Refresh();
     }
 
     public bool IsBossUnlocked(string sanctumID)
@@ -87,5 +98,11 @@ public class XPManager : MonoBehaviour
     {
         CurrentXP = xp;
         OnXPChanged?.Invoke(CurrentXP);
+    }
+    public void ResetXP()
+    {
+        CurrentXP = 0;
+        OnXPChanged?.Invoke(0);
+        Debug.Log("[XPManager] XP reset.");
     }
 }

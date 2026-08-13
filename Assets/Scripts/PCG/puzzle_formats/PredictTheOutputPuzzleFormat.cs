@@ -58,6 +58,7 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
 
     private void GeneratePuzzle()
     {
+        Debug.Log($"[PredictTheOutputPuzzleFormat] template.variableValue={template.variableValue} | template.correctAnswer={template.correctAnswer}");
         correctAnswer = template.correctAnswer;
         isErrorVariant = correctAnswer == "NameError"
                       || correctAnswer == "TypeError"

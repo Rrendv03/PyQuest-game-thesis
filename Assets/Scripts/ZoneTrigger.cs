@@ -4,12 +4,17 @@ using UnityEngine;
 public class ZoneTrigger : MonoBehaviour
 {
     public string zoneName;
-    public string knowledgeComponent;   // BKT knowledge component, separate from zoneName
+    public string knowledgeComponent;
 
     public PuzzleType forcedPuzzleType = PuzzleType.TrueOrFalse;
     public bool randomizePuzzleType = false;
     public bool isEncounterZone = false;
-    public bool isBossZone = false;     // if true: skips BKT update, awards boss XP only
+    public bool isBossZone = false;
+
+    // ADD at the top with other fields:
+    [Header("Save/Load Identity")]
+    [Tooltip("Unique ID. Format: SCENE_Zone_01. Required for boss tracking.")]
+    public string zoneID;
 
     public EnemyDifficultyCategory encounterDifficulty = EnemyDifficultyCategory.Beginner;
 
@@ -22,19 +27,35 @@ public class ZoneTrigger : MonoBehaviour
     public Vector3 playerCombatRotation;
 
     [Header("Respawn")]
-    public bool respawns = true;        // false for boss zones and mission-critical zones
+    public bool respawns = true;
     public float respawnCooldownMin = 60f;
     public float respawnCooldownMax = 300f;
-    public GameObject spawnerParent;    // assign the EnemySpawner that owns this zone
+    public GameObject spawnerParent;
 
-    // Runtime state
     private bool triggered = false;
-    private bool hasAwardedXP = false;  // first-clear-only XP gate
+    private bool hasAwardedXP = false;
     private Collider zoneCollider;
 
     void Awake()
     {
         zoneCollider = GetComponent<Collider>();
+    }
+
+    void Start()
+    {
+        zoneCollider = GetComponent<Collider>();
+
+        // ADD THIS BLOCK:
+        if (isBossZone && !string.IsNullOrEmpty(zoneID))
+        {
+            if (SaveLoadManager.Instance != null &&
+                SaveLoadManager.Instance.IsZoneDefeated(zoneID, true))
+            {
+                Debug.Log($"[ZoneTrigger] Boss zone {zoneID} already defeated. Destroying.");
+                Destroy(gameObject);
+                return;
+            }
+        }
     }
 
     void OnTriggerEnter(Collider other)
@@ -46,13 +67,16 @@ public class ZoneTrigger : MonoBehaviour
 
         if (isEncounterZone)
         {
-            // Block entry if boss zone and XP threshold not met
-            if (isBossZone && XPManager.Instance != null)
+            // === BOSS UNLOCK GATE ===
+            if (isBossZone)
             {
                 string sanctumID = GetSanctumIDFromScene();
-                if (!XPManager.Instance.IsBossUnlocked(sanctumID))
+
+                // Check BOTH XP and tablet missions
+                if (MissionTabletManager.Instance != null &&
+                    !MissionTabletManager.Instance.IsBossUnlockReady(sanctumID))
                 {
-                    Debug.Log("[ZoneTrigger] Boss not yet unlocked. XP threshold not reached.");
+                    Debug.Log("[ZoneTrigger] Boss not unlocked. Need more XP or tablet missions.");
                     triggered = false;
                     return;
                 }
@@ -100,7 +124,7 @@ public class ZoneTrigger : MonoBehaviour
     {
         if (playerWon)
         {
-            // Award XP only on first clear for regular zones
+            // Award XP
             if (awardXP && !hasAwardedXP && XPManager.Instance != null)
             {
                 hasAwardedXP = true;
@@ -109,23 +133,33 @@ public class ZoneTrigger : MonoBehaviour
                     : DifficultyToXPType(encounterDifficulty);
                 XPManager.Instance.AwardXP(xpType);
 
-                // Refresh mission tablet if open
                 if (MissionTabletUI.Instance != null)
                     MissionTabletUI.Instance.Refresh();
+            }
+
+            // === SAVE/LOAD: Register defeat ===
+            if (SaveLoadManager.Instance != null && !string.IsNullOrEmpty(zoneID))
+            {
+                string sanctum = isBossZone ? GetSanctumIDFromScene() : null;
+                SaveLoadManager.Instance.RegisterZoneDefeated(zoneID, isBossZone, sanctum);
             }
 
             if (zoneCollider != null)
                 zoneCollider.enabled = false;
 
-            if (respawns && !isBossZone)
+            // === BOSS DEFEATED FLOW ===
+            if (isBossZone)
             {
-                // Notify spawner to schedule a respawn
+                HandleBossDefeated();
+                Destroy(gameObject, 0.1f);
+            }
+            else if (respawns)
+            {
                 if (spawnerParent != null)
                 {
                     EnemySpawner spawner = spawnerParent.GetComponent<EnemySpawner>();
                     if (spawner != null)
-                        spawner.ScheduleRespawn(
-                            Random.Range(respawnCooldownMin, respawnCooldownMax));
+                        spawner.ScheduleRespawn(Random.Range(respawnCooldownMin, respawnCooldownMax));
                 }
                 Destroy(gameObject, 0.1f);
             }
@@ -140,6 +174,29 @@ public class ZoneTrigger : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Called when a boss is defeated. Spawns crystal, refreshes UI, opens any gates.
+    /// </summary>
+    private void HandleBossDefeated()
+    {
+        string sanctumID = GetSanctumIDFromScene();
+        Debug.Log($"[ZoneTrigger] Boss defeated in {sanctumID}!");
+
+        // 1. Refresh tablet UI to show DEFEATED state
+        if (MissionTabletUI.Instance != null)
+            MissionTabletUI.Instance.Refresh();
+
+        // 2. Spawn rune crystal
+        RuneCrystal[] crystals = FindObjectsOfType<RuneCrystal>(true);
+        foreach (var crystal in crystals)
+        {
+            if (crystal.sanctumID == sanctumID)
+                crystal.OnBossDefeated();
+        }
+            
+
+        // REMOVED: gate opening — gate was already open when requirements were met
+    }
     private XPManager.EnemyType DifficultyToXPType(EnemyDifficultyCategory cat)
     {
         return cat switch

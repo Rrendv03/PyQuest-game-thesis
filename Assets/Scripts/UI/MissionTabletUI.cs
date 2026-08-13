@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,17 +27,8 @@ public class MissionTabletUI : MonoBehaviour
     [Header("Close Button")]
     public Button closeButton;
 
-    private const string Mission1QuestID = "echoing_atrium_mission1_complete";
-    private const string Mission2QuestID = "echoing_atrium_mission2_complete";
-    private const string Mission3QuestID = "echoing_atrium_mission3_complete";
-    private const string SanctumID = "echoing_atrium";
-
-    private readonly string Mission1Desc =
-        "Mission I: Restore the Gate of First Words.";
-    private readonly string Mission2Desc =
-        "Mission II: Silence the Murmur Shades in the East Wing.";
-    private readonly string Mission3Desc =
-        "Mission III: Find and restore the erased final inscription.";
+    [Header("Current Sanctum")]
+    public string currentSanctumID = "echoing_atrium";
 
     void Awake()
     {
@@ -48,10 +40,6 @@ public class MissionTabletUI : MonoBehaviour
     {
         if (closeButton != null)
             closeButton.onClick.AddListener(HideTablet);
-
-        if (mission1Desc != null) mission1Desc.text = Mission1Desc;
-        if (mission2Desc != null) mission2Desc.text = Mission2Desc;
-        if (mission3Desc != null) mission3Desc.text = Mission3Desc;
     }
 
     public void ShowTablet()
@@ -82,29 +70,42 @@ public class MissionTabletUI : MonoBehaviour
 
     public void Refresh()
     {
-        if (StoryProgressionManager.Instance == null) return;
+        if (MissionTabletManager.Instance == null) return;
 
-        bool m1 = StoryProgressionManager.Instance.IsQuestComplete(Mission1QuestID);
-        bool m2 = StoryProgressionManager.Instance.IsQuestComplete(Mission2QuestID);
-        bool m3 = StoryProgressionManager.Instance.IsQuestComplete(Mission3QuestID);
+        List<MissionTabletData> missions =
+            MissionTabletManager.Instance.GetMissionsForSanctum(currentSanctumID);
 
-        SetMissionRow(mission1Check, m1);
-        SetMissionRow(mission2Check, m2);
-        SetMissionRow(mission3Check, m3);
+        UpdateRow(0, missions, mission1Check, mission1Desc);
+        UpdateRow(1, missions, mission2Check, mission2Desc);
+        UpdateRow(2, missions, mission3Check, mission3Desc);
 
-        bool bossUnlocked = XPManager.Instance != null
-            && XPManager.Instance.IsBossUnlocked(SanctumID);
+        bool bossUnlocked = MissionTabletManager.Instance.IsBossUnlockReady(currentSanctumID);
 
         if (bossLockedText != null) bossLockedText.SetActive(!bossUnlocked);
         if (bossUnlockedText != null) bossUnlockedText.SetActive(bossUnlocked);
     }
 
-    private void SetMissionRow(Text checkText, bool complete)
+    private void UpdateRow(int index, List<MissionTabletData> missions, Text check, Text desc)
     {
-        if (checkText == null) return;
-        checkText.text = complete ? "?" : "?";
-        checkText.color = complete
-            ? new Color(0.2f, 0.8f, 0.2f)
-            : new Color(0.8f, 0.8f, 0.8f);
+        if (index >= missions.Count)
+        {
+            if (check != null) check.text = "";
+            if (desc != null) desc.text = "";
+            return;
+        }
+
+        MissionTabletData m = missions[index];
+        bool done = MissionTabletManager.Instance.IsMissionComplete(m.missionID);
+
+        if (check != null)
+        {
+            check.text = "?";
+            check.color = done
+                ? new Color(0.2f, 0.8f, 0.2f)
+                : new Color(0.8f, 0.8f, 0.8f);
+        }
+
+        if (desc != null)
+            desc.text = m.description;
     }
 }

@@ -1,0 +1,112 @@
+{
+  "missions": [
+    {
+      "missionID": "ea_tablet_01",
+      "sanctumID": "echoing_atrium",
+      "displayName": "Restore the Gate",
+      "description": "Mission I: Restore the Gate of First Words.",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": "FillInTheBlank",
+      "promptText": "Restore the Corrupted Gate"
+    },
+    {
+      "missionID": "ea_tablet_02",
+      "sanctumID": "echoing_atrium",
+      "displayName": "Silence the Shades",
+      "description": "Mission II: Silence the Murmur Shades in the East Wing.",
+      "knowledgeComponent": "variables",
+      "puzzleType": "SpotTheBug",
+      "promptText": "Approach Murmur Shade"
+    },
+    {
+      "missionID": "ea_tablet_03",
+      "sanctumID": "echoing_atrium",
+      "displayName": "Find the Inscription",
+      "description": "Mission III: Find and restore the erased final inscription.",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": "PredictTheOutput",
+      "promptText": "Examine Erased Tablet"
+    },
+    {
+      "missionID": "voe_tablet_01",
+      "sanctumID": "vault_of_essence",
+      "displayName": "Bind the Unnamed",
+      "description": "Mission I: Bind the unnamed shards drifting in the Vault.",
+      "knowledgeComponent": "variables",
+      "puzzleType": "FillInTheBlank",
+      "promptText": "Inspect Drifting Shard"
+    },
+    {
+      "missionID": "voe_tablet_02",
+      "sanctumID": "vault_of_essence",
+      "displayName": "Seal the Fracture",
+      "description": "Mission II: Seal the fracture where values leak into void.",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": "TrueOrFalse",
+      "promptText": "Examine Value Leak"
+    },
+    {
+      "missionID": "voe_tablet_03",
+      "sanctumID": "vault_of_essence",
+      "displayName": "Recover the True Name",
+      "description": "Mission III: Recover the true name erased from the registry.",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": "PairACode",
+      "promptText": "Inspect Name Registry"
+    },
+    {
+      "missionID": "wwm_tablet_01",
+      "sanctumID": "whitewake_mist",
+      "displayName": "Calm the Static",
+      "description": "Mission I: Calm the static drowning the transmission stream.",
+      "knowledgeComponent": "loops",
+      "puzzleType": "LineScramble",
+      "promptText": "Approach Static Stream"
+    },
+    {
+      "missionID": "wwm_tablet_02",
+      "sanctumID": "whitewake_mist",
+      "displayName": "Restore the Echo",
+      "description": "Mission II: Restore the echo trapped in recursive feedback.",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": "SpotTheBug",
+      "promptText": "Inspect Recursive Echo"
+    },
+    {
+      "missionID": "wwm_tablet_03",
+      "sanctumID": "whitewake_mist",
+      "displayName": "Decode the Signal",
+      "description": "Mission III: Decode the signal buried beneath white noise.",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": "PredictTheOutput",
+      "promptText": "Examine Signal Source"
+    },
+    {
+      "missionID": "lol_tablet_01",
+      "sanctumID": "labyrinth_of_logic",
+      "displayName": "Repair the Branch",
+      "description": "Mission I: Repair the branch where all paths return false.",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": "FillInTheBlank",
+      "promptText": "Inspect Broken Branch"
+    },
+    {
+      "missionID": "lol_tablet_02",
+      "sanctumID": "labyrinth_of_logic",
+      "displayName": "Close the Loop",
+      "description": "Mission II: Close the loop that runs toward infinity.",
+      "knowledgeComponent": "loops",
+      "puzzleType": "TrueOrFalse",
+      "promptText": "Approach Infinite Loop"
+    },
+    {
+      "missionID": "lol_tablet_03",
+      "sanctumID": "labyrinth_of_logic",
+      "displayName": "Align the Sequence",
+      "description": "Mission III: Align the sequence so order returns to the Labyrinth.",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": "LineScramble",
+      "promptText": "Inspect Scrambled Sequence"
+    }
+  ]
+}

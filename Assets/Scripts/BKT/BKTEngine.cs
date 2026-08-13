@@ -89,4 +89,43 @@ public class BKTEngine : MonoBehaviour
 
     public Dictionary<string, float> GetAllMasteryScores()
                 => new Dictionary<string, float>(masteryProbabilities);
+
+    // ========== SAVE/LOAD BRIDGE METHODS ==========
+
+    public List<BKTMasteryEntry> ExportMastery()
+    {
+        List<BKTMasteryEntry> result = new List<BKTMasteryEntry>();
+        foreach (var kvp in masteryProbabilities)
+        {
+            result.Add(new BKTMasteryEntry
+            {
+                componentName = kvp.Key,
+                masteryProbability = kvp.Value
+            });
+        }
+        return result;
+    }
+
+    public void ImportMastery(List<BKTMasteryEntry> entries)
+    {
+        if (entries == null) return;
+        foreach (var entry in entries)
+        {
+            if (parameters.ContainsKey(entry.componentName))
+            {
+                masteryProbabilities[entry.componentName] = Mathf.Clamp01(entry.masteryProbability);
+            }
+        }
+        Debug.Log($"[BKT] Imported {entries.Count} mastery entries.");
+    }
+
+    public void ResetAllMastery()
+    {
+        masteryProbabilities.Clear();
+        foreach (var kvp in parameters)
+        {
+            masteryProbabilities[kvp.Key] = kvp.Value.p_init;
+        }
+        Debug.Log("[BKT] All mastery reset to p_init.");
+    }
 }
