@@ -54,7 +54,7 @@ public class QuestManager : MonoBehaviour
         EvaluateActiveQuest();
     }
 
-    private void EvaluateActiveQuest()
+    public void EvaluateActiveQuest()
     {
         if (StoryProgressionManager.Instance == null) return;
 
@@ -98,54 +98,61 @@ public class QuestManager : MonoBehaviour
     {
         quests = new List<QuestEntry>
         {
+            // --- Print Console ---
             new QuestEntry { unlockedByQuestID = "intro_complete",
-                questID = "echoing_atrium_find_echo",
-                displayName = "Find Echo in the Echoing Atrium" },
-            new QuestEntry { unlockedByQuestID = "echoing_atrium_find_echo",
-                questID = "echoing_atrium_speak_echo",
-                displayName = "Speak with Echo" },
-            new QuestEntry { unlockedByQuestID = "echoing_atrium_speak_echo",
-                questID = "echoing_atrium_defeat_enemy",
+                questID = "print_console_find_printessa",
+                displayName = "Find Printessa in the Print Console" },
+            new QuestEntry { unlockedByQuestID = "print_console_find_printessa",
+                questID = "print_console_speak_printessa",
+                displayName = "Speak with Printessa" },
+            new QuestEntry { unlockedByQuestID = "print_console_speak_printessa",
+                questID = "print_console_defeat_enemy",
                 displayName = "Defeat the Null Wraith's corruption" },
-            new QuestEntry { unlockedByQuestID = "echoing_atrium_defeat_enemy",
-                questID = "echoing_atrium_restore_crystal",
-                displayName = "Restore the Rune Crystal" },
-            new QuestEntry { unlockedByQuestID = "echoing_atrium_restore_crystal",
-                questID = "vault_find_lyra",
-                displayName = "Find Lyra in the Vault of Essence" },
-            new QuestEntry { unlockedByQuestID = "vault_find_lyra",
-                questID = "vault_speak_lyra",
-                displayName = "Speak with Lyra" },
-            new QuestEntry { unlockedByQuestID = "vault_speak_lyra",
-                questID = "vault_defeat_enemy",
+            new QuestEntry { unlockedByQuestID = "print_console_defeat_enemy",
+                questID = "print_console_restore_crystal",
+                displayName = "Restore the Kernel Crystal" },
+
+            // --- Vars Vault ---
+            new QuestEntry { unlockedByQuestID = "print_console_restore_crystal",
+                questID = "vars_vault_find_variel",
+                displayName = "Find Variel in the Vars Vault" },
+            new QuestEntry { unlockedByQuestID = "vars_vault_find_variel",
+                questID = "vars_vault_speak_variel",
+                displayName = "Speak with Variel" },
+            new QuestEntry { unlockedByQuestID = "vars_vault_speak_variel",
+                questID = "vars_vault_defeat_enemy",
                 displayName = "Defeat the Null Wraith's corruption" },
-            new QuestEntry { unlockedByQuestID = "vault_defeat_enemy",
-                questID = "vault_restore_crystal",
-                displayName = "Restore the Rune Crystal" },
-            new QuestEntry { unlockedByQuestID = "vault_restore_crystal",
-                questID = "whitewake_find_auralis",
-                displayName = "Find Auralis in the Whitewake Mist" },
-            new QuestEntry { unlockedByQuestID = "whitewake_find_auralis",
-                questID = "whitewake_speak_auralis",
-                displayName = "Speak with Auralis" },
-            new QuestEntry { unlockedByQuestID = "whitewake_speak_auralis",
-                questID = "whitewake_defeat_enemy",
+            new QuestEntry { unlockedByQuestID = "vars_vault_defeat_enemy",
+                questID = "vars_vault_restore_crystal",
+                displayName = "Restore the Kernel Crystal" },
+
+            // --- Input Mists ---
+            new QuestEntry { unlockedByQuestID = "vars_vault_restore_crystal",
+                questID = "input_mists_find_evalyn",
+                displayName = "Find Evalyn in the Input Mists" },
+            new QuestEntry { unlockedByQuestID = "input_mists_find_evalyn",
+                questID = "input_mists_speak_evalyn",
+                displayName = "Speak with Evalyn" },
+            new QuestEntry { unlockedByQuestID = "input_mists_speak_evalyn",
+                questID = "input_mists_defeat_enemy",
                 displayName = "Defeat the Null Wraith's corruption" },
-            new QuestEntry { unlockedByQuestID = "whitewake_defeat_enemy",
-                questID = "whitewake_restore_crystal",
-                displayName = "Restore the Rune Crystal" },
-            new QuestEntry { unlockedByQuestID = "whitewake_restore_crystal",
-                questID = "labyrinth_find_selvara",
-                displayName = "Find Selvara in the Labyrinth of Logic" },
-            new QuestEntry { unlockedByQuestID = "labyrinth_find_selvara",
-                questID = "labyrinth_speak_selvara",
-                displayName = "Speak with Selvara" },
-            new QuestEntry { unlockedByQuestID = "labyrinth_speak_selvara",
-                questID = "labyrinth_defeat_enemy",
+            new QuestEntry { unlockedByQuestID = "input_mists_defeat_enemy",
+                questID = "input_mists_restore_crystal",
+                displayName = "Restore the Kernel Crystal" },
+
+            // --- Elif Labyrinth ---
+            new QuestEntry { unlockedByQuestID = "input_mists_restore_crystal",
+                questID = "elif_labyrinth_find_whilow",
+                displayName = "Find Whilow in the Elif Labyrinth" },
+            new QuestEntry { unlockedByQuestID = "elif_labyrinth_find_whilow",
+                questID = "elif_labyrinth_speak_whilow",
+                displayName = "Speak with Whilow" },
+            new QuestEntry { unlockedByQuestID = "elif_labyrinth_speak_whilow",
+                questID = "elif_labyrinth_defeat_enemy",
                 displayName = "Defeat the Null Wraith's corruption" },
-            new QuestEntry { unlockedByQuestID = "labyrinth_defeat_enemy",
-                questID = "labyrinth_restore_crystal",
-                displayName = "Restore the Rune Crystal" }
+            new QuestEntry { unlockedByQuestID = "elif_labyrinth_defeat_enemy",
+                questID = "elif_labyrinth_restore_crystal",
+                displayName = "Restore the Kernel Crystal" }
         };
     }
 }

@@ -91,9 +91,14 @@ public class SpotTheBugUIController : MonoBehaviour
 
         Debug.Log($"[SpotTheBugUIController] Line {selectedLine.lineIndex} " +
                   $"({(lineCorrect ? "correct" : "wrong")}) | " +
-                  $"Fix: {option.optionText} ({(fixCorrect ? "correct" : "wrong")})");
+                  $"Fix: {option.optionText} ({(fixCorrect ? "correct" : "wrong")}) | " +
+                  $"Pre-check result: {isCorrect}");
 
-        PuzzleManager.Instance.UserSubmission(isCorrect);
+        var submission = new SpotTheBugPuzzleFormat.SubmissionData(
+            selectedLine.lineIndex,
+            option.optionText);
+
+        PuzzleManager.Instance.UserSubmission(submission);
     }
 
     private void ShowFixOptionsForLine(int lineIndex)

@@ -190,4 +190,6 @@ public class TabletMissionObject : InteractableObject
         };
         return available[Random.Range(0, available.Length)];
     }
+
+    public bool IsRestored() => isCompleted;
 }

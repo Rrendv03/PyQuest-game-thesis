@@ -1,184 +1,98 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Attach to the PARENT empty GameObject that holds the rune crystal meshes.
-/// Starts inactive. Activates when the sanctum's boss is defeated.
-/// Contains visual swapping and corruption cleansing logic.
+/// Activates when a sanctum boss is defeated. Uses inherited sanctumID from InteractableObject.
 /// </summary>
-public class RuneCrystal : MonoBehaviour
+public class RuneCrystal : InteractableObject
 {
-    [Header("Sanctum")]
-    public string sanctumID;
-
-    [Header("Spawn Effect")]
-    public GameObject spawnEffect;
+    [Header("Rune Crystal")]
+    [Tooltip("Parent GameObject containing all crystal meshes (auto-found if null)")]
+    public GameObject crystalParent;
+    [Tooltip("Optional spawn effect when activated")]
+    public ParticleSystem spawnEffect;
+    [Tooltip("Optional sound when activated")]
     public AudioClip spawnSound;
 
     [Header("Visual States")]
-    [Tooltip("The corrupted/destroyed crystal mesh parent.")]
-    public GameObject destroyedState;
-    [Tooltip("The restored/glowing crystal mesh parent.")]
-    public GameObject restoredState;
+    public GameObject crystalDefaultState;
+    public GameObject crystalRestoredState;
 
-    [Header("Cleansing Effect")]
-    [Tooltip("Tag assigned to corrupted props in the scene that should fade out.")]
-    public string corruptedTag = "Corrupted";
-    [Tooltip("How long it takes for corrupted objects to fade out.")]
-    public float corruptionFadeDuration = 2f;
+    private AudioSource audioSource;
+    private bool isActivated = false;
 
-    private bool hasSpawned = false;
-    private bool isRestored = false;
-
-    void Start()
+    private void Awake()
     {
-        // If boss already defeated (loaded from save), show crystal immediately
-        if (SaveLoadManager.Instance?.IsSanctumBossDefeated(sanctumID) ?? false)
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null && spawnSound != null)
         {
-            gameObject.SetActive(true);
-            hasSpawned = true;
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+        }
+    }
 
-            // If the crystal was ALREADY restored in a previous save, 
-            // skip the destroyed state and just show the restored state.
-            bool wasRestored = StoryProgressionManager.Instance != null &&
-                               StoryProgressionManager.Instance.IsQuestComplete($"{sanctumID}_restore_crystal");
+    private void Start()
+    {
+        // Ensure correct visual state on startup
+        crystalDefaultState?.SetActive(true);
+        crystalRestoredState?.SetActive(false);
 
-            if (wasRestored)
-            {
-                ForceRestoredState();
-                isRestored = true;
-            }
-            else
-            {
-                // Boss is dead, but crystal hasn't been clicked yet
-                if (destroyedState != null) destroyedState.SetActive(true);
-                if (restoredState != null) restoredState.SetActive(false);
-            }
+        if (crystalParent == null)
+            crystalParent = transform.parent?.gameObject ?? gameObject;
+
+        bool alreadyDefeated = false;
+        if (SaveLoadManager.Instance != null && SanctumManager.Instance != null)
+            alreadyDefeated = SanctumManager.Instance.IsBossDefeated();
+
+        if (alreadyDefeated)
+        {
+            // If loading a save where it's already done, show it restored
+            Restore();
         }
         else
         {
-            gameObject.SetActive(false);
+            // Hide completely until boss dies
+            crystalParent.SetActive(false);
         }
-    }
-
-    public void OnBossDefeated()
-    {
-        if (hasSpawned) return;
-        hasSpawned = true;
-
-        gameObject.SetActive(true);
-
-        // Ensure we start in the destroyed state when boss dies
-        if (destroyedState != null) destroyedState.SetActive(true);
-        if (restoredState != null) restoredState.SetActive(false);
-
-        if (spawnEffect != null)
-            Instantiate(spawnEffect, transform.position, Quaternion.identity);
-
-        if (spawnSound != null)
-            AudioSource.PlayClipAtPoint(spawnSound, transform.position);
     }
 
     /// <summary>
-    /// Called by InteractableObject when the player presses the interact button.
+    /// Called by SanctumManager immediately on boss defeat.
+    /// ONLY reveals the crystal in its DEFAULT (destroyed) state.
+    /// </summary>
+    public void OnBossDefeated()
+    {
+        // Just make the parent visible. Start() already ensured Default is ON and Restored is OFF.
+        if (crystalParent != null)
+        {
+            crystalParent.SetActive(true);
+            Debug.Log($"[RuneCrystal] Revealed in default state in sanctum: {sanctumID}");
+        }
+    }
+
+    /// <summary>
+    /// Called by InteractableObject.HandleRuneCrystal() when the player
+    /// manually interacts with the crystal. Swaps to RESTORED state.
     /// </summary>
     public void Restore()
     {
-        if (isRestored) return;
-        isRestored = true;
-
-        // 1. Swap visuals
-        if (destroyedState != null) destroyedState.SetActive(false);
-        if (restoredState != null) restoredState.SetActive(true);
-
-        // 2. Mark quest complete so NPC (Echo) knows to change behavior
-        if (StoryProgressionManager.Instance != null)
-        {
-            StoryProgressionManager.Instance.CompleteQuest($"{sanctumID}_restore_crystal");
-        }
-
-        // 3. Disable the collider. 
-        // NOTE: Doing this automatically triggers InteractableObject's OnTriggerExit, 
-        // which automatically hides the "Restore" prompt for you! No extra UI code needed.
-        Collider col = GetComponent<Collider>();
-        if (col != null) col.enabled = false;
-
-        // 4. Start cleansing corrupted map elements
-        StartCoroutine(CleanseCorruption());
-
-        Debug.Log($"[RuneCrystal] Crystal restored in {sanctumID}!");
+        if (isActivated) return;
+        ActivateCrystal();
     }
 
-    private void ForceRestoredState()
+    private void ActivateCrystal()
     {
-        // Used when loading a save where the crystal is already done
-        if (destroyedState != null) destroyedState.SetActive(false);
-        if (restoredState != null) restoredState.SetActive(true);
+        isActivated = true;
 
-        // Instantly remove corruption without fading
-        GameObject[] corruptedObjects = GameObject.FindGameObjectsWithTag(corruptedTag);
-        foreach (GameObject obj in corruptedObjects)
-        {
-            obj.SetActive(false);
-        }
+        // Swap the meshes
+        crystalDefaultState?.SetActive(false);
+        crystalRestoredState?.SetActive(true);
 
-        // Disable collider so it can't be interacted with again
-        Collider col = GetComponent<Collider>();
-        if (col != null) col.enabled = false;
-    }
+        if (spawnEffect != null)
+            spawnEffect.Play();
 
-    private IEnumerator CleanseCorruption()
-    {
-        GameObject[] corruptedObjects = GameObject.FindGameObjectsWithTag(corruptedTag);
+        if (audioSource != null && spawnSound != null)
+            audioSource.PlayOneShot(spawnSound);
 
-        if (corruptedObjects.Length == 0)
-        {
-            Debug.LogWarning($"[RuneCrystal] No objects found with tag '{corruptedTag}'.");
-            yield break;
-        }
-
-        // Gather all renderers from all corrupted parent objects
-        List<Renderer> allRenderers = new List<Renderer>();
-        foreach (GameObject obj in corruptedObjects)
-        {
-            Renderer[] childRenderers = obj.GetComponentsInChildren<Renderer>();
-            allRenderers.AddRange(childRenderers);
-        }
-
-        // Store original colors
-        Color[] originalColors = new Color[allRenderers.Count];
-        for (int i = 0; i < allRenderers.Count; i++)
-        {
-            if (allRenderers[i] != null)
-                originalColors[i] = allRenderers[i].material.color;
-        }
-
-        // Fade them out over time
-        float elapsed = 0f;
-        while (elapsed < corruptionFadeDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / corruptionFadeDuration);
-
-            for (int i = 0; i < allRenderers.Count; i++)
-            {
-                if (allRenderers[i] != null)
-                {
-                    Color c = originalColors[i];
-                    c.a = Mathf.Lerp(1f, 0f, t);
-                    allRenderers[i].material.color = c;
-                }
-            }
-            yield return null;
-        }
-
-        // Finally, turn the parent objects off completely
-        foreach (GameObject obj in corruptedObjects)
-        {
-            obj.SetActive(false);
-        }
-
-        Debug.Log($"[RuneCrystal] Cleansed {corruptedObjects.Length} corrupted objects.");
+        Debug.Log($"[RuneCrystal] Restored in sanctum: {sanctumID}");
     }
 }

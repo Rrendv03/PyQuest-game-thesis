@@ -1,7 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System.IO;
+using System.Security.Cryptography;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class BKTEngine : MonoBehaviour
@@ -128,4 +129,11 @@ public class BKTEngine : MonoBehaviour
         }
         Debug.Log("[BKT] All mastery reset to p_init.");
     }
+}
+
+[System.Serializable]
+public class BKTMasteryEntry
+{
+    public string componentName;
+    public float masteryProbability;
 }

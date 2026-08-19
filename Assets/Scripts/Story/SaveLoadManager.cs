@@ -4,27 +4,37 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// Manages three manual save slots and one dedicated autosave slot.
+/// Autosave never overwrites manual slots.
+/// Fires every 5 minutes while IsSafeToSave is true.
+///
+/// Canonical single source of truth for SaveSlotData - do not keep
+/// a second copy of this class anywhere else in the project, having
+/// two SaveLoadManager/SaveSlotData definitions is what caused the
+/// missing-field compile errors this file fixes.
+/// </summary>
 public class SaveLoadManager : MonoBehaviour
 {
     public static SaveLoadManager Instance;
     public static bool IsSafeToSave = true;
 
+    private NPCStateEntry[] _lastAppliedNPCStates = null;
+
     [Header("Autosave")]
     public float autosaveIntervalSeconds = 300f;
-    public bool enableAutosave = true;
 
-    [Header("Player Reference (for saving position)")]
+    [Header("Player Reference")]
     public Transform playerTransform;
 
     private float autosaveTimer = 0f;
-    private float sessionPlayTime = 0f;
     private const string AutosaveFilename = "save_autosave.json";
 
-    private HashSet<string> _defeatedNormalZones = new HashSet<string>();
-    private HashSet<string> _defeatedBossZones = new HashSet<string>();
-    private HashSet<string> _defeatedSanctumBosses = new HashSet<string>();
+    private static string SlotFilename(int slot)
+        => slot == 0 ? AutosaveFilename : $"save_slot_{slot}.json";
 
-    private SaveSlotData _pendingLoadData = null;
+    private static string SlotPath(int slot)
+        => Path.Combine(Application.persistentDataPath, SlotFilename(slot));
 
     void Awake()
     {
@@ -41,11 +51,16 @@ public class SaveLoadManager : MonoBehaviour
 
     void Update()
     {
-        if (!IsSafeToSave || !enableAutosave) return;
+        // Prefer SaveRestrictionEnforcer's blocker set when present;
+        // fall back to the legacy static flag for scenes that haven't
+        // wired a blocker in yet.
+        bool safe = SaveRestrictionEnforcer.Instance != null
+            ? SaveRestrictionEnforcer.Instance.IsSafeToSave
+            : IsSafeToSave;
 
-        autosaveTimer += Time.unscaledDeltaTime;
-        sessionPlayTime += Time.unscaledDeltaTime;
+        if (!safe) return;
 
+        autosaveTimer += Time.deltaTime;
         if (autosaveTimer >= autosaveIntervalSeconds)
         {
             autosaveTimer = 0f;
@@ -53,122 +68,46 @@ public class SaveLoadManager : MonoBehaviour
         }
     }
 
+    // == Save ==================================================
     public void SaveToSlot(int slot)
     {
-        if (!IsSafeToSave)
-        {
-            Debug.LogWarning("[SaveLoadManager] Save blocked: unsafe state.");
-            return;
-        }
-
         if (slot < 0 || slot > 3)
         {
-            Debug.LogWarning("[SaveLoadManager] Invalid slot.");
+            Debug.LogWarning($"[SaveLoadManager] Invalid slot {slot}.");
             return;
         }
 
         SaveSlotData data = BuildSaveData(slot);
         string json = JsonUtility.ToJson(data, true);
-        string path = GetSlotPath(slot);
 
         try
         {
-            File.WriteAllText(path, json);
-            Debug.Log($"[SaveLoadManager] Saved slot {slot} to {path}");
+            File.WriteAllText(SlotPath(slot), json);
+            Debug.Log($"[SaveLoadManager] Saved slot {slot}.");
         }
         catch (Exception e)
         {
-            Debug.LogError($"[SaveLoadManager] Save failed: {e.Message}");
+            Debug.LogError($"[SaveLoadManager] Failed to write slot {slot}: {e.Message}");
         }
     }
 
-    public SaveSlotData LoadFromSlot(int slot)
-    {
-        string path = GetSlotPath(slot);
-        if (!File.Exists(path)) return null;
+    /// <summary>
+    /// Convenience wrapper used by SanctumManager and other systems
+    /// that just want "save now to the dedicated autosave slot"
+    /// without knowing slot numbering.
+    /// </summary>
+    public void AutoSave() => SaveToSlot(0);
 
-        try
-        {
-            string json = File.ReadAllText(path);
-            return JsonUtility.FromJson<SaveSlotData>(json);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[SaveLoadManager] Load failed: {e.Message}");
-            return null;
-        }
-    }
-
-    public void ApplySaveData(SaveSlotData data)
-    {
-        if (data == null) return;
-
-        _pendingLoadData = data;
-
-        RestoreManagerData(data);
-
-        SceneTransition.RespawnPoint = new Vector3(
-            data.playerPositionX, data.playerPositionY, data.playerPositionZ);
-
-        Time.timeScale = 1f;
-        IsSafeToSave = true;
-
-        SceneManager.sceneLoaded += OnSceneLoadedForRestore;
-        SceneManager.LoadScene(data.currentScene);
-    }
-
-    public void StartNewGame()
-    {
-        _defeatedNormalZones.Clear();
-        _defeatedBossZones.Clear();
-        _defeatedSanctumBosses.Clear();
-        sessionPlayTime = 0f;
-
-        if (BKTEngine.Instance != null) BKTEngine.Instance.ResetAllMastery();
-        if (XPManager.Instance != null) XPManager.Instance.ResetXP();
-        if (StoryProgressionManager.Instance != null) StoryProgressionManager.Instance.ResetProgression();
-        if (MissionTabletManager.Instance != null) MissionTabletManager.Instance.ResetMissions();
-
-        SceneManager.LoadScene("IntroScene");
-    }
-
-    public bool SlotExists(int slot) => File.Exists(GetSlotPath(slot));
-
-    public void DeleteSlot(int slot)
-    {
-        string path = GetSlotPath(slot);
-        if (File.Exists(path))
-        {
-            File.Delete(path);
-            Debug.Log($"[SaveLoadManager] Deleted slot {slot}.");
-        }
-    }
-
-    public void RegisterZoneDefeated(string zoneID, bool isBoss, string sanctumID = null)
-    {
-        if (string.IsNullOrEmpty(zoneID)) return;
-
-        if (isBoss)
-        {
-            _defeatedBossZones.Add(zoneID);
-            if (!string.IsNullOrEmpty(sanctumID))
-                _defeatedSanctumBosses.Add(sanctumID);
-        }
-        else
-        {
-            _defeatedNormalZones.Add(zoneID);
-        }
-    }
-
-    public bool IsZoneDefeated(string zoneID, bool isBoss)
-    {
-        if (string.IsNullOrEmpty(zoneID)) return false;
-        return isBoss ? _defeatedBossZones.Contains(zoneID) : _defeatedNormalZones.Contains(zoneID);
-    }
-
+    /// <summary>
+    /// Convenience query for BossGate and similar scripts that need a
+    /// yes/no on "has this sanctum's boss been defeated" without going
+    /// through StoryProgressionManager directly. Delegates to it rather
+    /// than tracking a second copy of the same state.
+    /// </summary>
     public bool IsSanctumBossDefeated(string sanctumID)
     {
-        return !string.IsNullOrEmpty(sanctumID) && _defeatedSanctumBosses.Contains(sanctumID);
+        return StoryProgressionManager.Instance != null
+            && StoryProgressionManager.Instance.HasDefeatedBoss(sanctumID);
     }
 
     private SaveSlotData BuildSaveData(int slot)
@@ -183,19 +122,33 @@ public class SaveLoadManager : MonoBehaviour
             data.playerPositionX = playerTransform.position.x;
             data.playerPositionY = playerTransform.position.y;
             data.playerPositionZ = playerTransform.position.z;
-            data.playerRotY = playerTransform.eulerAngles.y;
+            data.playerYRotation = playerTransform.eulerAngles.y;
         }
-
-        SaveSlotData existing = LoadFromSlot(slot);
-        float previousTime = (existing != null && existing.playTimeSeconds > 0) ? existing.playTimeSeconds : 0f;
-        data.playTimeSeconds = previousTime + sessionPlayTime;
-        sessionPlayTime = 0f;
 
         if (StoryProgressionManager.Instance != null)
         {
             data.completedQuestIDs = StoryProgressionManager.Instance.ExportCompletedQuestIDs();
             data.activeQuestID = StoryProgressionManager.Instance.ExportActiveQuestID();
+
+            data.storyProgression = new StoryProgressionData
+            {
+                visitedSanctums = StoryProgressionManager.Instance.ExportVisitedSanctums(),
+                defeatedBosses = StoryProgressionManager.Instance.ExportDefeatedBosses()
+            };
+
+            // Rune crystals activate on boss defeat, so "restored" is
+            // the same signal as "defeated" - no separate tracking needed.
+            data.restoredCrystalSanctums = StoryProgressionManager.Instance.ExportDefeatedBosses();
         }
+
+        if (BKTEngine.Instance != null)
+            data.bktMastery = BKTEngine.Instance.ExportMastery();
+
+        if (MissionTabletManager.Instance != null)
+            data.completedMissionIDs = MissionTabletManager.Instance.ExportCompletedMissions();
+
+        if (StudentLogManager.Instance != null)
+            data.studentLogs = StudentLogManager.Instance.ExportLogs();
 
         data.npcStates = new List<NPCStateEntry>();
         NPCController[] npcs = FindObjectsOfType<NPCController>();
@@ -209,67 +162,96 @@ public class SaveLoadManager : MonoBehaviour
             });
         }
 
-        if (BKTEngine.Instance != null)
-            data.bktMastery = BKTEngine.Instance.ExportMastery();
+        data.missionDisplayName = GetMissionDisplayName(data.activeQuestID);
+        data.locationDisplayName = GetLocationDisplayName(data.currentScene);
+
+        SaveSlotData existing = LoadFromSlot(slot);
+        data.playTimeSeconds = existing != null ? existing.playTimeSeconds : 0f;
 
         if (XPManager.Instance != null)
             data.currentXP = XPManager.Instance.ExportXP();
 
-        data.defeatedNormalZoneIDs = new List<string>(_defeatedNormalZones);
-        data.defeatedBossZoneIDs = new List<string>(_defeatedBossZones);
-        data.defeatedSanctumBosses = new List<string>(_defeatedSanctumBosses);
-
-        if (MissionTabletManager.Instance != null)
-            data.completedMissionIDs = MissionTabletManager.Instance.ExportCompletedMissions();
-
-        data.missionDisplayName = GetMissionDisplayName(data.activeQuestID);
-        data.locationDisplayName = GetLocationDisplayName(data.currentScene);
-
         return data;
     }
 
-    private void RestoreManagerData(SaveSlotData data)
+    // == Load ==================================================
+    public SaveSlotData LoadFromSlot(int slot)
     {
-        if (BKTEngine.Instance != null && data.bktMastery != null)
-            BKTEngine.Instance.ImportMastery(data.bktMastery);
+        string path = SlotPath(slot);
+        if (!File.Exists(path)) return null;
 
-        if (XPManager.Instance != null)
-            XPManager.Instance.ImportXP(data.currentXP);
+        try
+        {
+            string json = File.ReadAllText(path);
+            return JsonUtility.FromJson<SaveSlotData>(json);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[SaveLoadManager] Failed to read slot {slot}: {e.Message}");
+            return null;
+        }
+    }
+
+    public void ApplySaveData(SaveSlotData data)
+    {
+        if (data == null) return;
 
         if (StoryProgressionManager.Instance != null)
         {
             StoryProgressionManager.Instance.ImportCompletedQuestIDs(data.completedQuestIDs);
             StoryProgressionManager.Instance.ImportActiveQuestID(data.activeQuestID);
+
+            if (data.storyProgression != null)
+            {
+                StoryProgressionManager.Instance.ImportVisitedSanctums(data.storyProgression.visitedSanctums);
+                StoryProgressionManager.Instance.ImportDefeatedBosses(data.storyProgression.defeatedBosses);
+            }
         }
 
-        _defeatedNormalZones.Clear();
-        if (data.defeatedNormalZoneIDs != null)
-            foreach (var id in data.defeatedNormalZoneIDs) _defeatedNormalZones.Add(id);
+        if (QuestManager.Instance != null)
+            QuestManager.Instance.OnQuestCompleted(data.activeQuestID);
 
-        _defeatedBossZones.Clear();
-        if (data.defeatedBossZoneIDs != null)
-            foreach (var id in data.defeatedBossZoneIDs) _defeatedBossZones.Add(id);
+        if (XPManager.Instance != null)
+            XPManager.Instance.ImportXP(data.currentXP);
 
-        _defeatedSanctumBosses.Clear();
-        if (data.defeatedSanctumBosses != null)
-            foreach (var id in data.defeatedSanctumBosses) _defeatedSanctumBosses.Add(id);
+        if (BKTEngine.Instance != null)
+            BKTEngine.Instance.ImportMastery(data.bktMastery);
 
-        if (MissionTabletManager.Instance != null && data.completedMissionIDs != null)
+        if (MissionTabletManager.Instance != null)
             MissionTabletManager.Instance.ImportCompletedMissions(data.completedMissionIDs);
+
+        if (StudentLogManager.Instance != null)
+            StudentLogManager.Instance.ImportLogs(data.studentLogs);
+
+        SceneTransition.RespawnPoint = new Vector3(
+            data.playerPositionX,
+            data.playerPositionY,
+            data.playerPositionZ);
+
+        // Critical: restore timeScale and save flag before loading.
+        // The pause menu sets timeScale = 0 when open. If we load a scene
+        // while timeScale is 0, SceneEntrance.FadeIn() coroutine never runs
+        // and the black overlay never disappears.
+        Time.timeScale = 1f;
+        IsSafeToSave = true;
+        SaveRestrictionEnforcer.Instance?.ClearAllBlockers();
+
+        _lastAppliedNPCStates = data.npcStates != null ? data.npcStates.ToArray() : null;
+
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.LoadScene(data.currentScene);
     }
 
-    private void OnSceneLoadedForRestore(Scene scene, LoadSceneMode mode)
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        SceneManager.sceneLoaded -= OnSceneLoadedForRestore;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
 
-        if (_pendingLoadData == null) return;
-
-        if (_pendingLoadData.npcStates != null)
+        NPCController[] npcs = FindObjectsOfType<NPCController>();
+        if (_lastAppliedNPCStates != null)
         {
-            NPCController[] npcs = FindObjectsOfType<NPCController>();
-            foreach (var npc in npcs)
+            foreach (var entry in _lastAppliedNPCStates)
             {
-                foreach (var entry in _pendingLoadData.npcStates)
+                foreach (var npc in npcs)
                 {
                     if (entry.npcID == npc.npcID)
                     {
@@ -279,26 +261,21 @@ public class SaveLoadManager : MonoBehaviour
                 }
             }
         }
-
-        if (playerTransform != null)
-        {
-            Vector3 euler = playerTransform.eulerAngles;
-            euler.y = _pendingLoadData.playerRotY;
-            playerTransform.eulerAngles = euler;
-        }
-
-        if (MissionTabletUI.Instance != null)
-            MissionTabletUI.Instance.Refresh();
-
-        _pendingLoadData = null;
     }
 
-    private static string GetSlotPath(int slot)
+    public bool SlotExists(int slot) => File.Exists(SlotPath(slot));
+
+    public void DeleteSlot(int slot)
     {
-        string filename = slot == 0 ? AutosaveFilename : $"save_slot_{slot}.json";
-        return Path.Combine(Application.persistentDataPath, filename);
+        string path = SlotPath(slot);
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+            Debug.Log($"[SaveLoadManager] Deleted slot {slot}.");
+        }
     }
 
+    // == Display Name Lookups ==================================
     private string GetMissionDisplayName(string questID)
     {
         if (QuestManager.Instance != null)
@@ -306,24 +283,26 @@ public class SaveLoadManager : MonoBehaviour
             string name = QuestManager.Instance.GetActiveQuestDisplayName();
             if (!string.IsNullOrEmpty(name)) return name;
         }
+
         return string.IsNullOrEmpty(questID) ? "No Active Mission" : questID;
     }
 
     private string GetLocationDisplayName(string sceneName)
     {
-        return sceneName switch
+        switch (sceneName)
         {
-            "IntroScene" => "Aethelscript - Arrival",
-            "MainMap" => "Aethelscript",
-            "EchoingAtrium" => "Echoing Atrium",
-            "VaultOfEssence" => "Vault of Essence",
-            "WhitewakeMist" => "Whitewake Mist",
-            "LabyrinthOfLogic" => "Labyrinth of Logic",
-            _ => string.IsNullOrEmpty(sceneName) ? "Unknown" : sceneName
-        };
+            case "IntroScene": return "Aethelscript - Arrival";
+            case "MainMap": return "Aethelscript";
+            case "PrintConsole": return "Print Console";
+            case "VarsVault": return "Vars Vault";
+            case "InputMists": return "Input Mists";
+            case "ElifLabyrinth": return "Elif Labyrinth";
+            default: return string.IsNullOrEmpty(sceneName) ? "Unknown" : sceneName;
+        }
     }
 }
 
+// == Data Structures ==========================================
 [Serializable]
 public class SaveSlotData
 {
@@ -336,16 +315,18 @@ public class SaveSlotData
     public float playerPositionX;
     public float playerPositionY;
     public float playerPositionZ;
-    public float playerRotY;
+    public float playerYRotation;
     public string currentScene;
     public string activeQuestID;
     public List<string> completedQuestIDs = new List<string>();
     public List<NPCStateEntry> npcStates = new List<NPCStateEntry>();
+
+    // Added for BKT / tablet / logging integration
     public List<BKTMasteryEntry> bktMastery = new List<BKTMasteryEntry>();
-    public List<string> defeatedNormalZoneIDs = new List<string>();
-    public List<string> defeatedBossZoneIDs = new List<string>();
     public List<string> completedMissionIDs = new List<string>();
-    public List<string> defeatedSanctumBosses = new List<string>();
+    public List<string> restoredCrystalSanctums = new List<string>();
+    public StudentLogData studentLogs;
+    public StoryProgressionData storyProgression;
 }
 
 [Serializable]
@@ -356,9 +337,16 @@ public class NPCStateEntry
     public bool hasDeparted;
 }
 
+/// <summary>
+/// Sanctum-level story state that isn't part of the linear quest
+/// ledger: which sanctums have been visited and which bosses have
+/// been defeated. Kept as its own class (rather than flat fields on
+/// SaveSlotData) so StoryProgressionManager's export/import stays a
+/// single call each.
+/// </summary>
 [Serializable]
-public class BKTMasteryEntry
+public class StoryProgressionData
 {
-    public string componentName;
-    public float masteryProbability;
+    public List<string> visitedSanctums = new List<string>();
+    public List<string> defeatedBosses = new List<string>();
 }

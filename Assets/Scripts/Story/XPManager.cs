@@ -17,10 +17,10 @@ public class XPManager : MonoBehaviour
     public int xpBoss = 150;
 
     [Header("Boss Unlock Thresholds (cumulative total XP)")]
-    public int thresholdEchoingAtrium = 150;
-    public int thresholdVaultOfEssence = 350;
-    public int thresholdWhitewakeMist = 600;
-    public int thresholdLabyrinthOfLogic = 900;
+    public int thresholdPrintConsole = 150;
+    public int thresholdVarsVault = 350;
+    public int thresholdInputMists = 600;
+    public int thresholdElifLabyrinth = 900;
 
     public int CurrentXP { get; private set; } = 0;
 
@@ -55,27 +55,16 @@ public class XPManager : MonoBehaviour
         CurrentXP += amount;
         Debug.Log($"[XPManager] +{amount} XP ({enemyType}). Total: {CurrentXP}");
         OnXPChanged?.Invoke(CurrentXP);
-
-        // ADD THIS: Refresh all gates in case XP threshold was met
-        RefreshAllBossGates();
-    }
-
-    // ADD THIS METHOD:
-    private void RefreshAllBossGates()
-    {
-        BossGate[] gates = FindObjectsOfType<BossGate>();
-        foreach (var gate in gates)
-            gate.Refresh();
     }
 
     public bool IsBossUnlocked(string sanctumID)
     {
         return sanctumID switch
         {
-            "echoing_atrium" => CurrentXP >= thresholdEchoingAtrium,
-            "vault_of_essence" => CurrentXP >= thresholdVaultOfEssence,
-            "whitewake_mist" => CurrentXP >= thresholdWhitewakeMist,
-            "labyrinth_of_logic" => CurrentXP >= thresholdLabyrinthOfLogic,
+            "print_console" => CurrentXP >= thresholdPrintConsole,
+            "vars_vault" => CurrentXP >= thresholdVarsVault,
+            "input_mists" => CurrentXP >= thresholdInputMists,
+            "elif_labyrinth" => CurrentXP >= thresholdElifLabyrinth,
             _ => false
         };
     }
@@ -84,10 +73,10 @@ public class XPManager : MonoBehaviour
     {
         return sanctumID switch
         {
-            "echoing_atrium" => thresholdEchoingAtrium,
-            "vault_of_essence" => thresholdVaultOfEssence,
-            "whitewake_mist" => thresholdWhitewakeMist,
-            "labyrinth_of_logic" => thresholdLabyrinthOfLogic,
+            "print_console" => thresholdPrintConsole,
+            "vars_vault" => thresholdVarsVault,
+            "input_mists" => thresholdInputMists,
+            "elif_labyrinth" => thresholdElifLabyrinth,
             _ => 0
         };
     }
@@ -99,10 +88,15 @@ public class XPManager : MonoBehaviour
         CurrentXP = xp;
         OnXPChanged?.Invoke(CurrentXP);
     }
-    public void ResetXP()
+
+    /// <summary>
+    /// Raw XP add, for bonuses that don't map to an EnemyType tier
+    /// (e.g. SanctumManager's per-sanctum boss clear bonus).
+    /// </summary>
+    public void AddXP(int amount)
     {
-        CurrentXP = 0;
-        OnXPChanged?.Invoke(0);
-        Debug.Log("[XPManager] XP reset.");
+        CurrentXP += amount;
+        Debug.Log($"[XPManager] +{amount} bonus XP. Total: {CurrentXP}");
+        OnXPChanged?.Invoke(CurrentXP);
     }
 }

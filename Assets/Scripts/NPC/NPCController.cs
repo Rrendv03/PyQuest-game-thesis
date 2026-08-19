@@ -5,8 +5,8 @@ using UnityEngine.UI;
 public class NPCController : MonoBehaviour
 {
     [Header("NPC Identity")]
-    public string npcID;              // stable ID for save matching, e.g. "echo", "lyra"
-    public string npcDisplayName;     // shown in the interact prompt, e.g. "Echo"
+    public string npcID;              // stable ID for save matching, e.g. "printessa", "variel"
+    public string npcDisplayName;     // shown in the interact prompt, e.g. "Printessa"
 
     [Header("Dialogue")]
     public string startingSequenceID;
@@ -27,6 +27,12 @@ public class NPCController : MonoBehaviour
 
     [Header("Departure")]
     public float departFadeDuration = 1.5f;
+
+    [Header("HUD Compass (optional)")]
+    [Tooltip("If set, the HUD compass will point here after THIS NPC's current dialogue sequence finishes. Leave empty for NPCs that don't need to direct the player anywhere.")]
+    public Transform compassTargetOnComplete;
+    [Tooltip("Label shown above the compass arrow, e.g. 'Exit' or 'Vars Vault'.")]
+    public string compassLabelOnComplete = "Exit";
 
     private bool playerInRange = false;
     private bool interactionActive = false;
@@ -150,6 +156,14 @@ public class NPCController : MonoBehaviour
 
         if (!string.IsNullOrEmpty(finished.questIDToComplete) && StoryProgressionManager.Instance != null)
             StoryProgressionManager.Instance.CompleteQuest(finished.questIDToComplete);
+
+        // Generic compass hook: fires for ANY sequence on ANY NPC that has
+        // a compassTargetOnComplete assigned in the Inspector. Not specific
+        // to farewell/depart sequences, works for endBehavior "none" and
+        // "stay" too, so this same field can drive future features
+        // (pointing to a shop, a quest giver, whatever comes next).
+        if (compassTargetOnComplete != null && HUDCompassController.Instance != null)
+            HUDCompassController.Instance.ShowCompassTo(compassTargetOnComplete, compassLabelOnComplete);
 
         switch (finished.endBehavior)
         {

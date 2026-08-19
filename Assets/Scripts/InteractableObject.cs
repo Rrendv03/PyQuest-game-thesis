@@ -28,7 +28,13 @@ public class InteractableObject : MonoBehaviour
     public Text interactPromptText;
 
     [Header("Sanctum (for Rune Crystal type)")]
-    public string sanctumID = "echoing_atrium";
+    public string sanctumID = "print_console";
+
+    [Header("Guide NPC (for Rune Crystal type)")]
+    [Tooltip("npcID of the guide who should give the farewell sequence, e.g. 'printessa'.")]
+    public string guideNpcID = "printessa";
+    [Tooltip("Sequence to switch the guide to once the crystal is restored, e.g. 'printessa_after_restore'.")]
+    public string guideAfterRestoreSequenceID = "printessa_after_restore";
 
     private bool playerInRange = false;
     private bool interactionActive = false;
@@ -107,6 +113,18 @@ public class InteractableObject : MonoBehaviour
     {
         if (StoryProgressionManager.Instance == null) return;
 
+        string crystalQuestID = $"{sanctumID}_restore_crystal";
+
+        // Guard against re-triggering. Without this, pressing E again while
+        // still standing in the (now collider-disabled but still
+        // "in range") trigger zone re-runs this whole method, including
+        // replaying the guide's farewell dialogue every time.
+        if (StoryProgressionManager.Instance.IsQuestComplete(crystalQuestID))
+        {
+            Debug.Log("[InteractableObject] Crystal already restored, ignoring repeat interaction.");
+            return;
+        }
+
         // Only allow restoration if boss has been defeated
         string bossQuestID = $"{sanctumID}_boss_defeated";
         if (!StoryProgressionManager.Instance.IsQuestComplete(bossQuestID))
@@ -115,23 +133,12 @@ public class InteractableObject : MonoBehaviour
             return;
         }
 
-        // Mark crystal restored and trigger Echo's farewell dialogue
-        string crystalQuestID = $"{sanctumID}_restore_crystal";
+        // Mark crystal restored
         StoryProgressionManager.Instance.CompleteQuest(crystalQuestID);
 
-        // Find Echo and trigger her farewell sequence
-        NPCController echo = FindNPCByID("echo");
-        if (echo != null)
-        {
-            echo.SetNextSequence("echo_after_restore");
-            echo.TriggerInteraction();
-        }
-
-        if (interactPromptUI != null) interactPromptUI.SetActive(false);
-        gameObject.GetComponent<Collider>().enabled = false;
-
-        Debug.Log($"[InteractableObject] Rune Crystal restored: {sanctumID}");
-
+        // =========================================================
+        // Actually swap the 3D meshes!
+        // =========================================================
         RuneCrystal crystal = GetComponent<RuneCrystal>();
         if (crystal != null)
         {
@@ -141,6 +148,27 @@ public class InteractableObject : MonoBehaviour
         {
             Debug.LogError("[InteractableObject] RuneCrystal component is missing from this GameObject!");
         }
+        // =========================================================
+
+        // Find the guide and trigger their farewell sequence.
+        // guideNpcID / guideAfterRestoreSequenceID are Inspector fields now,
+        // not hardcoded, so this same script works unchanged on every
+        // sanctum's crystal once you copy-paste the scene setup.
+        NPCController guide = FindNPCByID(guideNpcID);
+        if (guide != null)
+        {
+            guide.SetNextSequence(guideAfterRestoreSequenceID);
+            guide.TriggerInteraction();
+        }
+        else
+        {
+            Debug.LogWarning($"[InteractableObject] Could not find guide NPC with npcID '{guideNpcID}'.");
+        }
+
+        if (interactPromptUI != null) interactPromptUI.SetActive(false);
+        gameObject.GetComponent<Collider>().enabled = false;
+
+        Debug.Log($"[InteractableObject] Rune Crystal restored: {sanctumID}");
     }
 
     private NPCController FindNPCByID(string id)

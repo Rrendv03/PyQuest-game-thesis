@@ -4,6 +4,24 @@ using UnityEngine.UI;
 
 public class SpotTheBugPuzzleFormat : IPuzzleFormat
 {
+    [System.Serializable]
+    public struct SubmissionData
+    {
+        public int selectedLineIndex;
+        public string selectedFixText;
+
+        public SubmissionData(int lineIndex, string fixText)
+        {
+            selectedLineIndex = lineIndex;
+            selectedFixText = fixText;
+        }
+
+        public override string ToString()
+        {
+            return $"[Line {selectedLineIndex}] {selectedFixText}";
+        }
+    }
+
     public PuzzleType FormatType => PuzzleType.SpotTheBug;
 
     private PuzzleTemplate template;
@@ -50,14 +68,33 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
 
     public bool EvaluateAnswer(object playerAnswer)
     {
-        if (playerAnswer is bool boolAnswer)
-            return boolAnswer;
+        if (playerAnswer is SubmissionData submission)
+        {
+            bool lineCorrect = submission.selectedLineIndex == correctLineIndex;
+            bool fixCorrect = !string.IsNullOrEmpty(submission.selectedFixText)
+                              && submission.selectedFixText.Trim() == correctFix.Trim();
+            bool result = lineCorrect && fixCorrect;
 
-        Debug.LogError("[SpotTheBugPuzzleFormat] Invalid answer type.");
+            Debug.Log($"[SpotTheBugPuzzleFormat] Evaluated structured submission | " +
+                      $"Line: {submission.selectedLineIndex} ({(lineCorrect ? "correct" : "wrong")}) | " +
+                      $"Fix: {submission.selectedFixText} ({(fixCorrect ? "correct" : "wrong")}) | " +
+                      $"Result: {result}");
+            return result;
+        }
+
+        if (playerAnswer is bool boolAnswer)
+        {
+            Debug.LogWarning("[SpotTheBugPuzzleFormat] Legacy bool submission received. " +
+                             "For reproducibility, use SubmissionData instead.");
+            return boolAnswer;
+        }
+
+        Debug.LogError("[SpotTheBugPuzzleFormat] Invalid answer type: " +
+                       $"{playerAnswer?.GetType().Name ?? "null"}");
         return false;
     }
 
-    public object GetCorrectAnswer() => correctFix;
+    public object GetCorrectAnswer() => new SubmissionData(correctLineIndex, correctFix);
 
     private void GeneratePuzzle()
     {

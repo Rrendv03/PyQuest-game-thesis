@@ -79,9 +79,7 @@ public class PCGEngine : MonoBehaviour
 
         Debug.Log($"[PCG] Generated | {componentName} | {puzzleType} | {forcedTier}");
         Debug.Log($"[PCG] After mutation: {string.Join(" | ", mutated.codeLines)}");
-        return new PuzzleData(mutated, formatHandler);
-       
-        
+        return new PuzzleData(mutated, formatHandler);        
     }
 
     public PuzzleTemplate GeneratePuzzleTemplate(string componentName)
