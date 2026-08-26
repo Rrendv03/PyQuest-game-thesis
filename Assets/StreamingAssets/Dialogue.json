@@ -6,87 +6,603 @@
       "nextSequenceIfStay": "",
       "questIDToComplete": "intro_complete",
       "lines": [
-        { "speakerName": "", "dialogueText": "It is an ordinary night.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "Glyph sits at a desk in a room that smells like old books and cold coffee. A single lamp throws yellow light across a notebook filled with half-finished thoughts. Outside, rain moves quietly against the window.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "Nothing about this night suggests it will be the last ordinary one.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "Then, across the room, in the space between the bookshelf and the wall where nothing has ever happened before, something tears.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "Light bleeds through the gap. Not warm light. Not cold light. The light of something ancient being accessed for the first time in a very long time, pale, flickering, threaded through with lines of glowing script."},
-        { "speakerName": "", "dialogueText": "A portal. It pulls, not like a storm. Like a question that demands an answer. Like a blank line in a program waiting to be filled." },
-
-        { "speakerName": "", "dialogueText": "There is no tunnel. No countdown. No gentle transition.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "There is the room, and then there is not the room. Falling through something that is not quite darkness and not quite light, surrounded by cascading script streaming past like rain in reverse.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "Then, ground. Stone. Cold. Real.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "A sound. Ragged. Close. Breathing.", "isCinematic": true },
-
-        { "speakerName": "", "dialogueText": "She is kneeling at the edge of the portal, one hand pressed flat against the stone to keep herself upright. Dressed in layered robes the color of deep water, threaded with the same glowing script, except here, the script is fractured. Lines broken mid-character. Symbols fading at the edges.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "She is wounded. Not in the way of cuts or bruises. Structural. As though the thing that holds her together has been partially unmade.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "But her eyes, when they find Glyph, are completely clear.", "isCinematic": true },
-        { "speakerName": "Pythariel", "dialogueText": "You came through. Good." },
-        { "speakerName": "Glyph", "dialogueText": "What, where is this." },
-        { "speakerName": "Pythariel", "dialogueText": "Aethelscript. The world beneath the language of all things. You would not have been pulled here if you were not meant to come." },
-        { "speakerName": "Pythariel", "dialogueText": "I don't have much time to explain. So I need you to listen carefully, and I need you to believe what I tell you even though none of it will sound possible. Can you do that?" },
-        { "speakerName": "Glyph", "dialogueText": "I think I have to." },
-
-        { "speakerName": "Pythariel", "dialogueText": "Aethelscript is governed by the Codewardens. We were its keepers, twelve of us, each one responsible for maintaining a different layer of the world's foundational logic. We kept the language running. We kept the runes clean. We kept the Sanctums stable." },
-        { "speakerName": "Pythariel", "dialogueText": "Were. Past tense." },
-        { "speakerName": "Pythariel", "dialogueText": "It started small. A single undefined variable in the oldest rune of the First Sanctum, a flaw so minor that for centuries, nothing noticed it. Not us. Not the Sanctums. Not the runes themselves." },
-        { "speakerName": "Pythariel", "dialogueText": "But something noticed." },
-        { "speakerName": "Pythariel", "dialogueText": "We call it the Null Wraith. It is not a creature. It is not a force. It is what grows in the space left by a thing that was never named, an absence that learned to move. It found that undefined variable and it fed on it." },
-        { "speakerName": "Pythariel", "dialogueText": "It reached the Echoing Atrium first. Erased the inscriptions from the stone tablets. Then the Vault of Essence, severed the bindings between names and values. Then the Whitewake Mist, corrupted the communication stream. And then the Labyrinth of Logic." },
-        { "speakerName": "Pythariel", "dialogueText": "By then, we were fighting. Eleven Codewardens against something that does not fight back, it simply erases. You cannot battle an absence." },
-        { "speakerName": "Pythariel", "dialogueText": "One by one, they were unmade. Not killed. Unmade. Erased the way the inscriptions were erased, not destroyed, just removed. As though they had never been assigned." },
-        { "speakerName": "Pythariel", "dialogueText": "I am the last one." },
-
-        { "speakerName": "", "dialogueText": "She reaches inside her robes and withdraws a book. Its cover is the deep blue of old ink, worn smooth at the corners. The moment it is out, the glowing script in the air gravitates toward it slightly, as if recognizing something.", "isCinematic": true },
-        { "speakerName": "Pythariel", "dialogueText": "Everything I know is in here. Every lesson the Codewardens learned across centuries of maintaining Aethelscript, the logic of variables, the art of asking and being answered, the discipline of conditions and loops. All of it." },
-        { "speakerName": "Pythariel", "dialogueText": "It will not give you everything at once. Knowledge given faster than understanding is just noise. The Spellbook knows this. It will open to you one chapter at a time, each one unlocked when you have proven you can carry what came before it." },
-        { "speakerName": "Pythariel", "dialogueText": "Guard it. Not because it is rare, though it is. Guard it because what is inside it is the only thing standing between the Null Wraith and a world with no names left in it." },
-
-        { "speakerName": "Pythariel", "dialogueText": "There are four Sanctums. Each one is a layer of Aethelscript's foundation, and each one has been corrupted by the Null Wraith. At the heart of each Sanctum is a Rune Crystal. If the Wraith reaches them before they are restored, what that Sanctum governs will collapse permanently." },
-        { "speakerName": "Pythariel", "dialogueText": "The Echoing Atrium, where all spoken truths are inscribed. The Crystal there governs manifestation. Words made real." },
-        { "speakerName": "Pythariel", "dialogueText": "The Vault of Essence, where all things are named and given value. The Crystal there governs identity. The difference between something and nothing." },
-        { "speakerName": "Pythariel", "dialogueText": "The Whitewake Mist, where questions reach the system and the system answers. The Crystal there governs communication." },
-        { "speakerName": "Pythariel", "dialogueText": "And the Labyrinth of Logic, where decisions are made and time is driven forward. The Crystal there governs order. Without it, nothing in Aethelscript can sequence correctly." },
-        { "speakerName": "Pythariel", "dialogueText": "Restore the four Crystals. The guides inside each Sanctum are already there, waiting, holding on. Echo, Lyra, Auralis, Selvara. They have been holding the line alone for a long time. They are ready for you." },
-
-        { "speakerName": "Pythariel", "dialogueText": "Before the Null Wraith came, the oldest rune in the First Sanctum produced something unusual. Not an error. Not a warning. A line of output that none of us inscribed and none of us could explain." },
-        { "speakerName": "Pythariel", "dialogueText": "A mind unbound by error shall rewrite the broken world." },
-        { "speakerName": "Pythariel", "dialogueText": "We did not understand it then. We argued about it, catalogued it, filed it away as an anomaly. The Codewardens were precise people. We did not trust things we could not explain." },
-        { "speakerName": "Pythariel", "dialogueText": "I understand it now." },
-        { "speakerName": "Glyph", "dialogueText": "Wait, you're." },
-        { "speakerName": "Pythariel", "dialogueText": "I knew this was coming. I held on long enough to find you. That was what I had left to give." },
-        { "speakerName": "Pythariel", "dialogueText": "Do not be afraid of errors, Glyph. Every error is a thing that can be fixed. That is what makes you different from the Wraith, it only knows how to create absence. You will learn to create presence." },
-        { "speakerName": "Pythariel", "dialogueText": "Rewrite it. All of it. Give everything back its name." },
-        { "speakerName": "", "dialogueText": "And then, like an inscription that has been erased cleanly and completely, she is gone.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "Glyph stands alone, holding a Spellbook and a fractured map and the weight of a prophecy spoken by someone who is no longer there to explain it.", "isCinematic": true },
-        { "speakerName": "", "dialogueText": "Ahead, faint, distant, pulsing in four directions, the four Sanctums wait.", "isCinematic": true }
+        {
+          "speakerName": "",
+          "dialogueText": "On a quiet, rainy night.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "",
+          "dialogueText": "Glyph sits at his desk seeking inspiration when a silent tear in reality opens near his bookshelf.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "",
+          "dialogueText": "An ancient, pale light containing self-writing script forms a glowing rift before him. ",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "",
+          "dialogueText": "Startled, Glyph drops his pen and instinctively reaches out into the yielding darkness.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "Where — what is this place?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "Aethelscript. The world beneath the language of all things. You would not have been pulled here if you were not meant to come.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "I don't have long. Listen. We're the codewardens. We keep this world's Python Runes declared and true.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "'Keep'? Past tense?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "What does it do?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "It doesn't break things. It un-writes them. It's already taken all four Sanctums. It's taken every codewarden but me.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "So what am I supposed to do?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "Take this. The Spellbook. Everything I know, in these pages. It teaches one lesson at a time.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "And after I learn it?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "Four Sanctums. Four Rune Crystals. Restore them, or Null Wraith finishes the job",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "I don't know where to start.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "First is the Print Console where spoken truth becomes stone. Its Crystal governs manifestation, turning words into real, physical things” (Print Statements)",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "Next is the Vars Vault where things are given their name and value. Its Crystal controls identity, keeping the line drawn between something and nothing” (Variables and basic operations)",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "The Input Mists where the world actually listens and responds. Its Crystal governs communication, controlling the connection and the desire to answer” (Input handling)",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "Lastly, The Elif Labyrinth, where decisions are made and time actually progresses. Its Crystal controls order. Without it, nothing follows anythingthe world completely forgets how to take turns” (Conditionals and loops)",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "A guide is waiting in each Sanctum. Printessa. Variel. Evalyn. Whilow. Find them.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "What about you?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "I held on just long enough to find you. That's all I had left.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "Wait-",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Pythariel",
+          "dialogueText": "Don't fear getting it wrong. Every error can be fixed. That's what separates you from Null Wraith. Rewrite what's broken.",
+          "isCinematic": false
+        }
       ]
     },
     {
-      "sequenceID": "EXAMPLE_npc_first_meeting",
+      "sequenceID": "printessa_first_meeting",
       "endBehavior": "stay",
-      "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
-      "questIDToComplete": "EXAMPLE_echoing_atrium_first_talk",
+      "nextSequenceIfStay": "printessa_mission_reminder",
+      "questIDToComplete": "print_console_speak_printessa",
       "lines": [
-        { "speakerName": "Echo", "dialogueText": "PLACEHOLDER: first-meeting line for Echo goes here. Delete this sequence once real content exists." }
+        {
+          "speakerName": "",
+          "dialogueText": "A figure stands at the center of the console hall, her form flickering with printed characters that scroll faintly across her robes like a screen that never stops refreshing.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "Another traveler came to read the walls with nothing left to say.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "What happened to them? These tablets are blank.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "Null Wraith erased them. Every statement that proved this place was real now gone.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "How do I fix that?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "Print it. If it isn't printed, it isn't true here.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "In Python you write print(\"your message here\"). The word print tells the console you are about to speak. The parentheses hold what you're saying. The quotation marks tell it your words are text, not a command.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "Get the quotes wrong, open with one kind and close with another, and the console hears nothing at all. It has to match, start to finish.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "Three missions remain on your tablet. Complete them and the gate answers.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "I'll try.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "Trying is how it starts.",
+          "isCinematic": false
+        }
       ]
     },
     {
-      "sequenceID": "EXAMPLE_npc_repeat_summary",
+      "sequenceID": "printessa_mission_reminder",
       "endBehavior": "stay",
-      "nextSequenceIfStay": "EXAMPLE_npc_repeat_summary",
+      "nextSequenceIfStay": "printessa_mission_reminder",
       "questIDToComplete": "",
       "lines": [
-        { "speakerName": "Echo", "dialogueText": "PLACEHOLDER: summarized reminder of the player's current objective goes here." }
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "Your tablet still holds what's left. Check it before you go further.",
+          "isCinematic": false
+        }
       ]
     },
     {
-      "sequenceID": "001",
+      "sequenceID": "printessa_after_restore",
+      "endBehavior": "depart",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "print_console_restore_crystal",
+      "lines": [
+        {
+          "speakerName": "",
+          "dialogueText": "The Crystal at the center of the console hall catches the light of every restored statement and holds it. The floor stops flickering.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "It just needed to know it was finished.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "Don't we all. Remember that further in, the world only knows what you tell it.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "You did well, traveler. Better than most who've stood where you're standing.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Printessa",
+          "dialogueText": "The Vars Vault is next. Follow the compass, it knows the way even if you don't.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "",
+          "dialogueText": "The far gate opens. Printessa steps back into the scrolling light and does not follow.",
+          "isCinematic": true
+        }
+      ]
+    },
+    {
+      "sequenceID": "variel_first_meeting",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "variel_mission_reminder",
+      "questIDToComplete": "vars_vault_speak_variel",
+      "lines": [
+        {
+          "speakerName": "Variel",
+          "dialogueText": "Unassigned boulder, no mass, no destination. You're not one of mine.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "No.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "Good. I've catalogued enough of those today.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "What is this place?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "The Vars Vault. Nothing exists here without a name and a value. Null Wraith severed the bindings, now things drift.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "How do I stop it?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "Name it. Assign it a value. mass = 40 gives that boulder a mass. distance = 12 gives it a place to be measured from.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "Names are case sensitive here. distance and Distance are two different things to the Vault, not the same thing spelled differently.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "And a single equals sign only assigns. It doesn't ask whether two things are equal, that's a different question for a different day.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "Noted.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "Your tablet will keep count. Look before you leave.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "variel_mission_reminder",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "variel_mission_reminder",
+      "questIDToComplete": "",
+      "lines": [
+        {
+          "speakerName": "Variel",
+          "dialogueText": "Two bindings held, one Crystal left dark. Your tablet knows which.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "variel_after_restore",
+      "endBehavior": "depart",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "vars_vault_restore_crystal",
+      "lines": [
+        {
+          "speakerName": "",
+          "dialogueText": "Names and values settle back into place across the Vault. What was drifting is named again.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "Named, valued, real. That's the Vault settled.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "Well assigned, Glyph. Not everyone binds a thing correctly on the first try.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Variel",
+          "dialogueText": "The Mists are next, and they're worse than they sound. The compass will keep you pointed the right way.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "evalyn_first_meeting",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "evalyn_mission_reminder",
+      "questIDToComplete": "input_mists_speak_evalyn",
+      "lines": [
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "You won't get anything from this place by demanding it.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "Then how?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "Ask. Precisely. This place only answers what it's given.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "input(\"Who approaches?\") asks a question and waits. Whatever the Mists give back, it comes back as words, even if you asked for a number.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "If you need a number instead of words, you have to say so yourself, int(input(\"...\")), or the Mists will hand you digits that refuse to add.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "That seems like a strange rule.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "Every place has one. Ours is that it never assumes what you meant.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "Three things left on your tablet. Ask this place exactly what it needs and it will answer.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "evalyn_mission_reminder",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "evalyn_mission_reminder",
+      "questIDToComplete": "",
+      "lines": [
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "The Mists won't fill your tablet in for you. Ask again.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "evalyn_after_restore",
+      "endBehavior": "depart",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "input_mists_restore_crystal",
+      "lines": [
+        {
+          "speakerName": "",
+          "dialogueText": "The fog thins where it had settled thickest. The Mists' Crystal takes the last answer and holds it.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "It answered. That's the Mists' Crystal settled.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "You asked well. This place doesn't answer everyone that cleanly.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Evalyn",
+          "dialogueText": "The Labyrinth won't forgive carelessness, and it's the last of them. The compass will take you there.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "whilow_first_meeting",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "whilow_mission_reminder",
+      "questIDToComplete": "elif_labyrinth_speak_whilow",
+      "lines": [
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "If you go left, one thing happens. Else, another. That's the whole maze.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "And if I choose wrong?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "You loop back and choose again. Null Wraith broke the conditions here, branches lead nowhere, loops don't close.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "Indentation is the only wall in this maze. Line up wrong and the path doesn't exist, even if the words are right.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "elif only gets asked if what came before it said no. Once one path answers, the rest stay quiet.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "And a loop that never changes what it's checking never ends. Something inside it has to move, or you're just walking in place.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "How do I fix that?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "Read the condition first. Then decide.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "Your tablet holds the last of it. One Crystal, still dark.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "whilow_mission_reminder",
+      "endBehavior": "stay",
+      "nextSequenceIfStay": "whilow_mission_reminder",
+      "questIDToComplete": "",
+      "lines": [
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "One line left. Read it before you move.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "whilow_after_restore",
+      "endBehavior": "depart",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "elif_labyrinth_restore_crystal",
+      "lines": [
+        {
+          "speakerName": "",
+          "dialogueText": "The Main Loop turns again, closing on itself the way it was always meant to. The last Crystal answers.",
+          "isCinematic": true
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "It remembers. That's the last Crystal answered.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "What's after this?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "Uncharted. But you have what you need.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "And if I'm not ready?",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Whilow",
+          "dialogueText": "Then you go anyway.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "finale",
       "endBehavior": "none",
       "nextSequenceIfStay": "",
       "questIDToComplete": "",
       "lines": [
-        { "speakerName": "Bruh", "dialogueText": "Suprise, Motherfucker" }
+        {
+          "speakerName": "Null Wraith",
+          "dialogueText": "...undefined... undefined...",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "Not anymore.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "undefined_variable = \"resolved\"\nif undefined_variable:\n    print(\"The rune is whole.\")",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Null Wraith",
+          "dialogueText": "...no space left to,",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "It's whole. The prophecy held.",
+          "isCinematic": false
+        }
+      ]
+    },
+    {
+      "sequenceID": "epilogue",
+      "endBehavior": "none",
+      "nextSequenceIfStay": "",
+      "questIDToComplete": "",
+      "lines": [
+        {
+          "speakerName": "Null Wraith",
+          "dialogueText": "...not gone... only unassigned...",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Null Wraith",
+          "dialogueText": "...what was corrupted once... can be corrupted again...",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "Try it.",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Null Wraith",
+          "dialogueText": "...you carry something now... I was never built to erase...",
+          "isCinematic": false
+        },
+        {
+          "speakerName": "Glyph",
+          "dialogueText": "Understanding.",
+          "isCinematic": false
+        }
       ]
     }
   ]

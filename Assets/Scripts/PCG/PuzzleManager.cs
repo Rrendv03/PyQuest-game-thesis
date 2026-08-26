@@ -154,15 +154,25 @@ public class PuzzleManager : MonoBehaviour
         }
 
         bool isCorrect = currentPuzzle.IsAnswerCorrect(playerAnswerChoice);
-
         int optionCount = currentPuzzle.formatHandler.GetOptionCount();
         float pGuessOverride = optionCount > 0 ? 1f / optionCount : 0f;
 
-        Debug.Log($"[PuzzleManager] Player answered: {playerAnswerChoice} | Correct: {isCorrect} | " +
-                  $"Format option count: {optionCount} | p_guess override: {pGuessOverride:F4}");
+        Debug.Log($"[PuzzleManager] Player answered: {playerAnswerChoice} | Correct: {isCorrect}");
 
         currentPuzzleCanvasPanel.SetActive(false);
         currentPuzzle = null;
+
+        // === TABLET MISSION PATH ===
+        if (_tabletMissionCallback != null)
+        {
+            var callback = _tabletMissionCallback;
+            _tabletMissionCallback = null;
+            callback.Invoke(isCorrect);
+            currentPuzzle = null;
+            currentActiveComponent = null;
+            return;
+        }
+
 
         if (EncounterManager.Instance != null &&
             EncounterManager.Instance.IsEncounterActive())
@@ -186,5 +196,26 @@ public class PuzzleManager : MonoBehaviour
     public void UserSubmission(bool isCorrect)
     {
         UserSubmission((object)isCorrect);
+    }
+    // ========== TABLET MISSION PUZZLE PIPELINE ==========
+
+    private System.Action<bool> _tabletMissionCallback;
+
+    public void StartTabletMissionPuzzle(string knowledgeComponent, PuzzleType puzzleType, System.Action<bool> onComplete)
+    {
+        currentActiveComponent = knowledgeComponent;
+        _tabletMissionCallback = onComplete;
+
+        currentPuzzle = PCGEngine.Instance.GeneratePuzzle(knowledgeComponent, puzzleType);
+
+        if (currentPuzzle == null || currentPuzzle.formatHandler == null)
+        {
+            Debug.LogError("[PuzzleManager] Failed to generate tablet mission puzzle.");
+            _tabletMissionCallback?.Invoke(false);
+            _tabletMissionCallback = null;
+            return;
+        }
+
+        ActivatePuzzleCanvas();
     }
 }

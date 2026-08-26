@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,7 +9,8 @@ using UnityEngine.UI;
 /// Each slot panel displays: slot number, mission name, location,
 /// playtime, date saved, and Save/Load/Delete buttons.
 /// Wire one SlotPanel entry per slot in the Inspector.
-/// This panel should be toggled on/off by the pause menu or main menu.
+/// This panel is opened via the static Open() method, which automatically
+/// handles the Back button navigation to whatever panel called it.
 /// </summary>
 public class SaveSlotUI : MonoBehaviour
 {
@@ -29,6 +32,10 @@ public class SaveSlotUI : MonoBehaviour
     [Header("Slot Panels")]
     public SlotPanel[] slots;             // assign 4 entries: slots 1, 2, 3, autosave (0)
 
+    [Header("Navigation")]
+    [Tooltip("Drag your Back Button here. Its OnClick is wired automatically in code.")]
+    public Button backButton;
+
     [Header("Confirm Panel")]
     public GameObject confirmPanel;
     public Text confirmMessageText;
@@ -39,12 +46,65 @@ public class SaveSlotUI : MonoBehaviour
     private enum PendingAction { None, Save, Load, Delete }
     private PendingAction pendingAction = PendingAction.None;
 
+    // Stores the instruction on how to go back
+    private Action onBackCallback;
+
     void OnEnable()
     {
         RefreshAllSlots();
+        WireBackButton();
     }
 
-    // ?? Refresh ???????????????????????????????????????????????????????????????
+    // -------------------------------------------------------------------
+    // AUTOMATIC OPEN/CLOSE SYSTEM
+    // Other menus call this to open the SaveLoad screen.
+    // -------------------------------------------------------------------
+
+    /// <summary>
+    /// Call this from MainMenu or PauseMenu to open the screen.
+    /// Example: SaveSlotUI.Open(mySaveLoadPanel, () => myMainMenuPanel.SetActive(true));
+    /// </summary>
+    public static void Open(GameObject saveLoadPanelObject, Action backAction)
+    {
+        if (saveLoadPanelObject == null) return;
+
+        SaveSlotUI ui = saveLoadPanelObject.GetComponent<SaveSlotUI>();
+        if (ui != null)
+        {
+            ui.onBackCallback = backAction;
+            saveLoadPanelObject.SetActive(true);
+        }
+        else
+        {
+            Debug.LogError("[SaveSlotUI] Open() called on an object without a SaveSlotUI component!");
+        }
+    }
+
+    private void WireBackButton()
+    {
+        if (backButton != null)
+        {
+            backButton.onClick.RemoveAllListeners();
+            backButton.onClick.AddListener(OnBackButtonClicked);
+        }
+        else
+        {
+            Debug.LogWarning("[SaveSlotUI] Back button is not assigned in the inspector!");
+        }
+    }
+
+    private void OnBackButtonClicked()
+    {
+        // Hide this save/load screen
+        gameObject.SetActive(false);
+
+        // Execute whatever instruction was given by the menu that opened this
+        onBackCallback?.Invoke();
+
+        // Clear the callback to free up memory
+        onBackCallback = null;
+    }
+
     public void RefreshAllSlots()
     {
         if (slots == null) return;
@@ -102,8 +162,6 @@ public class SaveSlotUI : MonoBehaviour
         if (slot.saveButton != null)
         {
             slot.saveButton.interactable = slot.slotNumber != 0;
-
-            // Wire dynamically so we don't double-subscribe on repeated RefreshAllSlots
             slot.saveButton.onClick.RemoveAllListeners();
             int capturedSlot = slot.slotNumber;
             slot.saveButton.onClick.AddListener(() => RequestSave(capturedSlot));

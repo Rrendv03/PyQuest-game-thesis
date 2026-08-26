@@ -9,6 +9,8 @@ using UnityEngine.EventSystems;
 /// </summary>
 public class HUDController : MonoBehaviour
 {
+    public static HUDController Instance;
+
     [Header("Movement Buttons")]
     public Button buttonUp;
     public Button buttonDown;
@@ -22,6 +24,24 @@ public class HUDController : MonoBehaviour
     public static bool MoveBackward;
     public static bool MoveLeft;
     public static bool MoveRight;
+
+    void Awake()
+    {
+        Instance = this;
+    }
+
+    [Header("HUD Canvas Root")]
+    public GameObject hudCanvas; // drag the HUDCanvas root GameObject here
+
+    // SetVisible never touches the interact button.
+    // InteractButtonController owns its own visibility based on NPC range.
+    public void SetVisible(bool visible)
+    {
+        if (hudCanvas != null)
+            hudCanvas.SetActive(visible);
+        else
+            gameObject.SetActive(visible);
+    }
 
     void Start()
     {

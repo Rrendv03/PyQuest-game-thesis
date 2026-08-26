@@ -1,5 +1,5 @@
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -8,29 +8,21 @@ using UnityEngine.SceneManagement;
 /// Manages three manual save slots and one dedicated autosave slot.
 /// Autosave never overwrites manual slots.
 /// Fires every 5 minutes while IsSafeToSave is true.
-/// DialogueManager and EncounterManager must set IsSafeToSave = false
-/// while active and restore it when done.
 ///
-/// Save files live in Application.persistentDataPath:
-///   save_slot_1.json
-///   save_slot_2.json
-///   save_slot_3.json
-///   save_autosave.json
-///
-/// SaveSlotData is what gets serialized per slot.
-/// SaveSlotMeta is the lightweight summary read for the slot selection UI
-/// without loading the full save.
+/// Canonical single source of truth for SaveSlotData - do not keep
+/// a second copy of this class anywhere else in the project, having
+/// two SaveLoadManager/SaveSlotData definitions is what caused the
+/// missing-field compile errors this file fixes.
 /// </summary>
 public class SaveLoadManager : MonoBehaviour
 {
     public static SaveLoadManager Instance;
-
-    // Set false by DialogueManager and EncounterManager while active.
-    // Autosave checks this before writing.
     public static bool IsSafeToSave = true;
 
+    private NPCStateEntry[] _lastAppliedNPCStates = null;
+
     [Header("Autosave")]
-    public float autosaveIntervalSeconds = 300f; // 5 minutes
+    public float autosaveIntervalSeconds = 300f;
 
     [Header("Player Reference")]
     public Transform playerTransform;
@@ -38,19 +30,12 @@ public class SaveLoadManager : MonoBehaviour
     private float autosaveTimer = 0f;
     private const string AutosaveFilename = "save_autosave.json";
 
-    // ?? Slot filename map ?????????????????????????????????????????????????????
     private static string SlotFilename(int slot)
-    {
-        if (slot == 0) return AutosaveFilename;
-        return $"save_slot_{slot}.json";
-    }
+        => slot == 0 ? AutosaveFilename : $"save_slot_{slot}.json";
 
     private static string SlotPath(int slot)
-    {
-        return Path.Combine(Application.persistentDataPath, SlotFilename(slot));
-    }
+        => Path.Combine(Application.persistentDataPath, SlotFilename(slot));
 
-    // ?????????????????????????????????????????????????????????????????????????
     void Awake()
     {
         if (Instance == null)
@@ -66,22 +51,29 @@ public class SaveLoadManager : MonoBehaviour
 
     void Update()
     {
-        if (!IsSafeToSave) return;
+        // Prefer SaveRestrictionEnforcer's blocker set when present;
+        // fall back to the legacy static flag for scenes that haven't
+        // wired a blocker in yet.
+        bool safe = SaveRestrictionEnforcer.Instance != null
+            ? SaveRestrictionEnforcer.Instance.IsSafeToSave
+            : IsSafeToSave;
+
+        if (!safe) return;
 
         autosaveTimer += Time.deltaTime;
         if (autosaveTimer >= autosaveIntervalSeconds)
         {
             autosaveTimer = 0f;
-            SaveToSlot(0); // slot 0 = autosave
+            SaveToSlot(0);
         }
     }
 
-    // ?? Save ??????????????????????????????????????????????????????????????????
+    // == Save ==================================================
     public void SaveToSlot(int slot)
     {
         if (slot < 0 || slot > 3)
         {
-            Debug.LogWarning($"[SaveLoadManager] Invalid slot {slot}. Valid: 1-3, 0 = autosave.");
+            Debug.LogWarning($"[SaveLoadManager] Invalid slot {slot}.");
             return;
         }
 
@@ -91,7 +83,16 @@ public class SaveLoadManager : MonoBehaviour
         try
         {
             File.WriteAllText(SlotPath(slot), json);
-            Debug.Log($"[SaveLoadManager] Saved slot {slot} to {SlotPath(slot)}");
+            Debug.Log($"[SaveLoadManager] Saved slot {slot}.");
+
+            // Cement the student log CSV on MANUAL saves only (slot != 0).
+            // Autosave (slot 0) does not trigger this, per the requirement
+            // that this only fires when the respondent deliberately saves,
+            // not on the 5-minute timer. ExportCanonicalCsv() overwrites
+            // one fixed-name file every time, it does not append, so
+            // calling it on every manual save cannot produce duplicate rows.
+            if (slot != 0)
+                StudentLogManager.Instance?.ExportCanonicalCsv();
         }
         catch (Exception e)
         {
@@ -99,31 +100,66 @@ public class SaveLoadManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Convenience wrapper used by SanctumManager and other systems
+    /// that just want "save now to the dedicated autosave slot"
+    /// without knowing slot numbering.
+    /// </summary>
+    public void AutoSave() => SaveToSlot(0);
+
+    /// <summary>
+    /// Convenience query for BossGate and similar scripts that need a
+    /// yes/no on "has this sanctum's boss been defeated" without going
+    /// through StoryProgressionManager directly. Delegates to it rather
+    /// than tracking a second copy of the same state.
+    /// </summary>
+    public bool IsSanctumBossDefeated(string sanctumID)
+    {
+        return StoryProgressionManager.Instance != null
+            && StoryProgressionManager.Instance.HasDefeatedBoss(sanctumID);
+    }
+
     private SaveSlotData BuildSaveData(int slot)
     {
         SaveSlotData data = new SaveSlotData();
-
         data.slotNumber = slot;
         data.dateSavedISO = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
         data.currentScene = SceneManager.GetActiveScene().name;
 
-        // Player position
         if (playerTransform != null)
         {
             data.playerPositionX = playerTransform.position.x;
             data.playerPositionY = playerTransform.position.y;
             data.playerPositionZ = playerTransform.position.z;
+            data.playerYRotation = playerTransform.eulerAngles.y;
         }
 
-        // Story progression
         if (StoryProgressionManager.Instance != null)
         {
             data.completedQuestIDs = StoryProgressionManager.Instance.ExportCompletedQuestIDs();
             data.activeQuestID = StoryProgressionManager.Instance.ExportActiveQuestID();
+
+            data.storyProgression = new StoryProgressionData
+            {
+                visitedSanctums = StoryProgressionManager.Instance.ExportVisitedSanctums(),
+                defeatedBosses = StoryProgressionManager.Instance.ExportDefeatedBosses()
+            };
+
+            // Rune crystals activate on boss defeat, so "restored" is
+            // the same signal as "defeated" - no separate tracking needed.
+            data.restoredCrystalSanctums = StoryProgressionManager.Instance.ExportDefeatedBosses();
         }
 
-        // NPC states
-        data.npcStates = new System.Collections.Generic.List<NPCStateEntry>();
+        if (BKTEngine.Instance != null)
+            data.bktMastery = BKTEngine.Instance.ExportMastery();
+
+        if (MissionTabletManager.Instance != null)
+            data.completedMissionIDs = MissionTabletManager.Instance.ExportCompletedMissions();
+
+        if (StudentLogManager.Instance != null)
+            data.studentLogs = StudentLogManager.Instance.ExportLogs();
+
+        data.npcStates = new List<NPCStateEntry>();
         NPCController[] npcs = FindObjectsOfType<NPCController>();
         foreach (var npc in npcs)
         {
@@ -135,21 +171,19 @@ public class SaveLoadManager : MonoBehaviour
             });
         }
 
-        // Active quest display name (looked up from questDisplayNames table)
         data.missionDisplayName = GetMissionDisplayName(data.activeQuestID);
         data.locationDisplayName = GetLocationDisplayName(data.currentScene);
 
-        // Playtime: carried forward from existing save if one exists, plus
-        // time elapsed since scene load. Full playtime tracking requires a
-        // session timer, which is a separate addition. For now stores the
-        // value from the last save if one exists, otherwise 0.
         SaveSlotData existing = LoadFromSlot(slot);
         data.playTimeSeconds = existing != null ? existing.playTimeSeconds : 0f;
+
+        if (XPManager.Instance != null)
+            data.currentXP = XPManager.Instance.ExportXP();
 
         return data;
     }
 
-    // ?? Load ??????????????????????????????????????????????????????????????????
+    // == Load ==================================================
     public SaveSlotData LoadFromSlot(int slot)
     {
         string path = SlotPath(slot);
@@ -167,61 +201,78 @@ public class SaveLoadManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Loads a save slot and restores game state into the current session.
-    /// Call this from the save slot selection UI after the player taps Load.
-    /// </summary>
     public void ApplySaveData(SaveSlotData data)
     {
         if (data == null) return;
 
-        // Restore story progression
         if (StoryProgressionManager.Instance != null)
         {
             StoryProgressionManager.Instance.ImportCompletedQuestIDs(data.completedQuestIDs);
             StoryProgressionManager.Instance.ImportActiveQuestID(data.activeQuestID);
+
+            if (data.storyProgression != null)
+            {
+                StoryProgressionManager.Instance.ImportVisitedSanctums(data.storyProgression.visitedSanctums);
+                StoryProgressionManager.Instance.ImportDefeatedBosses(data.storyProgression.defeatedBosses);
+            }
         }
 
-        // Set respawn point so PlayerMovement.Awake() places the player correctly
+        if (QuestManager.Instance != null)
+            QuestManager.Instance.OnQuestCompleted(data.activeQuestID);
+
+        if (XPManager.Instance != null)
+            XPManager.Instance.ImportXP(data.currentXP);
+
+        if (BKTEngine.Instance != null)
+            BKTEngine.Instance.ImportMastery(data.bktMastery);
+
+        if (MissionTabletManager.Instance != null)
+            MissionTabletManager.Instance.ImportCompletedMissions(data.completedMissionIDs);
+
+        if (StudentLogManager.Instance != null)
+            StudentLogManager.Instance.ImportLogs(data.studentLogs);
+
         SceneTransition.RespawnPoint = new Vector3(
             data.playerPositionX,
             data.playerPositionY,
             data.playerPositionZ);
 
-        // Load the scene — NPCs restore state via OnSceneLoaded below
-        _pendingNPCStates = data.npcStates;
+        // Critical: restore timeScale and save flag before loading.
+        // The pause menu sets timeScale = 0 when open. If we load a scene
+        // while timeScale is 0, SceneEntrance.FadeIn() coroutine never runs
+        // and the black overlay never disappears.
+        Time.timeScale = 1f;
+        IsSafeToSave = true;
+        SaveRestrictionEnforcer.Instance?.ClearAllBlockers();
+
+        _lastAppliedNPCStates = data.npcStates != null ? data.npcStates.ToArray() : null;
+
         SceneManager.sceneLoaded += OnSceneLoaded;
         SceneManager.LoadScene(data.currentScene);
     }
-
-    private System.Collections.Generic.List<NPCStateEntry> _pendingNPCStates;
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
 
-        if (_pendingNPCStates == null) return;
-
         NPCController[] npcs = FindObjectsOfType<NPCController>();
-        foreach (var npc in npcs)
+        if (_lastAppliedNPCStates != null)
         {
-            foreach (var entry in _pendingNPCStates)
+            foreach (var entry in _lastAppliedNPCStates)
             {
-                if (entry.npcID == npc.npcID)
+                foreach (var npc in npcs)
                 {
-                    npc.RestoreState(entry.currentSequenceID, entry.hasDeparted);
-                    break;
+                    if (entry.npcID == npc.npcID)
+                    {
+                        npc.RestoreState(entry.currentSequenceID, entry.hasDeparted);
+                        break;
+                    }
                 }
             }
         }
-
-        _pendingNPCStates = null;
     }
 
-    public bool SlotExists(int slot)
-    {
-        return File.Exists(SlotPath(slot));
-    }
+    public bool SlotExists(int slot) => File.Exists(SlotPath(slot));
 
     public void DeleteSlot(int slot)
     {
@@ -233,27 +284,16 @@ public class SaveLoadManager : MonoBehaviour
         }
     }
 
-    // ?? Display Name Lookups ??????????????????????????????????????????????????
-    // Author these two tables as your quest IDs and scene names are finalized.
-    // Neither list is complete; add entries here as new quests and scenes
-    // are built out. Unrecognized IDs fall back to the raw ID string.
-
+    // == Display Name Lookups ==================================
     private string GetMissionDisplayName(string questID)
     {
-        switch (questID)
+        if (QuestManager.Instance != null)
         {
-            case "intro_complete": return "Find the Echoing Atrium";
-            case "echoing_atrium_first_talk": return "Speak with Echo";
-            case "echoing_atrium_complete": return "Find the Vault of Essence";
-            case "vault_first_talk": return "Speak with Lyra";
-            case "vault_complete": return "Find the Whitewake Mist";
-            case "whitewake_first_talk": return "Speak with Auralis";
-            case "whitewake_complete": return "Find the Labyrinth of Logic";
-            case "labyrinth_first_talk": return "Speak with Selvara";
-            case "labyrinth_complete": return "Aethelscript Restored";
-            default:
-                return string.IsNullOrEmpty(questID) ? "No Active Mission" : questID;
+            string name = QuestManager.Instance.GetActiveQuestDisplayName();
+            if (!string.IsNullOrEmpty(name)) return name;
         }
+
+        return string.IsNullOrEmpty(questID) ? "No Active Mission" : questID;
     }
 
     private string GetLocationDisplayName(string sceneName)
@@ -262,17 +302,16 @@ public class SaveLoadManager : MonoBehaviour
         {
             case "IntroScene": return "Aethelscript - Arrival";
             case "MainMap": return "Aethelscript";
-            case "EchoingAtrium": return "Echoing Atrium";
-            case "VaultOfEssence": return "Vault of Essence";
-            case "WhitewakeMist": return "Whitewake Mist";
-            case "LabyrinthOfLogic": return "Labyrinth of Logic";
-            default:
-                return string.IsNullOrEmpty(sceneName) ? "Unknown" : sceneName;
+            case "PrintConsole": return "Print Console";
+            case "VarsVault": return "Vars Vault";
+            case "InputMists": return "Input Mists";
+            case "ElifLabyrinth": return "Elif Labyrinth";
+            default: return string.IsNullOrEmpty(sceneName) ? "Unknown" : sceneName;
         }
     }
 }
 
-// ?? Data Structures ???????????????????????????????????????????????????????????
+// == Data Structures ==========================================
 [Serializable]
 public class SaveSlotData
 {
@@ -280,19 +319,23 @@ public class SaveSlotData
     public string missionDisplayName;
     public string locationDisplayName;
     public float playTimeSeconds;
+    public int currentXP;
     public string dateSavedISO;
-
     public float playerPositionX;
     public float playerPositionY;
     public float playerPositionZ;
+    public float playerYRotation;
     public string currentScene;
-
     public string activeQuestID;
-    public System.Collections.Generic.List<string> completedQuestIDs
-        = new System.Collections.Generic.List<string>();
+    public List<string> completedQuestIDs = new List<string>();
+    public List<NPCStateEntry> npcStates = new List<NPCStateEntry>();
 
-    public System.Collections.Generic.List<NPCStateEntry> npcStates
-        = new System.Collections.Generic.List<NPCStateEntry>();
+    // Added for BKT / tablet / logging integration
+    public List<BKTMasteryEntry> bktMastery = new List<BKTMasteryEntry>();
+    public List<string> completedMissionIDs = new List<string>();
+    public List<string> restoredCrystalSanctums = new List<string>();
+    public StudentLogData studentLogs;
+    public StoryProgressionData storyProgression;
 }
 
 [Serializable]
@@ -301,4 +344,18 @@ public class NPCStateEntry
     public string npcID;
     public string currentSequenceID;
     public bool hasDeparted;
+}
+
+/// <summary>
+/// Sanctum-level story state that isn't part of the linear quest
+/// ledger: which sanctums have been visited and which bosses have
+/// been defeated. Kept as its own class (rather than flat fields on
+/// SaveSlotData) so StoryProgressionManager's export/import stays a
+/// single call each.
+/// </summary>
+[Serializable]
+public class StoryProgressionData
+{
+    public List<string> visitedSanctums = new List<string>();
+    public List<string> defeatedBosses = new List<string>();
 }

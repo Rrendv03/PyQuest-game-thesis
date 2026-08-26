@@ -5,8 +5,10 @@ using UnityEngine.UI;
 public class NPCController : MonoBehaviour
 {
     [Header("NPC Identity")]
-    public string npcID;              // stable ID for save matching, e.g. "echo", "lyra"
-    public string npcDisplayName;     // shown in the interact prompt, e.g. "Echo"
+    public string npcID;              // stable ID for save matching, e.g. "printessa", "variel"
+    public string npcDisplayName;     // shown in the interact prompt, e.g. "Printessa"
+    [Tooltip("Quest ID to auto-complete when player first interacts (e.g. print_console_find_printessa).")]
+    public string questIDToCompleteOnInteract;
 
     [Header("Dialogue")]
     public string startingSequenceID;
@@ -27,6 +29,14 @@ public class NPCController : MonoBehaviour
 
     [Header("Departure")]
     public float departFadeDuration = 1.5f;
+
+    [Header("HUD Compass (optional)")]
+    [Tooltip("If set, the HUD compass will point here after THIS NPC's current dialogue sequence finishes. Leave empty for NPCs that don't need to direct the player anywhere.")]
+    public Transform compassTargetOnComplete;
+    [Tooltip("Label shown above the compass arrow, e.g. 'Exit' or 'Vars Vault'.")]
+    public string compassLabelOnComplete = "Exit";
+    [Tooltip("Only show the compass when THIS sequenceID is the one that just finished. Leave empty to fire on ANY sequence completion for this NPC, which is what currently causes the compass to appear after first-meeting/intro dialogue too.")]
+    public string compassTriggerSequenceID = "";
 
     private bool playerInRange = false;
     private bool interactionActive = false;
@@ -128,6 +138,10 @@ public class NPCController : MonoBehaviour
         if (cameraPanCoroutine != null) StopCoroutine(cameraPanCoroutine);
         cameraPanCoroutine = StartCoroutine(PanCamera(cameraPanOffset, cameraPanRotation, cameraPanDuration));
 
+        // In NPCController.TriggerInteraction(), right after the null checks and before Play()
+        if (!string.IsNullOrEmpty(questIDToCompleteOnInteract) && StoryProgressionManager.Instance != null)
+            StoryProgressionManager.Instance.CompleteQuest(questIDToCompleteOnInteract);
+
         DialogueManager.Instance.Play(currentSequenceID);
 
         Debug.Log($"[NPCController] Starting interaction: {currentSequenceID}");
@@ -151,6 +165,18 @@ public class NPCController : MonoBehaviour
         if (!string.IsNullOrEmpty(finished.questIDToComplete) && StoryProgressionManager.Instance != null)
             StoryProgressionManager.Instance.CompleteQuest(finished.questIDToComplete);
 
+        // Compass hook: fires only when compassTargetOnComplete is assigned AND
+        // (compassTriggerSequenceID is empty, meaning "any sequence", OR the
+        // sequence that just finished matches compassTriggerSequenceID). Leaving
+        // compassTriggerSequenceID empty reproduces the old unconditional
+        // behavior, set it to a specific farewell/directional sequenceID to stop
+        // the compass firing on intro/tutorial dialogue.
+        bool compassSequenceMatches = string.IsNullOrEmpty(compassTriggerSequenceID)
+            || finished.sequenceID == compassTriggerSequenceID;
+
+        if (compassTargetOnComplete != null && compassSequenceMatches && HUDCompassController.Instance != null)
+            HUDCompassController.Instance.ShowCompassTo(compassTargetOnComplete, compassLabelOnComplete);
+
         switch (finished.endBehavior)
         {
             case "depart":
@@ -172,6 +198,20 @@ public class NPCController : MonoBehaviour
 
     private IEnumerator Depart()
     {
+        // BUGFIX: Set departed flag immediately so player can't re-trigger
+        // dialogue during the 1.5s fade. Also clean up HUD references
+        // because gameObject.SetActive(false) does NOT fire OnTriggerExit.
+        hasDeparted = true;
+
+        playerInRange = false;
+        playerTransform = null;
+        if (interactPromptUI != null) interactPromptUI.SetActive(false);
+
+        InteractButtonController hud = FindObjectOfType<InteractButtonController>();
+        if (hud != null) hud.ClearNPC(this);
+
+        Debug.Log($"[NPCController] Depart() cleanup executed for {npcID}. playerInRange={playerInRange}, hasDeparted={hasDeparted}");
+
         // Fade to black, disable, fade back, matching the seamless
         // departure behavior specified for NPCs the script sends away.
         // Reuses DialogueManager's fadeOverlay since it already sits on
@@ -191,7 +231,6 @@ public class NPCController : MonoBehaviour
             }
         }
 
-        hasDeparted = true;
         gameObject.SetActive(false);
 
         if (overlay != null)
@@ -279,5 +318,26 @@ public class NPCController : MonoBehaviour
 
         if (hasDeparted)
             gameObject.SetActive(false);
+    }
+
+    public void SetNextSequence(string sequenceID)
+    {
+        currentSequenceID = sequenceID;
+        Debug.Log($"[NPCController] Sequence set to: {sequenceID}");
+    }
+
+    /// <summary>
+    /// Called by SanctumManager when loading a sanctum that was already
+    /// cleared. Permanently disables the NPC without playing a fade.
+    /// </summary>
+    public void ForceDepart()
+    {
+        hasDeparted = true;
+        gameObject.SetActive(false);
+
+        if (npcModel != null)
+            npcModel.SetActive(false);
+
+        Debug.Log($"[NPCController] {npcID} force-departed (sanctum already cleared).");
     }
 }

@@ -82,30 +82,23 @@ public class IntroSequenceController : MonoBehaviour
         // Indices match the array order in dialogue.json (starting at 0).
         switch (lineIndex)
         {
-            case 3: // "Nothing about this night suggests..."
+            case 1: // "Nothing about this night suggests..."
                 // Fade out black screen, show the room group
                 StartBGFade(0f);
                 SetMeshes(room: true, dimension: false, pyth: false);
                 break;
-
-            case 6: // "There is no tunnel. No countdown..."
-                // Hide room group, show the inside dimension group (falling through script)
-                SetMeshes(room: false, dimension: true, pyth: false);
-                break;
-
-            case 10: // "She is kneeling at the edge of the portal..."
-                // Show Pythariel inside the dimension
+            case 3:
                 SetMeshes(room: false, dimension: true, pyth: true);
                 break;
 
-            case 12: // "But her eyes, when they find Glyph, are completely clear."
+            case 4: // "There is no tunnel. No countdown..."
+                // Hide room group, show the inside dimension group (falling through script)
+                SetMeshes(room: false, dimension: true, pyth: true);
+                break;
+
+            case 6: // "But her eyes, when they find Glyph, are completely clear."
                 // Fade the background BACK to black before the UI switches
                 StartBGFade(1f);
-                break;
-
-            case 13: // "You came through. Good." (Standard dialogue starts)
-                // FIXED: Keep the dimension visible in the background! Only the room is false.
-                SetMeshes(room: false, dimension: true, pyth: true);
                 break;
 
             case 48: // "And then, like an inscription... she is gone."

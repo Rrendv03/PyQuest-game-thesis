@@ -169,8 +169,14 @@ public class DialogueManager : MonoBehaviour
         currentSequence = sequence;
         currentLineIndex = 0;
 
-        // Block autosave while dialogue is active
+        // Block autosave and hide HUD while dialogue is active
         SaveLoadManager.IsSafeToSave = false;
+        if (HUDController.Instance != null)
+            HUDController.Instance.SetVisible(false);
+
+        InteractButtonController interact = FindObjectOfType<InteractButtonController>();
+        if (interact != null)
+            interact.ForceHide();
 
         if (dialoguePanel != null)
             dialoguePanel.SetActive(true);
@@ -317,8 +323,10 @@ public class DialogueManager : MonoBehaviour
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
 
-        // Restore autosave now that dialogue is no longer active
+        // Restore autosave and HUD now that dialogue is no longer active
         SaveLoadManager.IsSafeToSave = true;
+        if (HUDController.Instance != null)
+            HUDController.Instance.SetVisible(true);
 
         DialogueSequence finished = currentSequence;
         currentSequence = null;
