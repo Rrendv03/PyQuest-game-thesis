@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 /// <summary>
@@ -19,8 +20,13 @@ public class StudentLogManager : MonoBehaviour
     [Header("Identity")]
     public string studentID = "unknown_student";
 
+    [Header("Debug")]
+    [Tooltip("Prints a line to the Console every time any Log* method is called, so you can watch data come in while testing. Turn off for the actual student evaluation build, it's noisy.")]
+    public bool enableDebugLogging = true;
+
     private StudentLogData data = new StudentLogData();
     private DateTime sessionStart;
+    private DateTime lastPlayTimeFlush;
 
     // Duration tracking: keyed by an ID the caller controls
     // (e.g. encounterID, puzzleID) so overlapping calls don't collide.
@@ -40,11 +46,18 @@ public class StudentLogManager : MonoBehaviour
 
         data.studentID = studentID;
         sessionStart = DateTime.UtcNow;
+        lastPlayTimeFlush = sessionStart;
         data.sessionStartTime = sessionStart.ToString("o");
         data.totalSessions++;
     }
 
     private static string Now() => DateTime.UtcNow.ToString("o");
+
+    private void DebugLog(string message)
+    {
+        if (enableDebugLogging)
+            Debug.Log($"[StudentLogManager] {message}");
+    }
 
     #region Sanctum Entry/Exit
 
@@ -58,6 +71,7 @@ public class StudentLogManager : MonoBehaviour
             cleared = false,
             missionsCompleted = 0
         });
+        DebugLog($"Sanctum entry: {sanctumName} ({sanctumID})");
     }
 
     public void LogSanctumExit(string sanctumID, string sanctumName, bool cleared)
@@ -70,6 +84,7 @@ public class StudentLogManager : MonoBehaviour
             cleared = cleared,
             missionsCompleted = 0
         });
+        DebugLog($"Sanctum exit: {sanctumName} ({sanctumID}), cleared={cleared}");
     }
 
     #endregion
@@ -88,6 +103,7 @@ public class StudentLogManager : MonoBehaviour
             attemptsBeforeSuccess = 0,
             fightDurationSeconds = 0f
         });
+        DebugLog($"Boss encounter started: {sanctumName} ({sanctumID})");
     }
 
     public void LogBossUnlocked(string sanctumID, string sanctumName)
@@ -101,6 +117,7 @@ public class StudentLogManager : MonoBehaviour
             attemptsBeforeSuccess = 0,
             fightDurationSeconds = 0f
         });
+        DebugLog($"Boss unlocked: {sanctumName} ({sanctumID})");
     }
 
     public void LogBossDefeated(string sanctumID, string sanctumName)
@@ -121,6 +138,7 @@ public class StudentLogManager : MonoBehaviour
             attemptsBeforeSuccess = 0,
             fightDurationSeconds = duration
         });
+        DebugLog($"Boss defeated: {sanctumName} ({sanctumID}), fight duration={duration:F1}s");
     }
 
     #endregion
@@ -130,6 +148,7 @@ public class StudentLogManager : MonoBehaviour
     public void StartTabletMissionTracking(string missionID)
     {
         puzzleStartTimes[missionID] = DateTime.UtcNow;
+        DebugLog($"Tablet mission tracking started: {missionID}");
     }
 
     public void LogTabletMissionComplete(string sanctumID, string missionID, string sanctumName)
@@ -153,6 +172,7 @@ public class StudentLogManager : MonoBehaviour
             attempts = 1,
             timeSpentSeconds = timeSpent
         });
+        DebugLog($"Tablet mission complete: {missionID} in {sanctumName} ({sanctumID}), time={timeSpent:F1}s");
     }
 
     #endregion
@@ -162,6 +182,7 @@ public class StudentLogManager : MonoBehaviour
     public void StartEncounterTracking(string encounterID)
     {
         encounterStartTimes[encounterID] = DateTime.UtcNow;
+        DebugLog($"Encounter tracking started: {encounterID}");
     }
 
     public void LogEncounterComplete(string encounterID, string enemyType, string enemyTier,
@@ -191,6 +212,7 @@ public class StudentLogManager : MonoBehaviour
         });
 
         data.totalEncounters++;
+        DebugLog($"Encounter complete: {encounterID} ({enemyType}/{enemyTier}) in {sanctumID}, victory={victory}, puzzles={puzzlesCorrect}/{puzzlesAttempted}, xp={xpAwarded}, duration={duration:F1}s. Total encounters logged: {data.totalEncounters}");
     }
 
     #endregion
@@ -200,6 +222,7 @@ public class StudentLogManager : MonoBehaviour
     public void StartPuzzleTracking(string puzzleID)
     {
         puzzleStartTimes[puzzleID] = DateTime.UtcNow;
+        DebugLog($"Puzzle tracking started: {puzzleID}");
     }
 
     public void LogPuzzleComplete(string puzzleID, string puzzleType, string knowledgeComponent,
@@ -234,6 +257,7 @@ public class StudentLogManager : MonoBehaviour
         data.overallAccuracy = data.totalPuzzlesAttempted > 0
             ? (float)data.totalPuzzlesCorrect / data.totalPuzzlesAttempted
             : 0f;
+        DebugLog($"Puzzle complete: {puzzleID} ({puzzleType}/{knowledgeComponent}/{difficulty}), correct={correct}, time={timeSpent:F1}s. Running accuracy: {data.totalPuzzlesCorrect}/{data.totalPuzzlesAttempted} ({data.overallAccuracy:P0})");
     }
 
     #endregion
@@ -251,6 +275,7 @@ public class StudentLogManager : MonoBehaviour
             runningTotal = runningTotal,
             sanctumID = sanctumID
         });
+        DebugLog($"XP gained: +{amount} ({source}) in {sanctumID}. Running total: {runningTotal}");
     }
 
     public void LogLevelUp(int newLevel, int previousLevel, int xpAtLevelUp)
@@ -262,6 +287,7 @@ public class StudentLogManager : MonoBehaviour
             previousLevel = previousLevel,
             xpAtLevelUp = xpAtLevelUp
         });
+        DebugLog($"Level up: {previousLevel} -> {newLevel} at {xpAtLevelUp} XP");
     }
 
     #endregion
@@ -278,6 +304,7 @@ public class StudentLogManager : MonoBehaviour
             sanctumID = sanctumID,
             description = description
         });
+        DebugLog($"Story event: {eventID} ({eventType}) in '{sanctumID}': {description}");
     }
 
     public void LogQuestEvent(string questID, string eventType, string stageID, string description)
@@ -290,6 +317,7 @@ public class StudentLogManager : MonoBehaviour
             stageID = stageID,
             description = description
         });
+        DebugLog($"Quest event: {questID} ({eventType}): {description}");
     }
 
     #endregion
@@ -310,6 +338,7 @@ public class StudentLogManager : MonoBehaviour
         });
 
         UpdateKCSummary(knowledgeComponent, newMastery, correct);
+        DebugLog($"Mastery update: {knowledgeComponent} {previousMastery:F3} -> {newMastery:F3} (correct={correct}, puzzleID={puzzleID})");
     }
 
     private void UpdateKCSummary(string kc, double currentMastery, bool correct)
@@ -344,6 +373,7 @@ public class StudentLogManager : MonoBehaviour
             sanctumID = sanctumID,
             details = details
         });
+        Debug.LogWarning($"[StudentLogManager] Error logged: {errorType} in '{context}' ({sanctumID}): {details}");
     }
 
     #endregion
@@ -352,19 +382,41 @@ public class StudentLogManager : MonoBehaviour
 
     public StudentLogData ExportLogs()
     {
+        DateTime now = DateTime.UtcNow;
+        // Elapsed since the LAST flush, not since sessionStart. Calling
+        // this more than once per session (which happens the moment
+        // this is wired to fire on every manual save) used to add the
+        // full session-elapsed time again on every call, compounding
+        // on top of what a previous call already added. This adds only
+        // the incremental time since the last flush, so it's safe to
+        // call as often as you want.
+        data.totalPlayTimeHours += (float)(now - lastPlayTimeFlush).TotalHours;
+        lastPlayTimeFlush = now;
         data.sessionEndTime = Now();
-        data.totalPlayTimeHours += (float)(DateTime.UtcNow - sessionStart).TotalHours;
         return data;
     }
 
     /// <summary>
-    /// Total play time across all sessions plus the current
-    /// in-progress session, as a TimeSpan for display formatting.
+    /// Read-only snapshot of the current in-progress session, does NOT
+    /// stamp sessionEndTime or add to totalPlayTimeHours the way
+    /// ExportLogs() does. Use this for any mid-session peek (CSV export,
+    /// debug tooling, etc.) so calling it doesn't corrupt the numbers
+    /// ExportLogs() will commit later when the session actually ends.
+    /// </summary>
+    public StudentLogData PeekCurrentData() => data;
+
+    /// <summary>
+    /// Total play time across all sessions plus time since the last
+    /// flush, as a TimeSpan for display formatting. Uses
+    /// lastPlayTimeFlush, not sessionStart, so this stays correct even
+    /// after ExportLogs() has already flushed part of the current
+    /// session into totalPlayTimeHours (e.g. from an earlier manual
+    /// save in the same session).
     /// </summary>
     public TimeSpan GetTotalPlayTime()
     {
         double totalSeconds = (data.totalPlayTimeHours * 3600.0)
-            + (DateTime.UtcNow - sessionStart).TotalSeconds;
+            + (DateTime.UtcNow - lastPlayTimeFlush).TotalSeconds;
         return TimeSpan.FromSeconds(totalSeconds);
     }
 
@@ -374,15 +426,102 @@ public class StudentLogManager : MonoBehaviour
         data = imported;
         data.studentID = studentID;
         sessionStart = DateTime.UtcNow;
+        lastPlayTimeFlush = sessionStart;
         data.sessionStartTime = sessionStart.ToString("o");
         data.totalSessions++;
     }
 
+    #endregion
+
+    #region Debug
+
     /// <summary>
-    /// Resets all runtime analytics back to a blank first-session state.
-    /// Called by MainMenuController when the user starts a New Game so
-    /// a previously-loaded save's logs don't bleed into the new run.
+    /// Dumps running totals to the Console in one block instead of
+    /// scrolling back through individual log lines. Call this from a
+    /// debug button, the pause menu, or just press F9 in a dev build
+    /// (see Update() below).
     /// </summary>
+    public void PrintSessionSummary()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("========== StudentLogManager Session Summary ==========");
+        sb.AppendLine($"Student ID: {data.studentID}");
+        sb.AppendLine($"Session start: {data.sessionStartTime}");
+        sb.AppendLine($"Total sessions (incl. this one): {data.totalSessions}");
+        sb.AppendLine($"Sanctum entries logged: {data.sanctumEntries.Count}");
+        sb.AppendLine($"Sanctum exits logged: {data.sanctumExits.Count}");
+        sb.AppendLine($"Boss encounter events logged: {data.bossEncounters.Count}");
+        sb.AppendLine($"Tablet missions logged: {data.tabletMissions.Count}");
+        sb.AppendLine($"Encounters logged: {data.encounters.Count} (totalEncounters counter: {data.totalEncounters})");
+        sb.AppendLine($"Puzzles logged: {data.puzzles.Count} (attempted={data.totalPuzzlesAttempted}, correct={data.totalPuzzlesCorrect}, accuracy={data.overallAccuracy:P1})");
+        sb.AppendLine($"XP events logged: {data.xpGained.Count}");
+        sb.AppendLine($"Level-up events logged: {data.levelUps.Count}");
+        sb.AppendLine($"Story events logged: {data.storyEvents.Count}");
+        sb.AppendLine($"Quest events logged: {data.questEvents.Count}");
+        sb.AppendLine($"Mastery updates logged: {data.masteryUpdates.Count}");
+        sb.AppendLine($"Known knowledge components: {data.knowledgeComponentSummaries.Count}");
+        foreach (var kc in data.knowledgeComponentSummaries)
+            sb.AppendLine($"    {kc.knowledgeComponent}: mastery={kc.currentMastery:F3}, accuracy={kc.accuracy:P0} ({kc.correctAttempts}/{kc.totalAttempts})");
+        sb.AppendLine($"Errors logged: {data.errors.Count}");
+        sb.AppendLine($"Currently open tracking timers: {encounterStartTimes.Count} encounter(s), {puzzleStartTimes.Count} puzzle/mission(s), {bossFightStartTimes.Count} boss fight(s)");
+        if (encounterStartTimes.Count > 0 || puzzleStartTimes.Count > 0 || bossFightStartTimes.Count > 0)
+            sb.AppendLine("    (Non-zero here after gameplay has settled usually means a Start*Tracking call has no matching Log*Complete call, an unclosed timer.)");
+        sb.AppendLine("=========================================================");
+        Debug.Log(sb.ToString());
+    }
+
+    [Tooltip("Dev-build convenience: press this key at any time to dump PrintSessionSummary() to the Console. Set to None to disable.")]
+    public KeyCode summaryHotkey = KeyCode.F9;
+
+    [Tooltip("Dev-build convenience: press this key to export the current session's data to a CSV file right now, without waiting for a save. Set to None to disable.")]
+    public KeyCode csvExportHotkey = KeyCode.F10;
+
+    void Update()
+    {
+        if (summaryHotkey != KeyCode.None && Input.GetKeyDown(summaryHotkey))
+            PrintSessionSummary();
+
+        if (csvExportHotkey != KeyCode.None && Input.GetKeyDown(csvExportHotkey))
+            ExportCurrentSessionToCsv();
+    }
+
+    /// <summary>
+    /// Exports everything logged so far in THIS session to a CSV file.
+    /// Does not wait for a save, this is separate from SaveLoadManager's
+    /// JSON persistence, meant for pulling a Google-Form-ready file at
+    /// any point, including mid-session during testing.
+    /// </summary>
+    public string ExportCurrentSessionToCsv(string outputPath = null)
+    {
+        StudentLogData snapshot = PeekCurrentData();
+        string path = StudentLogCsvExporter.Export(snapshot, outputPath);
+        if (path != null)
+            DebugLog($"Session exported to CSV: {path}");
+        return path;
+    }
+
+    /// <summary>
+    /// The canonical, single, per-student CSV. Always the same
+    /// filename, always fully overwritten, never appended to. Call this
+    /// from SaveLoadManager on every MANUAL save (slot != 0), not on
+    /// autosave. Overwriting instead of appending is what guarantees no
+    /// duplicate rows across repeated saves, each call writes the
+    /// complete current truth, not a delta on top of the last write.
+    /// </summary>
+    public string ExportCanonicalCsv()
+    {
+        string safeID = string.IsNullOrEmpty(studentID) ? "unknown_student" : SanitizeFileName(studentID);
+        string fixedPath = Path.Combine(Application.persistentDataPath, $"pyquest_log_{safeID}.csv");
+        return ExportCurrentSessionToCsv(fixedPath);
+    }
+
+    private string SanitizeFileName(string s)
+    {
+        foreach (char c in Path.GetInvalidFileNameChars())
+            s = s.Replace(c, '_');
+        return s;
+    }
+
     public void ResetLogs()
     {
         data = new StudentLogData();

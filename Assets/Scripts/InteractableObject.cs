@@ -31,10 +31,16 @@ public class InteractableObject : MonoBehaviour
     public string sanctumID = "print_console";
 
     [Header("Guide NPC (for Rune Crystal type)")]
-    [Tooltip("npcID of the guide who should give the farewell sequence, e.g. 'printessa'.")]
-    public string guideNpcID = "printessa";
+    [Tooltip("Direct reference to the guide NPC. Assign in Inspector.")]
+    public NPCController guideNPC;
+    [Tooltip("Where to teleport the guide before their farewell dialogue.")]
+    public Transform npcTeleportPoint;
     [Tooltip("Sequence to switch the guide to once the crystal is restored, e.g. 'printessa_after_restore'.")]
     public string guideAfterRestoreSequenceID = "printessa_after_restore";
+
+    [Header("Corruption Meshes")]
+    [Tooltip("Meshes to disable when the crystal is restored (e.g., corruption surrounding the sanctum).")]
+    public GameObject[] corruptionMeshes;
 
     private bool playerInRange = false;
     private bool interactionActive = false;
@@ -126,8 +132,7 @@ public class InteractableObject : MonoBehaviour
         }
 
         // Only allow restoration if boss has been defeated
-        string bossQuestID = $"{sanctumID}_boss_defeated";
-        if (!StoryProgressionManager.Instance.IsQuestComplete(bossQuestID))
+        if (!StoryProgressionManager.Instance.HasDefeatedBoss(sanctumID))
         {
             Debug.Log("[InteractableObject] Boss not yet defeated. Crystal cannot be restored.");
             return;
@@ -150,31 +155,53 @@ public class InteractableObject : MonoBehaviour
         }
         // =========================================================
 
-        // Find the guide and trigger their farewell sequence.
-        // guideNpcID / guideAfterRestoreSequenceID are Inspector fields now,
-        // not hardcoded, so this same script works unchanged on every
-        // sanctum's crystal once you copy-paste the scene setup.
-        NPCController guide = FindNPCByID(guideNpcID);
-        if (guide != null)
+        // =========================================================
+        // Disable corruption meshes surrounding the sanctum
+        // =========================================================
+        if (corruptionMeshes != null)
         {
-            guide.SetNextSequence(guideAfterRestoreSequenceID);
-            guide.TriggerInteraction();
+            foreach (var mesh in corruptionMeshes)
+            {
+                if (mesh != null) mesh.SetActive(false);
+            }
+            Debug.Log($"[InteractableObject] Disabled {corruptionMeshes.Length} corruption mesh(es) in {sanctumID}.");
+        }
+        // =========================================================
+
+        // Trigger the guide's farewell sequence AFTER crystal is restored.
+        if (guideNPC != null && !guideNPC.HasDeparted())
+        {
+            if (npcTeleportPoint != null)
+            {
+                guideNPC.transform.position = npcTeleportPoint.position;
+                guideNPC.transform.rotation = npcTeleportPoint.rotation;
+
+                // Also teleport the visual model in case it's on a separate GameObject
+                if (guideNPC.npcModel != null)
+                {
+                    guideNPC.npcModel.transform.position = npcTeleportPoint.position;
+                    guideNPC.npcModel.transform.rotation = npcTeleportPoint.rotation;
+                }
+
+                Debug.Log($"[InteractableObject] Teleported guide '{guideNPC.npcID}' + model to crystal.");
+            }
+            if (npcTeleportPoint != null)
+            {
+                guideNPC.transform.position = npcTeleportPoint.position;
+                guideNPC.transform.rotation = npcTeleportPoint.rotation;
+                Debug.Log($"[InteractableObject] Teleported guide '{guideNPC.npcID}' to crystal.");
+            }
+            guideNPC.SetNextSequence(guideAfterRestoreSequenceID);
+            guideNPC.TriggerInteraction();
         }
         else
         {
-            Debug.LogWarning($"[InteractableObject] Could not find guide NPC with npcID '{guideNpcID}'.");
+            Debug.LogWarning("[InteractableObject] Guide NPC is missing, null, or has already departed.");
         }
 
         if (interactPromptUI != null) interactPromptUI.SetActive(false);
         gameObject.GetComponent<Collider>().enabled = false;
 
         Debug.Log($"[InteractableObject] Rune Crystal restored: {sanctumID}");
-    }
-
-    private NPCController FindNPCByID(string id)
-    {
-        foreach (var npc in FindObjectsOfType<NPCController>())
-            if (npc.npcID == id) return npc;
-        return null;
     }
 }

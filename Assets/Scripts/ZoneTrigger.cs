@@ -4,6 +4,8 @@ public class ZoneTrigger : MonoBehaviour
 {
     public string zoneName;
     public string knowledgeComponent;   // BKT knowledge component, separate from zoneName
+    [Tooltip("Boss zones only. Leave empty for single-KC sanctums. If set, boss randomly tests this OR knowledgeComponent (50/50) each attempt.")]
+    public string secondaryKnowledgeComponent;
     public PuzzleType forcedPuzzleType = PuzzleType.TrueOrFalse;
     public bool randomizePuzzleType = false;
     public bool isEncounterZone = false;
@@ -24,6 +26,7 @@ public class ZoneTrigger : MonoBehaviour
     private bool triggered = false;
     private bool hasAwardedXP = false;  // first-clear-only XP gate
     private Collider zoneCollider;
+    private EnemyDifficultyCategory _actualDifficultyUsed;
     void Awake()
     {
         zoneCollider = GetComponent<Collider>();
@@ -88,6 +91,10 @@ public class ZoneTrigger : MonoBehaviour
                 return;
             }
             string kc = string.IsNullOrEmpty(knowledgeComponent) ? zoneName : knowledgeComponent;
+            if (isBossZone && !string.IsNullOrEmpty(secondaryKnowledgeComponent) && Random.value < 0.5f)
+            {
+                kc = secondaryKnowledgeComponent;
+            }
             // =========================================================
             // DYNAMIC DIFFICULTY VS BOSS LOCKING
             // =========================================================
@@ -95,7 +102,7 @@ public class ZoneTrigger : MonoBehaviour
             if (isBossZone)
             {
                 // Bosses use the hardcoded difficulty set in the Unity Inspector
-                finalDifficulty = encounterDifficulty;
+                finalDifficulty = EnemyDifficultyCategory.Boss;
             }
             else
             {
@@ -124,6 +131,7 @@ public class ZoneTrigger : MonoBehaviour
                 transform.position + playerCombatOffset,
                 Quaternion.Euler(playerCombatRotation),
                 this);
+            _actualDifficultyUsed = finalDifficulty;
         }
         else
         {
@@ -150,18 +158,16 @@ public class ZoneTrigger : MonoBehaviour
             // =========================================================
             if (isBossZone && StoryProgressionManager.Instance != null)
             {
-                string bossQuestID = sanctumID + "_boss_defeated";
+                string bossQuestID = sanctumID + "_defeat_enemy";
                 StoryProgressionManager.Instance.CompleteQuest(bossQuestID);
                 Debug.Log($"[ZoneTrigger] Boss defeated! Quest '{bossQuestID}' marked complete.");
             }
 
-            // Bug-005A FIX: mark "{sanctum}_defeat_enemy" quest step 3
-            // complete when player defeats a NON-BOSS encounter enemy
-            // (i.e. the "defeat the Null Wraith's corruption" objective).
-            // Safe to call repeatedly because CompleteQuest is idempotent.
+            // Bug-005A FIX: mark "{sanctum}_enemy_encounter_cleared" quest
+            // complete when player defeats a NON-BOSS encounter enemy.
             if (!isBossZone && StoryProgressionManager.Instance != null)
             {
-                string defeatQuestID = $"{sanctumID}_defeat_enemy";
+                string defeatQuestID = $"{sanctumID}_enemy_encounter_cleared";
                 if (!StoryProgressionManager.Instance.IsQuestComplete(defeatQuestID))
                 {
                     StoryProgressionManager.Instance.CompleteQuest(defeatQuestID);
@@ -169,18 +175,22 @@ public class ZoneTrigger : MonoBehaviour
                 }
             }
 
-            // =========================================================
-            // Award XP only on first clear for regular zones
+            // Award XP only on first clear for regular zones, only if this
+            // sanctum hasn't already produced enough cumulative XP to unlock its
+            // own boss, and typed by the difficulty actually fought (BKT/PCG
+            // scaled), not the Inspector default.
             if (awardXP && !hasAwardedXP && XPManager.Instance != null)
             {
-                hasAwardedXP = true;
-                XPManager.EnemyType xpType = isBossZone
-                    ? XPManager.EnemyType.Boss
-                    : DifficultyToXPType(encounterDifficulty);
-                XPManager.Instance.AwardXP(xpType);
-                // Refresh mission tablet if open
-                if (MissionTabletUI.Instance != null)
-                    MissionTabletUI.Instance.Refresh();
+                if (XPManager.Instance.CanGainXPInSanctum(sanctumID))
+                {
+                    hasAwardedXP = true;
+                    XPManager.EnemyType xpType = isBossZone
+                        ? XPManager.EnemyType.Boss
+                        : DifficultyToXPType(_actualDifficultyUsed);
+                    XPManager.Instance.AwardXPCapped(xpType, sanctumID);
+                    if (MissionTabletUI.Instance != null)
+                        MissionTabletUI.Instance.Refresh();
+                }
             }
             if (zoneCollider != null)
                 zoneCollider.enabled = false;

@@ -14,7 +14,7 @@
       "sanctumID": "print_console",
       "displayName": "Silence the Shades",
       "description": "Mission II: Silence the Murmur Shades in the East Wing.",
-      "knowledgeComponent": "variables",
+      "knowledgeComponent": "print_statements",
       "puzzleType": "SpotTheBug",
       "promptText": "Approach Murmur Shade"
     },
@@ -23,7 +23,7 @@
       "sanctumID": "print_console",
       "displayName": "Find the Inscription",
       "description": "Mission III: Find and restore the erased final inscription.",
-      "knowledgeComponent": "conditionals",
+      "knowledgeComponent": "print_statements",
       "puzzleType": "PredictTheOutput",
       "promptText": "Examine Erased Tablet"
     },
@@ -41,7 +41,7 @@
       "sanctumID": "vars_vault",
       "displayName": "Seal the Fracture",
       "description": "Mission II: Seal the fracture where values leak into void.",
-      "knowledgeComponent": "input_handling",
+      "knowledgeComponent": "basic_operations",
       "puzzleType": "TrueOrFalse",
       "promptText": "Examine Value Leak"
     },
@@ -59,7 +59,7 @@
       "sanctumID": "input_mists",
       "displayName": "Calm the Static",
       "description": "Mission I: Calm the static drowning the transmission stream.",
-      "knowledgeComponent": "loops",
+      "knowledgeComponent": "input_handling",
       "puzzleType": "LineScramble",
       "promptText": "Approach Static Stream"
     },
@@ -68,7 +68,7 @@
       "sanctumID": "input_mists",
       "displayName": "Restore the Echo",
       "description": "Mission II: Restore the echo trapped in recursive feedback.",
-      "knowledgeComponent": "conditionals",
+      "knowledgeComponent": "input_handling",
       "puzzleType": "SpotTheBug",
       "promptText": "Inspect Recursive Echo"
     },
@@ -77,7 +77,7 @@
       "sanctumID": "input_mists",
       "displayName": "Decode the Signal",
       "description": "Mission III: Decode the signal buried beneath white noise.",
-      "knowledgeComponent": "print_statements",
+      "knowledgeComponent": "input_handling",
       "puzzleType": "PredictTheOutput",
       "promptText": "Examine Signal Source"
     },
@@ -104,7 +104,7 @@
       "sanctumID": "elif_labyrinth",
       "displayName": "Align the Sequence",
       "description": "Mission III: Align the sequence so order returns to the Labyrinth.",
-      "knowledgeComponent": "basic_operations",
+      "knowledgeComponent": "loops",
       "puzzleType": "LineScramble",
       "promptText": "Inspect Scrambled Sequence"
     }

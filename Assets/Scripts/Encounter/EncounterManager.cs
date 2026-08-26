@@ -301,6 +301,7 @@ public class EncounterManager : MonoBehaviour
             case EnemyDifficultyCategory.Beginner: bonusMultiplier = 1.02f; break;
             case EnemyDifficultyCategory.Intermediate: bonusMultiplier = 1.05f; break;
             case EnemyDifficultyCategory.Advanced: bonusMultiplier = 1.08f; break;
+            case EnemyDifficultyCategory.Boss: bonusMultiplier = 1.15f; break;
         }
         return Mathf.RoundToInt(playerStats.GetTotalAttack() * bonusMultiplier);
     }

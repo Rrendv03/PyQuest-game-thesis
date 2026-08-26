@@ -1,6 +1,6 @@
     using UnityEngine;
 
-    public enum EnemyDifficultyCategory { Beginner, Intermediate, Advanced }
+    public enum EnemyDifficultyCategory { Beginner, Intermediate, Advanced, Boss }
 
     [System.Serializable]
     public class EnemyData
@@ -44,8 +44,17 @@
                     data.maxHP = 225;
                     data.baseAttack = Random.Range(25, 31);
                     break;
+                case EnemyDifficultyCategory.Boss:
+                    data.enemyName = "Null Wraith";
+                    data.category = category;
+                    data.maxHP = 500;
+                    data.baseAttack = Random.Range(35, 46);
+                    data.dodgeChance = 0.15f;
+                    data.escalationStartRound = 3;
+                    data.escalationPerRound = 0.15f;
+                    data.escalationCap = 1.60f;
+                    break;
             }
-
             return data;
         }
     }

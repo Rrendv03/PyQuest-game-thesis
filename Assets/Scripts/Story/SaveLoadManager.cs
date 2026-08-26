@@ -84,6 +84,15 @@ public class SaveLoadManager : MonoBehaviour
         {
             File.WriteAllText(SlotPath(slot), json);
             Debug.Log($"[SaveLoadManager] Saved slot {slot}.");
+
+            // Cement the student log CSV on MANUAL saves only (slot != 0).
+            // Autosave (slot 0) does not trigger this, per the requirement
+            // that this only fires when the respondent deliberately saves,
+            // not on the 5-minute timer. ExportCanonicalCsv() overwrites
+            // one fixed-name file every time, it does not append, so
+            // calling it on every manual save cannot produce duplicate rows.
+            if (slot != 0)
+                StudentLogManager.Instance?.ExportCanonicalCsv();
         }
         catch (Exception e)
         {

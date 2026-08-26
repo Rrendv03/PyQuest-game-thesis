@@ -45,7 +45,11 @@ public class RuneCrystal : InteractableObject
 
         if (alreadyDefeated)
         {
-            // If loading a save where it's already done, show it restored
+            // Ensure parent is visible before restoring (handles race condition
+            // where Start() ran before SanctumManager was ready)
+            if (crystalParent != null)
+                crystalParent.SetActive(true);
+
             Restore();
         }
         else
@@ -75,13 +79,25 @@ public class RuneCrystal : InteractableObject
     /// </summary>
     public void Restore()
     {
-        if (isActivated) return;
+        if (isActivated)
+        {
+            // Re-apply correct state in case parent was hidden by a race condition
+            if (crystalParent != null && !crystalParent.activeSelf)
+                crystalParent.SetActive(true);
+            crystalDefaultState?.SetActive(false);
+            crystalRestoredState?.SetActive(true);
+            return;
+        }
         ActivateCrystal();
     }
 
     private void ActivateCrystal()
     {
         isActivated = true;
+
+        // Ensure parent is visible before swapping meshes
+        if (crystalParent != null && !crystalParent.activeSelf)
+            crystalParent.SetActive(true);
 
         // Swap the meshes
         crystalDefaultState?.SetActive(false);

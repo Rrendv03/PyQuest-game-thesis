@@ -14,6 +14,23 @@ public class BossGate : MonoBehaviour
         EvaluateState();
     }
 
+    void OnEnable()
+    {
+        if (XPManager.Instance != null)
+            XPManager.Instance.OnXPChanged += HandleXPChanged;
+    }
+
+    void OnDisable()
+    {
+        if (XPManager.Instance != null)
+            XPManager.Instance.OnXPChanged -= HandleXPChanged;
+    }
+
+    private void HandleXPChanged(int _)
+    {
+        EvaluateState();
+    }
+
     public void Refresh()
     {
         EvaluateState();
@@ -33,7 +50,6 @@ public class BossGate : MonoBehaviour
     public void OpenGate()
     {
         gameObject.SetActive(false);
-
         if (lockedEffect != null) lockedEffect.SetActive(false);
         if (unlockedEffect != null) unlockedEffect.SetActive(true);
     }
@@ -41,7 +57,6 @@ public class BossGate : MonoBehaviour
     public void CloseGate()
     {
         gameObject.SetActive(true);
-
         if (lockedEffect != null) lockedEffect.SetActive(true);
         if (unlockedEffect != null) unlockedEffect.SetActive(false);
     }
