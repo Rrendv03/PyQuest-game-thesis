@@ -5759,7 +5759,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   autosaveIntervalSeconds: 30
-  playerTransform: {fileID: 207760857}
 --- !u!4 &465779394
 Transform:
   m_ObjectHideFlags: 0
@@ -8296,9 +8295,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 'Resume
-
-'
+  m_Text: Resume
 --- !u!222 &629834233
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -10313,6 +10310,7 @@ MonoBehaviour:
   npcTeleportPoint: {fileID: 0}
   guideAfterRestoreSequenceID: variel_after_restore
   corruptionMeshes: []
+  knowledgeComponentID: 
   missionID: vv_tablet_02
   defaultMesh: {fileID: 74655247}
   restoredMesh: {fileID: 680087270}
@@ -12917,6 +12915,7 @@ MonoBehaviour:
   npcTeleportPoint: {fileID: 0}
   guideAfterRestoreSequenceID: variel_after_restore
   corruptionMeshes: []
+  knowledgeComponentID: 
 --- !u!65 &1095103339
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -14616,6 +14615,7 @@ MonoBehaviour:
   npcTeleportPoint: {fileID: 0}
   guideAfterRestoreSequenceID: variel_after_restore
   corruptionMeshes: []
+  knowledgeComponentID: 
   missionID: vv_tablet_03
   defaultMesh: {fileID: 74655247}
   restoredMesh: {fileID: 680087270}
@@ -16089,6 +16089,7 @@ MonoBehaviour:
   corruptionMeshes:
   - {fileID: 2135408286}
   - {fileID: 1579376215}
+  knowledgeComponentID: 
   crystalParent: {fileID: 1285098778}
   spawnEffect: {fileID: 1579523614}
   spawnSound: {fileID: 0}
@@ -25156,6 +25157,7 @@ MonoBehaviour:
   npcTeleportPoint: {fileID: 0}
   guideAfterRestoreSequenceID: variel_after_restore
   corruptionMeshes: []
+  knowledgeComponentID: 
   missionID: vv_tablet_01
   defaultMesh: {fileID: 1108322806}
   restoredMesh: {fileID: 546520444}

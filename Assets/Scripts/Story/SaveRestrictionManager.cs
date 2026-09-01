@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Tracks named "blockers" that mark the game as unsafe to save
@@ -29,6 +30,23 @@ public class SaveRestrictionEnforcer : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    // Runs on EVERY scene load, regardless of what triggered it
+    // (SceneTransition, SaveLoadManager.ApplySaveData, SanctumManager,
+    // etc.), so "scene_transition" can't get stuck active after the
+    // GameObject that set it is gone. Only clears that one key; other
+    // blockers (encounter, sanctum_entry, boss_fight, ...) are untouched
+    // and still managed by whichever system owns them.
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        RemoveBlocker("scene_transition");
     }
 
     public void AddBlocker(string reason)

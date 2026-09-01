@@ -540,7 +540,7 @@
       ]
     },
     {
-      "sequenceID": "finale",
+      "sequenceID": "epilogue",
       "endBehavior": "none",
       "nextSequenceIfStay": "",
       "questIDToComplete": "",
@@ -569,15 +569,7 @@
           "speakerName": "Glyph",
           "dialogueText": "It's whole. The prophecy held.",
           "isCinematic": false
-        }
-      ]
-    },
-    {
-      "sequenceID": "epilogue",
-      "endBehavior": "none",
-      "nextSequenceIfStay": "",
-      "questIDToComplete": "",
-      "lines": [
+        },
         {
           "speakerName": "Null Wraith",
           "dialogueText": "...not gone... only unassigned...",

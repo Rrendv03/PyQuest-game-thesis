@@ -20,6 +20,7 @@ public class StudentLogData
     public List<SanctumLogEntry> sanctumExits = new List<SanctumLogEntry>();
     public List<BossLogEntry> bossEncounters = new List<BossLogEntry>();
     public List<TabletMissionLogEntry> tabletMissions = new List<TabletMissionLogEntry>();
+    public List<LessonTabletLogEntry> lessonTablets = new List<LessonTabletLogEntry>();
     public List<EncounterLogEntry> encounters = new List<EncounterLogEntry>();
     public List<PuzzleLogEntry> puzzles = new List<PuzzleLogEntry>();
     public List<XPLogEntry> xpGained = new List<XPLogEntry>();
@@ -175,4 +176,13 @@ public class ErrorLogEntry
     public string context;
     public string sanctumID;
     public string details;
+}
+
+[Serializable]
+public class LessonTabletLogEntry
+{
+    public string timestamp;
+    public string sanctumID;
+    public string knowledgeComponent;
+    public float timeSpentSeconds;
 }

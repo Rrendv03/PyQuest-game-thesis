@@ -2080,6 +2080,7 @@ MonoBehaviour:
   npcTeleportPoint: {fileID: 0}
   guideAfterRestoreSequenceID: printessa_after_restore
   corruptionMeshes: []
+  knowledgeComponentID: 
   missionID: pc_tablet_02
   defaultMesh: {fileID: 1248374483}
   restoredMesh: {fileID: 1988135576}
@@ -13239,6 +13240,7 @@ MonoBehaviour:
   npcTeleportPoint: {fileID: 0}
   guideAfterRestoreSequenceID: printessa_after_restore
   corruptionMeshes: []
+  knowledgeComponentID: 
 --- !u!1 &1155609110
 GameObject:
   m_ObjectHideFlags: 0
@@ -22720,6 +22722,7 @@ MonoBehaviour:
   npcTeleportPoint: {fileID: 0}
   guideAfterRestoreSequenceID: printessa_after_restore
   corruptionMeshes: []
+  knowledgeComponentID: 
   missionID: pc_tablet_03
   defaultMesh: {fileID: 743180845}
   restoredMesh: {fileID: 40359525}
@@ -23478,6 +23481,7 @@ MonoBehaviour:
   corruptionMeshes:
   - {fileID: 809821115}
   - {fileID: 966233851}
+  knowledgeComponentID: 
   crystalParent: {fileID: 1558691108}
   spawnEffect: {fileID: 1481903935}
   spawnSound: {fileID: 0}
@@ -23786,8 +23790,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22f43ac3680c3bb4faaff8b51afaf927, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  autosaveIntervalSeconds: 10
-  playerTransform: {fileID: 1391070249}
+  autosaveIntervalSeconds: 30
 --- !u!114 &1586992655
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25696,9 +25699,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 'Resume
-
-'
+  m_Text: Resume
 --- !u!222 &1736080296
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -27939,6 +27940,7 @@ MonoBehaviour:
   npcTeleportPoint: {fileID: 0}
   guideAfterRestoreSequenceID: printessa_after_restore
   corruptionMeshes: []
+  knowledgeComponentID: 
   missionID: pc_tablet_01
   defaultMesh: {fileID: 611437683}
   restoredMesh: {fileID: 485123525}

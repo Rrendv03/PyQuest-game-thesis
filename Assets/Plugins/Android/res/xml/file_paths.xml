@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Declares which on-device paths the app's FileProvider is allowed to
+    expose to other apps via content:// URIs.
+
+    external-files-path, not files-path: Application.persistentDataPath
+    on Android resolves to getExternalFilesDir(null), the app-private
+    folder under /storage/emulated/0/Android/data/<package>/files/, not
+    internal app storage. Using files-path here would make FileProvider
+    look in the wrong folder and every share attempt would fail with a
+    file-not-found-style permission error at the OS level, not a Unity
+    error, so it would be confusing to debug from inside the game.
+
+    path="." exposes the whole persistentDataPath root, which is fine
+    here since nothing sensitive besides the CSV lives there. Narrow
+    this to a subfolder if that changes later.
+
+    Place this file at:
+        Assets/Plugins/Android/res/xml/file_paths.xml
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="pyquest_logs" path="." />
+</paths>

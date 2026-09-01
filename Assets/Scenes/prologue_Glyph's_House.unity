@@ -540,6 +540,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   studentID: unknown_student
+  enableDebugLogging: 1
+  summaryHotkey: 290
+  csvExportHotkey: 291
 --- !u!114 &331174951
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1031,7 +1034,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c10186abadd257f4087ce9a16778b57c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainMapSceneName: act_001_Print_Console
+  mainMapSceneName: PrintConsole
   introSequenceID: intro_prologue
   pytharielRenderer: {fileID: 906207852}
   fadeDuration: 2.5

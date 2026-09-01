@@ -177,6 +177,36 @@ public class StudentLogManager : MonoBehaviour
 
     #endregion
 
+    #region Lesson Tablets
+
+    public void StartLessonTabletTracking(string knowledgeComponent)
+    {
+        puzzleStartTimes[$"lesson_{knowledgeComponent}"] = DateTime.UtcNow;
+        DebugLog($"Lesson tablet tracking started: {knowledgeComponent}");
+    }
+
+    public void LogLessonTabletViewed(string sanctumID, string knowledgeComponent)
+    {
+        string key = $"lesson_{knowledgeComponent}";
+        float timeSpent = 0f;
+        if (puzzleStartTimes.TryGetValue(key, out DateTime start))
+        {
+            timeSpent = (float)(DateTime.UtcNow - start).TotalSeconds;
+            puzzleStartTimes.Remove(key);
+        }
+
+        data.lessonTablets.Add(new LessonTabletLogEntry
+        {
+            timestamp = Now(),
+            sanctumID = sanctumID,
+            knowledgeComponent = knowledgeComponent,
+            timeSpentSeconds = timeSpent
+        });
+        DebugLog($"Lesson tablet viewed: {knowledgeComponent} in {sanctumID}, time={timeSpent:F1}s");
+    }
+
+    #endregion
+
     #region Encounters
 
     public void StartEncounterTracking(string encounterID)

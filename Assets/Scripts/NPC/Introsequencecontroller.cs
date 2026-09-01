@@ -45,6 +45,8 @@ public class IntroSequenceController : MonoBehaviour
 
     private void Start()
     {
+        SaveRestrictionEnforcer.Instance?.AddBlocker("prologue");
+
         // Ensure all mesh groups start hidden
         SetMeshes(false, false, false);
 
@@ -242,6 +244,7 @@ public class IntroSequenceController : MonoBehaviour
 
     private void LoadMainMap()
     {
+        SaveRestrictionEnforcer.Instance?.RemoveBlocker("prologue");
         Debug.Log($"[IntroSequenceController] Loading scene: {mainMapSceneName}");
         SceneManager.LoadScene(mainMapSceneName);
     }

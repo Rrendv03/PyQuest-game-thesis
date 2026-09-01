@@ -171,6 +171,7 @@ public class DialogueManager : MonoBehaviour
 
         // Block autosave and hide HUD while dialogue is active
         SaveLoadManager.IsSafeToSave = false;
+        SaveRestrictionEnforcer.Instance?.AddBlocker("dialogue");
         if (HUDController.Instance != null)
             HUDController.Instance.SetVisible(false);
 
@@ -325,6 +326,7 @@ public class DialogueManager : MonoBehaviour
 
         // Restore autosave and HUD now that dialogue is no longer active
         SaveLoadManager.IsSafeToSave = true;
+        SaveRestrictionEnforcer.Instance?.RemoveBlocker("dialogue");
         if (HUDController.Instance != null)
             HUDController.Instance.SetVisible(true);
 

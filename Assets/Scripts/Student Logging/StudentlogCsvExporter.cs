@@ -136,6 +136,14 @@ public static class StudentLogCsvExporter
                 ["time_spent_seconds"] = e.timeSpentSeconds.ToString("F2"),
             }));
 
+        foreach (var e in data.lessonTablets)
+            rows.Add(Row("lesson_tablet", e.timestamp, new Dictionary<string, string>
+            {
+                ["sanctum_id"] = e.sanctumID,
+                ["knowledge_component"] = e.knowledgeComponent,
+                ["time_spent_seconds"] = e.timeSpentSeconds.ToString("F2"),
+            }));
+
         foreach (var e in data.encounters)
             rows.Add(Row("encounter", e.timestamp, new Dictionary<string, string>
             {

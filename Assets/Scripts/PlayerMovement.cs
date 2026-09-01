@@ -19,6 +19,15 @@ public class PlayerMovement : MonoBehaviour
         {
             transform.position = SceneTransition.RespawnPoint;
             SceneTransition.RespawnPoint = Vector3.zero;
+
+            if (SceneTransition.RespawnYRotation.HasValue)
+            {
+                transform.rotation = Quaternion.Euler(0f, SceneTransition.RespawnYRotation.Value, 0f);
+                SceneTransition.RespawnYRotation = null;
+            }
+
+            Debug.Log($"[PlayerMovement] Restored position {transform.position}, " +
+                      $"rotation Y {transform.eulerAngles.y}");
         }
     }
 

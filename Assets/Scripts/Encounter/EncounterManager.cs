@@ -114,6 +114,7 @@ public class EncounterManager : MonoBehaviour
         if (interact != null)
             interact.ForceHide();
         SaveLoadManager.IsSafeToSave = false;
+        SaveRestrictionEnforcer.Instance?.AddBlocker("encounter");
         if (activePlayerMovement != null)
         {
             playerInitialPosition = activePlayerMovement.transform.position;
@@ -385,6 +386,7 @@ public class EncounterManager : MonoBehaviour
         if (HUDController.Instance != null)
             HUDController.Instance.SetVisible(true);
         SaveLoadManager.IsSafeToSave = true;
+        SaveRestrictionEnforcer.Instance?.RemoveBlocker("encounter");
         if (activeSourceZone != null)
             activeSourceZone.OnEncounterCompleted(standardVictoryOutcome, true);
         // Notify SanctumManager to handle boss rewards, crystal spawn, and state update

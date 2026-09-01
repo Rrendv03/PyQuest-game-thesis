@@ -22,6 +22,8 @@ public class MainMenuController : MonoBehaviour
 
     private void Start()
     {
+        SaveRestrictionEnforcer.Instance?.AddBlocker("main_menu");
+
         if (newGameButton != null) newGameButton.onClick.AddListener(OnNewGameClicked);
         if (continueButton != null) continueButton.onClick.AddListener(OnContinueClicked);
         if (settingsButton != null) settingsButton.onClick.AddListener(OnSettingsClicked);
@@ -32,6 +34,11 @@ public class MainMenuController : MonoBehaviour
         if (settingsPanel != null) settingsPanel.SetActive(false);
 
         CheckForSaveData();
+    }
+
+    private void OnDestroy()
+    {
+        SaveRestrictionEnforcer.Instance?.RemoveBlocker("main_menu");
     }
 
     private void CheckForSaveData()

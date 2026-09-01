@@ -24,9 +24,6 @@ public class SaveLoadManager : MonoBehaviour
     [Header("Autosave")]
     public float autosaveIntervalSeconds = 300f;
 
-    [Header("Player Reference")]
-    public Transform playerTransform;
-
     private float autosaveTimer = 0f;
     private const string AutosaveFilename = "save_autosave.json";
 
@@ -119,6 +116,17 @@ public class SaveLoadManager : MonoBehaviour
             && StoryProgressionManager.Instance.HasDefeatedBoss(sanctumID);
     }
 
+    /// <summary>
+    /// Player is always scene-local by design (see PlayerMovement.cs /
+    /// SceneTransition.RespawnPoint), so there is no valid persistent
+    /// reference to cache. Always resolve fresh, by tag, at save time.
+    /// </summary>
+    private Transform ResolvePlayerTransform()
+    {
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        return playerObj != null ? playerObj.transform : null;
+    }
+
     private SaveSlotData BuildSaveData(int slot)
     {
         SaveSlotData data = new SaveSlotData();
@@ -126,12 +134,18 @@ public class SaveLoadManager : MonoBehaviour
         data.dateSavedISO = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
         data.currentScene = SceneManager.GetActiveScene().name;
 
-        if (playerTransform != null)
+        Transform player = ResolvePlayerTransform();
+        if (player != null)
         {
-            data.playerPositionX = playerTransform.position.x;
-            data.playerPositionY = playerTransform.position.y;
-            data.playerPositionZ = playerTransform.position.z;
-            data.playerYRotation = playerTransform.eulerAngles.y;
+            data.playerPositionX = player.position.x;
+            data.playerPositionY = player.position.y;
+            data.playerPositionZ = player.position.z;
+            data.playerYRotation = player.eulerAngles.y;
+        }
+        else
+        {
+            Debug.LogWarning("[SaveLoadManager] No Player found in scene; " +
+                              "position not saved for this slot.");
         }
 
         if (StoryProgressionManager.Instance != null)
@@ -236,6 +250,8 @@ public class SaveLoadManager : MonoBehaviour
             data.playerPositionX,
             data.playerPositionY,
             data.playerPositionZ);
+        SceneTransition.RespawnYRotation = data.playerYRotation;
+        SceneTransition.SkipSpawnPositioning = true;
 
         // Critical: restore timeScale and save flag before loading.
         // The pause menu sets timeScale = 0 when open. If we load a scene

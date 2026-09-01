@@ -151,6 +151,14 @@ public class SanctumManager : MonoBehaviour
     }
     private void PositionPlayerAtSpawn()
     {
+        if (SceneTransition.SkipSpawnPositioning)
+        {
+            SceneTransition.SkipSpawnPositioning = false;
+            Debug.Log("[SanctumManager] Skipping entry spawn positioning, " +
+                      "a save restore already placed the player.");
+            return;
+        }
+
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null && playerSpawnPoint != null)
         {

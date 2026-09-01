@@ -14,7 +14,8 @@ public class InteractableObject : MonoBehaviour
     public enum InteractionType
     {
         MissionTablet,
-        RuneCrystal
+        RuneCrystal,
+        LessonTablet
         // Add more types here as new interactables are built
     }
 
@@ -41,6 +42,10 @@ public class InteractableObject : MonoBehaviour
     [Header("Corruption Meshes")]
     [Tooltip("Meshes to disable when the crystal is restored (e.g., corruption surrounding the sanctum).")]
     public GameObject[] corruptionMeshes;
+
+    [Header("Lesson Tablet (for Lesson Tablet type)")]
+    [Tooltip("Must match a key in LessonTabletUI's content dictionary, e.g. 'print_statements'.")]
+    public string knowledgeComponentID;
 
     private bool playerInRange = false;
     private bool interactionActive = false;
@@ -101,6 +106,9 @@ public class InteractableObject : MonoBehaviour
                 break;
             case InteractionType.RuneCrystal:
                 HandleRuneCrystal();
+                break;
+            case InteractionType.LessonTablet:
+                HandleLessonTablet();
                 break;
         }
 
@@ -203,5 +211,13 @@ public class InteractableObject : MonoBehaviour
         gameObject.GetComponent<Collider>().enabled = false;
 
         Debug.Log($"[InteractableObject] Rune Crystal restored: {sanctumID}");
+    }
+
+    private void HandleLessonTablet()
+    {
+        if (LessonTabletUI.Instance != null)
+            LessonTabletUI.Instance.ShowLesson(knowledgeComponentID, sanctumID);
+        else
+            Debug.LogWarning("[InteractableObject] LessonTabletUI.Instance is null.");
     }
 }

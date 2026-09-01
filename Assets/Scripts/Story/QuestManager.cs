@@ -152,7 +152,15 @@ public class QuestManager : MonoBehaviour
                 displayName = "Defeat the Null Wraith's corruption" },
             new QuestEntry { unlockedByQuestID = "elif_labyrinth_defeat_enemy",
                 questID = "elif_labyrinth_restore_crystal",
-                displayName = "Restore the Kernel Crystal" }
+                displayName = "Restore the Kernel Crystal" },
+            new QuestEntry { unlockedByQuestID = "elif_labyrinth_restore_crystal",
+                questID = "epilogue_return_to_mainmap",
+                displayName = "Return to Aethelscript" },
+
+            // --- Epilogue handled separately in EpilogueSequenceController.cs ---
+            new QuestEntry { unlockedByQuestID = "epilogue_return_to_mainmap",
+                questID = "world_restored",
+                displayName = "Aethelscript Restored" },
         };
     }
 }
