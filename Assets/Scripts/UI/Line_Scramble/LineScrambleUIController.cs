@@ -105,27 +105,31 @@ public class LineScrambleUIController : MonoBehaviour
         return result;
     }
 
+    /// <summary>
+    /// CHANGED: used to compute correctness locally as "does position i
+    /// hold original row i for every i", which is exact-match-to-one-order
+    /// checking and rejects any valid alternate ordering (e.g. two
+    /// independent variable inits swapped). Now submits the player's
+    /// actual arranged order and lets LineScramblePuzzleFormat's
+    /// dependency-graph check decide, via PuzzleManager. CheckAnswerCorrect
+    /// is called first purely so the green "correct" highlight can still
+    /// be shown before UserSubmission deactivates the canvas panel, same
+    /// sequencing as before, just backed by the real check now.
+    /// </summary>
     private void OnCheckPressed()
     {
-        bool isCorrect = true;
+        List<int> proposedOrder = GetCurrentRowNumbers();
 
-        for (int i = 0; i < orderedSlots.Count; i++)
-        {
-            if (orderedSlots[i].originalRowNumber != i)
-            {
-                isCorrect = false;
-                break;
-            }
-        }
+        bool isCorrect = PuzzleManager.Instance.CheckAnswerCorrect(proposedOrder);
 
         Debug.Log($"[LineScrambleUIController] Check pressed | Correct: {isCorrect} | " +
-                  $"Current order: {string.Join(", ", GetCurrentRowNumbers())}");
+                  $"Current order: {string.Join(", ", proposedOrder)}");
 
         if (isCorrect)
             foreach (var slot in orderedSlots)
                 slot.SetState_Correct();
 
-        PuzzleManager.Instance.UserSubmission(isCorrect);
+        PuzzleManager.Instance.UserSubmission(proposedOrder);
     }
 
     private void AdjustSpacing(int count)

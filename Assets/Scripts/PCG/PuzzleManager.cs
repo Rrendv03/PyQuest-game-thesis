@@ -142,6 +142,26 @@ public class PuzzleManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Read-only correctness check against the live puzzle, WITHOUT
+    /// finalizing/consuming the submission (no BKT update, no canvas
+    /// teardown). Added so a UI controller can show pass/fail feedback
+    /// (e.g. highlighting slots) using the real evaluation logic before
+    /// calling UserSubmission with the same answer to actually finalize it.
+    /// Deterministic pure check on the format handler's side, so calling
+    /// it once for preview and once inside UserSubmission for real is
+    /// safe and cheap.
+    /// </summary>
+    public bool CheckAnswerCorrect(object playerAnswerChoice)
+    {
+        if (currentPuzzle == null)
+        {
+            Debug.LogError("[PuzzleManager] No active puzzle to check");
+            return false;
+        }
+        return currentPuzzle.IsAnswerCorrect(playerAnswerChoice);
+    }
+
+    /// <summary>
     /// Input collection endpoint hooked directly up to Canvas buttons.
     /// Routes result to BKT (exploration) or EncounterManager (encounter).
     /// </summary>
@@ -154,10 +174,12 @@ public class PuzzleManager : MonoBehaviour
         }
 
         bool isCorrect = currentPuzzle.IsAnswerCorrect(playerAnswerChoice);
+
         int optionCount = currentPuzzle.formatHandler.GetOptionCount();
         float pGuessOverride = optionCount > 0 ? 1f / optionCount : 0f;
 
-        Debug.Log($"[PuzzleManager] Player answered: {playerAnswerChoice} | Correct: {isCorrect}");
+        Debug.Log($"[PuzzleManager] Player answered: {playerAnswerChoice} | Correct: {isCorrect} | " +
+                  $"Format option count: {optionCount} | p_guess override: {pGuessOverride:F4}");
 
         currentPuzzleCanvasPanel.SetActive(false);
         currentPuzzle = null;
@@ -191,7 +213,7 @@ public class PuzzleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Bool overload for SpotTheBug and LineScramble which submit bool directly.
+    /// Bool overload for formats that submit bool directly.
     /// </summary>
     public void UserSubmission(bool isCorrect)
     {

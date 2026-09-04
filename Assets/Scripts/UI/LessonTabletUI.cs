@@ -21,6 +21,9 @@ public class LessonTabletUI : MonoBehaviour
 
     private string currentKC;
 
+    [Header("HUD to hide while tablet is open")]
+    public GameObject hudCanvas;
+
     private class LessonContent
     {
         public string title;
@@ -117,7 +120,9 @@ public class LessonTabletUI : MonoBehaviour
         }
 
         if (panelRoot != null) panelRoot.SetActive(true);
-
+        if (HUDController.Instance != null)
+            HUDController.Instance.SetVisible(false);
+        
         _pendingSanctumID = sanctumID;
     }
 
@@ -126,6 +131,8 @@ public class LessonTabletUI : MonoBehaviour
     public void CloseLesson()
     {
         if (panelRoot != null) panelRoot.SetActive(false);
+        if (HUDController.Instance != null)
+            HUDController.Instance.SetVisible(true);
 
         if (!string.IsNullOrEmpty(currentKC))
         {

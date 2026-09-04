@@ -94,11 +94,52 @@ public class FillInTheBlankPuzzleFormat : IPuzzleFormat
             if (targetLine != -1) break;
         }
 
-        // Fallback: blank the variable value if no keyword found
+        // Fallback: blank the variable value if no keyword found.
+        // FIX: this used to hardcode targetLine = 0 unconditionally, but
+        // variableValue can appear on any line, not necessarily the first.
+        // If it wasn't actually on line 0, ReplaceFirstOccurrence below
+        // would find nothing to replace, the blank would never render, and
+        // correctAnswer would point at text that isn't visible anywhere in
+        // the displayed snippet. Now it searches for the line that actually
+        // contains the value (or the variable name, as a second try)
+        // before falling back to line 0 as a last resort.
         if (targetLine == -1)
         {
-            targetLine = 0;
-            foundKeyword = template.variableValue;
+            string valueTarget = template.variableValue;
+            if (!string.IsNullOrEmpty(valueTarget))
+            {
+                for (int i = 0; i < template.codeLines.Count; i++)
+                {
+                    if (template.codeLines[i].Contains(valueTarget))
+                    {
+                        targetLine = i;
+                        foundKeyword = valueTarget;
+                        break;
+                    }
+                }
+            }
+
+            if (targetLine == -1 && !string.IsNullOrEmpty(template.variableName))
+            {
+                for (int i = 0; i < template.codeLines.Count; i++)
+                {
+                    if (template.codeLines[i].Contains(template.variableName))
+                    {
+                        targetLine = i;
+                        foundKeyword = template.variableName;
+                        break;
+                    }
+                }
+            }
+
+            if (targetLine == -1)
+            {
+                Debug.LogWarning("[FillInTheBlankPuzzleFormat] No keyword, variableValue, " +
+                                 "or variableName found anywhere in codeLines. Falling back " +
+                                 "to line 0; this template likely needs a real blank target.");
+                targetLine = 0;
+                foundKeyword = template.variableValue;
+            }
         }
 
         correctAnswer = foundKeyword;
