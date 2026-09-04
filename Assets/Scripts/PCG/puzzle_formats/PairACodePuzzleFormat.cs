@@ -83,39 +83,64 @@ public class PairACodePuzzleFormat : IPuzzleFormat
         options = new List<string>();
         options.Add(correctAnswer);
 
+        // FIX: this used to do mutatedDistractor.Replace(template.variableName,
+        // template.variableName) -- replacing a string with itself, a no-op --
+        // so distractors were shown completely unmutated, verbatim from the
+        // original template, on every single puzzle instance. PCGEngine's
+        // MutatePuzzlePublic now mutates template.distractors alongside
+        // codeLines directly, so by the time this runs they already reflect
+        // the current variable name/value; no local sync step needed here.
         if (template.distractors != null)
         {
             foreach (string d in template.distractors)
-            {
-                // Also mutate distractors to match variable name changes from PCG
-                string mutatedDistractor = d;
-                if (!string.IsNullOrEmpty(template.variableName))
-                    mutatedDistractor = mutatedDistractor.Replace(template.variableName, template.variableName);
-                options.Add(mutatedDistractor);
-            }
+                if (!options.Contains(d) && d != correctAnswer)
+                    options.Add(d);
         }
 
-        // Pad with fallback distractors if not enough options
-        while (options.Count < 4)
-            options.Add(GenerateFallbackDistractor());
+        // Pad with fallback distractors if not enough options.
+        // FIX: previously had no duplicate check, so two independent random
+        // picks from the same small pool could add the identical string
+        // twice as if they were two different wrong answers. Also mixes in
+        // a guaranteed-wrong-but-thematically-related option (a real line
+        // pulled from elsewhere in this exact snippet) alongside the
+        // generic hardcoded pool, rather than relying on the generic pool
+        // alone. Capped so a pathologically small pool can't spin forever;
+        // fewer than 4 options is a safe degradation, not a crash.
+        int fallbackAttempts = 0;
+        while (options.Count < 4 && fallbackAttempts < 20)
+        {
+            string candidate = (fallbackAttempts % 3 == 0 && PCGEngine.Instance != null)
+                ? PCGEngine.Instance.GenerateGuaranteedWrongOption(template.codeLines, correctAnswer)
+                : GenerateFallbackDistractor();
+
+            if (!options.Contains(candidate))
+                options.Add(candidate);
+
+            fallbackAttempts++;
+        }
 
         Debug.Log($"[PairACodePuzzleFormat] Blank index: {blankIndex} | Correct: {correctAnswer} | Options: {string.Join(", ", options)}");
     }
 
     private string GenerateFallbackDistractor()
     {
-        string[] fallbacks = new string[]
-        {
-        $"print('{template.variableName}')",
-        $"{template.variableName} == {template.variableValue}",
-        $"return {template.variableName}",
-        "pass",
-        $"input('{template.variableName}: ')",
-        "break",
-        $"{template.variableName} = None",
-        $"print({template.variableValue})"
-        };
+        // FIX: these variableName-based entries used to always be in the
+        // pool, even for templates with no variableName set, producing
+        // garbled options like " == " or "print('')" with nothing filled
+        // in. Now they're only added when there's an actual variable to
+        // reference.
+        List<string> fallbacks = new List<string> { "pass", "break", "continue", "return None" };
 
-        return fallbacks[Random.Range(0, fallbacks.Length)];
+        if (!string.IsNullOrEmpty(template.variableName))
+        {
+            fallbacks.Add($"print('{template.variableName}')");
+            fallbacks.Add($"{template.variableName} == {template.variableValue}");
+            fallbacks.Add($"return {template.variableName}");
+            fallbacks.Add($"input('{template.variableName}: ')");
+            fallbacks.Add($"{template.variableName} = None");
+            fallbacks.Add($"print({template.variableValue})");
+        }
+
+        return fallbacks[Random.Range(0, fallbacks.Count)];
     }
 }

@@ -47,6 +47,26 @@ public class PredictTheOutputUIController : MonoBehaviour
         Debug.Log("[PredictTheOutputUIController] UI populated");
     }
 
+    // ADDED: this controller had no path to PuzzleManager.UserSubmission at
+    // all. PairACodeUIController (same drag-into-DropSlot pattern) has an
+    // OnSubmit() doing exactly this; this file didn't. If you already wire
+    // a submit button to something else that reaches PuzzleManager, this is
+    // redundant and safe to ignore, but if PredictTheOutput has been hard
+    // or impossible to actually submit, this was very likely why. Wire a
+    // submit Button's OnClick() to this in the Inspector if it isn't
+    // already hitting an equivalent path.
+    public void OnSubmit()
+    {
+        if (dropSlot == null || string.IsNullOrEmpty(dropSlot.currentAnswer))
+        {
+            Debug.LogWarning("[PredictTheOutputUIController] No answer dropped yet");
+            return;
+        }
+
+        Debug.Log($"[PredictTheOutputUIController] Submitting answer: {dropSlot.currentAnswer}");
+        PuzzleManager.Instance.UserSubmission(dropSlot.currentAnswer);
+    }
+
     private void ShuffleList(List<string> list)
     {
         for (int i = list.Count - 1; i > 0; i--)

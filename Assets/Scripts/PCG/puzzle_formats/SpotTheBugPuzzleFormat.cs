@@ -98,14 +98,26 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
 
     private void GeneratePuzzle()
     {
-        // Step 1: Pick a random line to inject a bug into
-        // Prefer lines with operators or function calls for more interesting bugs
-        List<int> candidateLines = new List<int>();
-        for (int i = 0; i < template.codeLines.Count; i++)
-            candidateLines.Add(i);
+        // Step 1: Determine the bug line. Prefer the template author's
+        // explicit bugLineIndex when it's a valid index into codeLines.
+        // Convention: bugLineIndex of -1 (or anything outside range) means
+        // "not authored, pick randomly" -- existing templates that never
+        // set this field keep behaving exactly as before, and only
+        // templates that DO set it get the benefit of an author-controlled,
+        // guaranteed-on-topic bug line instead of a blind random pick.
+        if (template.bugLineIndex >= 0 && template.bugLineIndex < template.codeLines.Count)
+        {
+            correctLineIndex = template.bugLineIndex;
+        }
+        else
+        {
+            List<int> candidateLines = new List<int>();
+            for (int i = 0; i < template.codeLines.Count; i++)
+                candidateLines.Add(i);
 
-        ShuffleList(candidateLines);
-        correctLineIndex = candidateLines[0];
+            ShuffleList(candidateLines);
+            correctLineIndex = candidateLines[0];
+        }
 
         // Step 2: Store clean version of the buggy line as the correct fix
         correctFix = template.codeLines[correctLineIndex];
@@ -155,12 +167,21 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
             allLineFixOptions.Add(lineOptions);
         }
 
-        Debug.Log($"[SpotTheBugPuzzleFormat] Bug injected on line {correctLineIndex} | " +
+        Debug.Log($"[SpotTheBugPuzzleFormat] Bug line: {correctLineIndex} " +
+                  $"({(template.bugLineIndex == correctLineIndex ? "authored" : "random")}) | " +
                   $"Clean: {correctFix} | Bugged: {buggedLine}");
     }
 
     /// <summary>
-    /// Injects a subtle but unambiguous bug into a clean line.
+    /// Injects a subtle but unambiguous bug into a clean line. Strategies
+    /// are tried in order; the first one that applies wins. Strategies 7
+    /// and 8 are new: the old code fell back to appending "# error" as a
+    /// comment when nothing else matched, which is not an actual bug in
+    /// Python (a trailing comment doesn't change execution), so some lines
+    /// (e.g. a bare "else:" or "if flag:" with no comparison operator) were
+    /// being marked "bugged" while still running identically to the clean
+    /// version. Strategies 7/8 guarantee a real change before that
+    /// harmless fallback is ever reached.
     /// </summary>
     private string InjectBug(string line)
     {
@@ -204,6 +225,30 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
             return line.Replace(template.variableName,
                                 $"'{template.variableName}'");
 
+        // Strategy 7 (NEW): drop the trailing colon on a block header
+        // (if/elif/else/for/while/def). Python requires it, so removing it
+        // is always a real SyntaxError.
+        string trimmedEnd = line.TrimEnd();
+        if (trimmedEnd.EndsWith(":"))
+            return trimmedEnd.Substring(0, trimmedEnd.Length - 1);
+
+        // Strategy 8 (NEW): last-resort character transposition. Swaps the
+        // first two non-whitespace characters, which breaks almost any
+        // keyword, identifier, or literal it touches, without relying on
+        // recognizing a specific pattern.
+        string trimmedStart = line.TrimStart();
+        string indent = line.Substring(0, line.Length - trimmedStart.Length);
+        if (trimmedStart.Length >= 2)
+        {
+            char[] chars = trimmedStart.ToCharArray();
+            char tmp = chars[0];
+            chars[0] = chars[1];
+            chars[1] = tmp;
+            return indent + new string(chars);
+        }
+
+        // True last resort: only reachable for lines with 0-1 non-whitespace
+        // characters, which shouldn't occur in authored puzzle content.
         return line + " # error";
     }
 

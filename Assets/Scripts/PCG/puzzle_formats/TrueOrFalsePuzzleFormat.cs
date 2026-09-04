@@ -183,14 +183,26 @@ public class TrueOrFalsePuzzleFormat : IPuzzleFormat
         }
 
         // Strategy 5: Change string literals to break output
+        // FIX: the old guard fired on ANY quote character, but the actual
+        // .Replace() chain only ever touches 'Hello'/'World' (and their
+        // double-quote forms). A line like name = 'Hero' has a quote, so
+        // the guard passed, but none of the four Replace() calls matched
+        // anything, and the method still logged success and returned --
+        // skipping the always-reliable comment-out fallback below entirely,
+        // leaving the code completely unchanged while correctAnswer was
+        // still set to false. Now it only claims success if the replacement
+        // chain actually changed the line, so unmatched lines correctly
+        // fall through to the fallback instead.
         for (int i = 0; i < template.codeLines.Count; i++)
         {
-            if (template.codeLines[i].Contains("'") || template.codeLines[i].Contains("\""))
+            string originalLine = template.codeLines[i];
+            string replacedLine = originalLine.Replace("'Hello'", "'Goodbye'")
+                                               .Replace("'World'", "'Universe'")
+                                               .Replace("\"Hello\"", "\"Goodbye\"")
+                                               .Replace("\"World\"", "\"Universe\"");
+            if (replacedLine != originalLine)
             {
-                template.codeLines[i] = template.codeLines[i].Replace("'Hello'", "'Goodbye'")
-                                                            .Replace("'World'", "'Universe'")
-                                                            .Replace("\"Hello\"", "\"Goodbye\"")
-                                                            .Replace("\"World\"", "\"Universe\"");
+                template.codeLines[i] = replacedLine;
                 Debug.Log($"[TrueOrFalsePuzzleFormat] Injected bug: changed string literal");
                 return;
             }
