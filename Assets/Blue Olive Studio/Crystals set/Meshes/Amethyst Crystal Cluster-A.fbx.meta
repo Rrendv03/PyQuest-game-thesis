@@ -10,7 +10,7 @@ ModelImporter:
       name: Crystal Amethyst
     second: {fileID: 2100000, guid: b3eceda572c8f4c4899b7ce68acc987e, type: 2}
   materials:
-    materialImportMode: 1
+    materialImportMode: 2
     materialName: 0
     materialSearch: 1
     materialLocation: 1

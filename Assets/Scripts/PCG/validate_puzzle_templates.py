@@ -173,26 +173,59 @@ def extract_uses(line):
     return result
 
 
-def count_valid_orders(code_lines, cap=200):
-    """Mirrors LineScramblePuzzleFormat.cs's BuildMustPrecedePairs +
-    IsValidDependencyOrder. Brute-forces all permutations, capped, since
-    templates are short (a handful of lines) -- fine for offline validation,
-    would NOT be fine at runtime in Unity, which is why the C# side uses
-    the pairwise-constraint check directly instead of enumerating orders."""
+def indent_of(line):
+    return len(line) - len(line.lstrip(' '))
+
+
+def build_chunks(code_lines):
+    """Mirrors LineScramblePuzzleFormat.cs's BuildChunks exactly: a header
+    line plus any more-indented lines that follow it, plus any elif/else
+    continuations, are fused into one atomic unit. Without this, a
+    dependency-only check drastically overcounts how many orderings are
+    'valid' for any template containing if/elif/else/for/while, since it
+    has no concept of a print statement being structurally glued to its
+    own if-block."""
+    chunks = []
     n = len(code_lines)
-    if n > 7:
-        return None  # 7! = 5040, still fine, but guard against surprises
-    defs = [set(extract_defines(l)) for l in code_lines]
-    uses = [set(extract_uses(l)) for l in code_lines]
+    i = 0
+    while i < n:
+        chunk = [i]
+        base_indent = indent_of(code_lines[i])
+        j = i + 1
+        while j < n:
+            stripped = code_lines[j].strip()
+            if indent_of(code_lines[j]) > base_indent or stripped.startswith('elif') or stripped.startswith('else'):
+                chunk.append(j)
+                j += 1
+            else:
+                break
+        chunks.append(chunk)
+        i = j
+    return chunks
+
+
+def count_valid_orders(code_lines, cap=5000):
+    chunks = build_chunks(code_lines)
+    m = len(chunks)
+    if m > 8:
+        return None
+    defs, uses = [], []
+    for c in chunks:
+        d, u = set(), set()
+        for row in c:
+            d |= set(extract_defines(code_lines[row]))
+            u |= set(extract_uses(code_lines[row]))
+        defs.append(d)
+        uses.append(u)
     pairs = []
-    for i in range(n):
-        for j in range(i + 1, n):
+    for i in range(m):
+        for j in range(i + 1, m):
             if (defs[i] & (uses[j] | defs[j])) or (uses[i] & defs[j]):
                 pairs.append((i, j))
     count = 0
-    for perm in permutations(range(n)):
-        pos = {row: idx for idx, row in enumerate(perm)}
-        if all(pos[i] < pos[j] for (i, j) in pairs):
+    for perm in permutations(range(m)):
+        pos = {c: idx for idx, c in enumerate(perm)}
+        if all(pos[i] < pos[j] for i, j in pairs):
             count += 1
         if count > cap:
             return count
@@ -206,21 +239,22 @@ def check_line_scramble(template, infos):
     n = len(code_lines)
     if n < 2:
         return
+    chunks = build_chunks(code_lines)
     total = count_valid_orders(code_lines)
     if total is None:
-        infos.append(f"LineScramble template has {n} lines, skipped combinatorial check (too many permutations)")
+        infos.append(f"LineScramble template has {len(chunks)} chunks, skipped combinatorial check (too many permutations)")
         return
     if total == 1:
-        return  # strict chain, exactly the "one right answer" case, nothing to flag
-    if total >= n:  # heuristic: a lot of freedom relative to line count
+        return  # exactly one valid arrangement once control-flow blocks are treated as atomic, nothing to flag
+    if total >= 3:
         infos.append(
-            f"LineScramble template has {total} valid orderings out of {n} lines -- "
-            f"if that's ALL lines mutually independent, the scramble may feel trivial "
-            f"even with the order-checking fix; consider whether this template still "
-            f"tests sequencing understanding"
+            f"LineScramble template has {total} valid chunk arrangements out of {len(chunks)} chunks "
+            f"({n} lines) -- the order-aware checker grades this correctly either way, but if most of "
+            f"those chunks are freely swappable independent statements, consider whether this template "
+            f"still tests sequencing understanding or has become closer to 'put anything anywhere'"
         )
     else:
-        infos.append(f"LineScramble template has {total} valid orderings (expected with the new order-aware checker)")
+        infos.append(f"LineScramble template has {total} valid chunk arrangements (expected with the order-aware checker)")
 
 
 def describe(t):

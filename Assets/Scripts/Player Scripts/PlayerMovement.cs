@@ -15,19 +15,23 @@ public class PlayerMovement : MonoBehaviour
         if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
         rb.freezeRotation = true;
 
+        // Restore position from a save load or scene transition.
+        // RespawnYRotation must be applied here too - SaveLoadManager
+        // sets it, and skipping it made restored players face the
+        // wrong way (and, combined with move-relative-to-forward,
+        // look like the position itself never loaded).
         if (SceneTransition.RespawnPoint != Vector3.zero)
         {
             transform.position = SceneTransition.RespawnPoint;
+            rb.position = SceneTransition.RespawnPoint;
             SceneTransition.RespawnPoint = Vector3.zero;
+        }
 
-            if (SceneTransition.RespawnYRotation.HasValue)
-            {
-                transform.rotation = Quaternion.Euler(0f, SceneTransition.RespawnYRotation.Value, 0f);
-                SceneTransition.RespawnYRotation = null;
-            }
-
-            Debug.Log($"[PlayerMovement] Restored position {transform.position}, " +
-                      $"rotation Y {transform.eulerAngles.y}");
+        if (SceneTransition.RespawnYRotation != 0f)
+        {
+            transform.rotation = Quaternion.Euler(0f, SceneTransition.RespawnYRotation.Value, 0f);
+            rb.rotation = transform.rotation;
+            SceneTransition.RespawnYRotation = 0f;
         }
     }
 

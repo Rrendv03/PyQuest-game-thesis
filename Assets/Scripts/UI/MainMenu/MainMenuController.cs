@@ -14,11 +14,25 @@ public class MainMenuController : MonoBehaviour
     public Button settingsButton;
     public Button quitButton;
 
+    public Button backToMainButton; // Optional: button to return from settings to main menu
+
     [Header("Panels & Background")]
     public GameObject menuBackground; // <-- DRAG YOUR BACKGROUND IMAGE HERE
     public GameObject mainMenuPanel;
     public GameObject settingsPanel;
     public GameObject saveLoadPanel;
+
+    [Header("Audio")]
+    [Tooltip("Music that plays in the main menu. Routed through the persistent MusicManager (auto-created at runtime).")]
+    public AudioClip menuMusic;
+
+    [Tooltip("Fade-in time when the menu music starts.")]
+    [Range(0f, 10f)] public float musicFadeIn = 1.5f;
+
+    [Tooltip("Optional UI click sound played on every menu button press.")]
+    public AudioClip uiClickClip;
+
+    private AudioSource _sfxSource;
 
     private void Start()
     {
@@ -28,10 +42,15 @@ public class MainMenuController : MonoBehaviour
         if (continueButton != null) continueButton.onClick.AddListener(OnContinueClicked);
         if (settingsButton != null) settingsButton.onClick.AddListener(OnSettingsClicked);
         if (quitButton != null) quitButton.onClick.AddListener(OnQuitClicked);
+        if (backToMainButton != null) backToMainButton.onClick.AddListener(OnBackToMainClicked);
+
+        SetupUiClickSounds();
 
         // Ensure sub-panels start hidden
         if (saveLoadPanel != null) saveLoadPanel.SetActive(false);
         if (settingsPanel != null) settingsPanel.SetActive(false);
+
+        PlayMenuMusic();
 
         CheckForSaveData();
     }
@@ -59,6 +78,56 @@ public class MainMenuController : MonoBehaviour
         }
         continueButton.gameObject.SetActive(hasSave);
     }
+
+    // ------------------------------------------------------------------
+    // AUDIO
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Starts the menu music through the persistent MusicManager. The
+    /// manager auto-creates itself, so no scene setup is needed — just
+    /// assign the menuMusic clip in the Inspector.
+    ///
+    /// Because the MusicManager survives scene loads, this track keeps
+    /// playing until some other scene's SceneMusic component (or a
+    /// StopMusic call) replaces it.
+    /// </summary>
+    private void PlayMenuMusic()
+    {
+        if (menuMusic == null) return;
+        MusicManager.Instance.PlayTrack(menuMusic, musicFadeIn);
+    }
+
+    /// <summary>
+    /// Wires the optional UI click sound to every menu button. Uses
+    /// PlayOneShot so rapid clicking overlaps instead of cutting off.
+    /// </summary>
+    private void SetupUiClickSounds()
+    {
+        if (uiClickClip == null) return;
+
+        _sfxSource = gameObject.AddComponent<AudioSource>();
+        _sfxSource.playOnAwake = false;
+
+        Button[] menuButtons =
+        {
+            newGameButton, continueButton, settingsButton, quitButton, backToMainButton
+        };
+
+        foreach (var button in menuButtons)
+        {
+            if (button != null) button.onClick.AddListener(PlayUiClick);
+        }
+    }
+
+    private void PlayUiClick()
+    {
+        if (_sfxSource != null) _sfxSource.PlayOneShot(uiClickClip);
+    }
+
+    // ------------------------------------------------------------------
+    // MENU ACTIONS
+    // ------------------------------------------------------------------
 
     public void OnNewGameClicked()
     {

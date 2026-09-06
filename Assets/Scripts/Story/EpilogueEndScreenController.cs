@@ -1,11 +1,6 @@
-using System.Collections;
-using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-#if UNITY_STANDALONE_WIN
-using System.Runtime.InteropServices;
-#endif
 
 /// <summary>
 /// "Thanks for playing" screen shown after the epilogue sequence, including
@@ -48,16 +43,6 @@ public class EpilogueEndScreenController : MonoBehaviour
     public string defaultStatusMessage = "Thanks for playing PyQuest!";
 
     private PlayerMovement playerMovement;
-
-#if UNITY_STANDALONE_WIN
-    [DllImport("user32.dll")]
-    private static extern System.IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow);
-
-    private const int SW_MINIMIZE = 6;
-#endif
 
     private void OnEnable()
     {
@@ -103,6 +88,7 @@ public class EpilogueEndScreenController : MonoBehaviour
         HUDController.Instance?.SetVisible(false);
 
         SaveRestrictionEnforcer.Instance?.AddBlocker("epilogue_end_screen");
+        GameCompletionState.MarkGameCompleted();
 
         if (statusText != null) statusText.text = defaultStatusMessage;
         if (endScreenPanel != null) endScreenPanel.SetActive(true);
@@ -121,70 +107,8 @@ public class EpilogueEndScreenController : MonoBehaviour
 
     private void OnSendResultsClicked()
     {
-        if (StudentLogManager.Instance == null)
-        {
-            SetStatus("Could not find results, StudentLogManager missing.");
-            return;
-        }
-
-        string path = StudentLogManager.Instance.ExportCanonicalCsv();
-
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
-        {
-            SetStatus("Could not create the results file. Try again, or tell your evaluator.");
-            return;
-        }
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-        bool launched = AndroidNativeShare.ShareFile(path, "text/csv", androidShareTitle);
-        SetStatus(launched
-            ? "Opening the share menu..."
-            : "Could not open the share menu. Try again, or tell your evaluator.");
-#elif UNITY_STANDALONE_WIN
-        StartCoroutine(RevealInExplorerRoutine(path));
-#else
-        SetStatus("Your results file is at: " + path);
-#endif
+        ResultsExportHelper.ExportAndShare(this, androidShareTitle, SetStatus);
     }
-
-#if UNITY_STANDALONE_WIN
-    private IEnumerator RevealInExplorerRoutine(string path)
-    {
-        string windowsPath = path.Replace('/', '\\');
-
-        Debug.Log($"[EpilogueEndScreenController] Current FullScreenMode: {Screen.fullScreenMode}");
-
-        if (Screen.fullScreenMode == FullScreenMode.ExclusiveFullScreen)
-        {
-            Screen.fullScreenMode = FullScreenMode.Windowed;
-            yield return new WaitForSecondsRealtime(0.2f);
-        }
-
-        try
-        {
-            System.Diagnostics.Process.Start("explorer.exe", "/select,\"" + windowsPath + "\"");
-            Debug.Log("[EpilogueEndScreenController] Process.Start for explorer.exe returned without throwing.");
-
-            System.IntPtr gameWindow = GetForegroundWindow();
-            if (gameWindow != System.IntPtr.Zero)
-            {
-                bool minimized = ShowWindow(gameWindow, SW_MINIMIZE);
-                Debug.Log($"[EpilogueEndScreenController] ShowWindow(SW_MINIMIZE) returned: {minimized}");
-            }
-            else
-            {
-                Debug.LogWarning("[EpilogueEndScreenController] GetForegroundWindow() returned zero, could not minimize.");
-            }
-
-            SetStatus("Opening file location, check your taskbar.");
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[EpilogueEndScreenController] Failed to open Explorer: {e.Message}\n{e.StackTrace}");
-            SetStatus("Could not open the folder. The file is at: " + path);
-        }
-    }
-#endif
 
     private void SetStatus(string message)
     {
