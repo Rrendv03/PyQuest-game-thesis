@@ -317,16 +317,16 @@
         "puzzleType": 0,
         "difficulty": 2,
         "codeLines": [
-          "def add(a, b):",
-          "    return a + b",
-          "print(add(3, 4))"
+          "mana = 12",
+          "bonus = mana * 3 - 5",
+          "print(bonus)"
         ],
         "correctAnswer": "",
         "bugLineIndex": -1,
         "correctOrder": [],
-        "distractors": ["yield", "output", "print"],
-        "variableName": "a",
-        "variableValue": "3"
+        "distractors": ["input", "output", "display"],
+        "variableName": "mana",
+        "variableValue": "12"
       },
       {
         "id": "fitb_008_true_keyword",
@@ -498,7 +498,7 @@
         "puzzleType": 4,
         "difficulty": 2,
         "codeLines": [
-          "print('Hello'"
+          "print('Hello')"
         ],
         "correctAnswer": "SyntaxError",
         "bugLineIndex": 0,
@@ -681,18 +681,16 @@
         "puzzleType": 1,
         "difficulty": 1,
         "codeLines": [
-          "health = 100",
-          "if health > 0:",
-          "    print('Alive')",
-          "else:",
-          "    print('Dead')"
+          "score = 20",
+          "score = 75",
+          "print(score)"
         ],
         "correctAnswer": "",
-        "bugLineIndex": -1,
+        "bugLineIndex": 1,
         "correctOrder": [],
         "distractors": [],
-        "variableName": "health",
-        "variableValue": "100"
+        "variableName": "score",
+        "variableValue": "75"
       },
       {
         "id": "stb_004_basic_operations",

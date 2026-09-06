@@ -49,7 +49,7 @@ public class BossGate : MonoBehaviour
 
     public void OpenGate()
     {
-        gameObject.SetActive(false);
+        gameObject.SetActive(true);
         if (lockedEffect != null) lockedEffect.SetActive(false);
         if (unlockedEffect != null) unlockedEffect.SetActive(true);
     }
