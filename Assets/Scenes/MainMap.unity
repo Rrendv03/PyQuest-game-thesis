@@ -1828,6 +1828,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   npcID: 
   npcDisplayName: 
+  questIDToCompleteOnInteract: 
   startingSequenceID: 001
   npcModel: {fileID: 819182115}
   markerSlot: {fileID: 2088024498}
@@ -1838,6 +1839,9 @@ MonoBehaviour:
   cameraPanDuration: 0.6
   mainGameplayCamera: {fileID: 0}
   departFadeDuration: 1.5
+  compassTargetOnComplete: {fileID: 0}
+  compassLabelOnComplete: Exit
+  compassTriggerSequenceID: 
 --- !u!1 &67439313
 GameObject:
   m_ObjectHideFlags: 0
@@ -2916,6 +2920,8 @@ MonoBehaviour:
   beginnerEnemyPrefab: {fileID: 1061798428}
   intermediateEnemyPrefab: {fileID: 0}
   advancedEnemyPrefab: {fileID: 0}
+  bossEnemyPrefab: {fileID: 0}
+  bossEnemyName: Null Wraith
   mainGameplayCamera: {fileID: 963194227}
   cinematicEncounterCamera: {fileID: 97251073}
   cameraCombatOffset: {x: -1, y: 0.25, z: -4.5}
@@ -5937,7 +5943,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 0}
+    m_TransformParent: {fileID: 2049891212}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
       propertyPath: m_LocalScale.x
@@ -5953,15 +5959,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -330.35938
+      value: 474.24066
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 16.54
+      value: 28.54
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 53.27836
+      value: 254.27838
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
       propertyPath: m_LocalRotation.w
@@ -5973,7 +5979,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
       propertyPath: m_LocalRotation.z
@@ -6000,6 +6006,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
+--- !u!4 &251997000 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: d521b6edfd9decd4c9715119b3e925c8, type: 3}
+  m_PrefabInstance: {fileID: 251996999}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &252675822
 GameObject:
   m_ObjectHideFlags: 0
@@ -9095,7 +9106,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 0}
+    m_TransformParent: {fileID: 2049891212}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 3c00c2f27a437114480f25a78a8111a4, type: 3}
       propertyPath: m_LocalScale.x
@@ -9111,15 +9122,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 3c00c2f27a437114480f25a78a8111a4, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -332.6
+      value: 472
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 3c00c2f27a437114480f25a78a8111a4, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 17.2
+      value: 29.2
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 3c00c2f27a437114480f25a78a8111a4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 125.4
+      value: 326.4
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 3c00c2f27a437114480f25a78a8111a4, type: 3}
       propertyPath: m_LocalRotation.w
@@ -9158,6 +9169,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3c00c2f27a437114480f25a78a8111a4, type: 3}
+--- !u!4 &454567074 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3c00c2f27a437114480f25a78a8111a4, type: 3}
+  m_PrefabInstance: {fileID: 454567073}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &460247360
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12332,6 +12348,7 @@ MonoBehaviour:
   bossLockedText: {fileID: 1901969873}
   bossUnlockedText: {fileID: 236324694}
   closeButton: {fileID: 246578767}
+  currentSanctumID: echoing_atrium
 --- !u!114 &692629202
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20864,11 +20881,11 @@ MonoBehaviour:
     saveButton: {fileID: 0}
     loadButton: {fileID: 764431619}
     deleteButton: {fileID: 48567319}
+  backButton: {fileID: 0}
   confirmPanel: {fileID: 102533627}
   confirmMessageText: {fileID: 2079956684}
   confirmYesButton: {fileID: 1155609112}
   confirmNoButton: {fileID: 706404448}
-  previousPanel: {fileID: 0}
 --- !u!114 &1182465167
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -28386,7 +28403,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   autosaveIntervalSeconds: 10
-  playerTransform: {fileID: 30154760}
 --- !u!114 &1586992655
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -28428,10 +28444,10 @@ MonoBehaviour:
   xpIntermediate: 60
   xpDifficult: 100
   xpBoss: 150
-  thresholdEchoingAtrium: 150
-  thresholdVaultOfEssence: 350
-  thresholdWhitewakeMist: 600
-  thresholdLabyrinthOfLogic: 900
+  thresholdPrintConsole: 150
+  thresholdVarsVault: 550
+  thresholdInputMists: 900
+  thresholdElifLabyrinth: 1500
 --- !u!1001 &1590575003
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -34758,6 +34774,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   zoneName: print_statements
   knowledgeComponent: 
+  secondaryKnowledgeComponent: 
   forcedPuzzleType: 0
   randomizePuzzleType: 0
   isEncounterZone: 1
@@ -36414,6 +36431,8 @@ Transform:
   - {fileID: 754961096}
   - {fileID: 1355367228}
   - {fileID: 1649215171}
+  - {fileID: 251997000}
+  - {fileID: 454567074}
   m_Father: {fileID: 845107747}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2052538148
@@ -38491,7 +38510,5 @@ SceneRoots:
   - {fileID: 1706264173}
   - {fileID: 1687775426}
   - {fileID: 1300146212}
-  - {fileID: 251996999}
-  - {fileID: 454567073}
   - {fileID: 4243720168871553803}
   - {fileID: 5107296924696147312}
