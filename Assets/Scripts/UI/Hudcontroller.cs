@@ -68,6 +68,12 @@ public class HUDController : MonoBehaviour
     {
         if (button == null) return;
 
+        // Movement buttons are hold-controls, not clicks: keep them out of
+        // the universal click-sound system so pressing them stays silent
+        // and their input path stays exactly as it was before the audio
+        // manager existed.
+        UISoundManager.MarkSilent(button);
+
         EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
         if (trigger == null)
             trigger = button.gameObject.AddComponent<EventTrigger>();

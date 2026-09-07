@@ -28,6 +28,8 @@ public class SceneEntrance : MonoBehaviour
 
     void Start()
     {
+        Time.timeScale = 1f; // ensure time is unpaused in case we came from a paused scene
+
         if (fadeOverlay == null) return;
         StartCoroutine(FadeIn());
     }
@@ -39,7 +41,7 @@ public class SceneEntrance : MonoBehaviour
 
         while (elapsed < fadeDuration)
         {
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             c.a = Mathf.Clamp01(1f - (elapsed / fadeDuration));
             fadeOverlay.color = c;
             yield return null;

@@ -29,11 +29,6 @@ public class MainMenuController : MonoBehaviour
     [Tooltip("Fade-in time when the menu music starts.")]
     [Range(0f, 10f)] public float musicFadeIn = 1.5f;
 
-    [Tooltip("Optional UI click sound played on every menu button press.")]
-    public AudioClip uiClickClip;
-
-    private AudioSource _sfxSource;
-
     private void Start()
     {
         SaveRestrictionEnforcer.Instance?.AddBlocker("main_menu");
@@ -43,8 +38,6 @@ public class MainMenuController : MonoBehaviour
         if (settingsButton != null) settingsButton.onClick.AddListener(OnSettingsClicked);
         if (quitButton != null) quitButton.onClick.AddListener(OnQuitClicked);
         if (backToMainButton != null) backToMainButton.onClick.AddListener(OnBackToMainClicked);
-
-        SetupUiClickSounds();
 
         // Ensure sub-panels start hidden
         if (saveLoadPanel != null) saveLoadPanel.SetActive(false);
@@ -91,38 +84,14 @@ public class MainMenuController : MonoBehaviour
     /// Because the MusicManager survives scene loads, this track keeps
     /// playing until some other scene's SceneMusic component (or a
     /// StopMusic call) replaces it.
+    ///
+    /// Button click sounds are handled globally by UISoundManager —
+    /// no per-button wiring here.
     /// </summary>
     private void PlayMenuMusic()
     {
         if (menuMusic == null) return;
         MusicManager.Instance.PlayTrack(menuMusic, musicFadeIn);
-    }
-
-    /// <summary>
-    /// Wires the optional UI click sound to every menu button. Uses
-    /// PlayOneShot so rapid clicking overlaps instead of cutting off.
-    /// </summary>
-    private void SetupUiClickSounds()
-    {
-        if (uiClickClip == null) return;
-
-        _sfxSource = gameObject.AddComponent<AudioSource>();
-        _sfxSource.playOnAwake = false;
-
-        Button[] menuButtons =
-        {
-            newGameButton, continueButton, settingsButton, quitButton, backToMainButton
-        };
-
-        foreach (var button in menuButtons)
-        {
-            if (button != null) button.onClick.AddListener(PlayUiClick);
-        }
-    }
-
-    private void PlayUiClick()
-    {
-        if (_sfxSource != null) _sfxSource.PlayOneShot(uiClickClip);
     }
 
     // ------------------------------------------------------------------
@@ -135,7 +104,7 @@ public class MainMenuController : MonoBehaviour
         // starting a new game, so state from a previously-loaded save does
         // not bleed into the new playthrough.
         ResetCrossSceneSingletons();
-
+        Time.timeScale = 1f; // ensure time is unpaused in case we came from a paused scene
         SceneManager.LoadScene(newGameSceneName);
     }
 
