@@ -3,7 +3,12 @@ guid: cec3ec5da2e06284da44bda5342db393
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Crystal Amethyst
+    second: {fileID: 2100000, guid: 80ddf2aa34fa1fc45bbd679a134d7eef, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

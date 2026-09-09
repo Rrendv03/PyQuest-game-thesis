@@ -8,7 +8,7 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Crystal Amethyst
-    second: {fileID: 2100000, guid: b3eceda572c8f4c4899b7ce68acc987e, type: 2}
+    second: {fileID: 2100000, guid: 80ddf2aa34fa1fc45bbd679a134d7eef, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
