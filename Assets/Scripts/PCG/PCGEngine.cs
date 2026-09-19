@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 public class PCGEngine : MonoBehaviour
@@ -9,35 +10,7 @@ public class PCGEngine : MonoBehaviour
 
     private List<PuzzleTemplate> allTemplates = new List<PuzzleTemplate>();
 
-    // Tracks recently-served template IDs per (component|type|tier) bucket so
-    // the same 2-3 templates don't repeat back to back when a KC's pool is
-    // small. Capped per-bucket in SelectWithHistory.
     private Dictionary<string, Queue<string>> recentlyUsed = new Dictionary<string, Queue<string>>();
-
-    // A template tagged for one puzzleType is content, not a hard format
-    // lock: SpotTheBug injects its own bug procedurally, LineScramble
-    // derives its own dependency graph, PredictTheOutput can derive its
-    // own answer via MiniPythonEvaluator, FillInTheBlank finds its own
-    // blank target -- none of them actually NEED puzzleType-specific
-    // hand-authored fields beyond codeLines (and optionally variableName).
-    // This table says which formats a template's codeLines are
-    // STRUCTURALLY usable for, regardless of what it was originally
-    // tagged as, so GeneratePuzzle can widen a thin candidate pool with
-    // real content instead of falling back to the wrong difficulty or
-    // wrong puzzleType entirely (see GeneratePuzzle below).
-    private static readonly Dictionary<PuzzleType, System.Func<PuzzleTemplate, bool>> formatEligibility =
-        new Dictionary<PuzzleType, System.Func<PuzzleTemplate, bool>>
-    {
-        { PuzzleType.SpotTheBug, t => t.codeLines.Count >= 1 },
-        { PuzzleType.TrueOrFalse, t => t.codeLines.Count >= 1 },
-        { PuzzleType.PairACode, t => t.codeLines.Count >= 2 },
-        { PuzzleType.LineScramble, t => t.codeLines.Count >= 3 },
-        { PuzzleType.PredictTheOutput, t => t.codeLines.Exists(l => l.Contains("print(")) },
-        { PuzzleType.FillInTheBlank, t => t.codeLines.Exists(l =>
-            l.Contains("print") || l.Contains("if") || l.Contains("elif") || l.Contains("else")
-            || l.Contains("for") || l.Contains("while") || l.Contains("input") || l.Contains("range"))
-            || !string.IsNullOrEmpty(t.variableName) },
-    };
 
     void Awake()
     {
@@ -48,7 +21,6 @@ public class PCGEngine : MonoBehaviour
             LoadTemplates();
         }
         else Destroy(gameObject);
-
     }
 
     void LoadTemplates()
@@ -67,13 +39,6 @@ public class PCGEngine : MonoBehaviour
         Debug.Log($"[PCG] Loaded {allTemplates.Count} puzzle templates");
     }
 
-    /// <summary>
-    /// Centralized puzzle generation method that works with all puzzle formats.
-    /// This is the primary endpoint for generating puzzles.
-    /// </summary>
-    /// <param name="componentName">The knowledge component to generate a puzzle for</param>
-    /// <returns>A fully initialized PuzzleData object with format handler, or null if generation fails</returns>
-    // Two-parameter overload: exploration mode, uses live BKT mastery
     public PuzzleData GeneratePuzzle(string componentName, PuzzleType puzzleType)
     {
         float mastery = BKTEngine.Instance.GetMastery(componentName);
@@ -81,37 +46,26 @@ public class PCGEngine : MonoBehaviour
         return GeneratePuzzle(componentName, puzzleType, targetTier);
     }
 
-    // Three-parameter overload: encounter mode, uses locked tier
     public PuzzleData GeneratePuzzle(string componentName, PuzzleType puzzleType,
                                       DifficultyTier forcedTier)
     {
+        // Cross-format widening was removed entirely. It solved thin
+        // buckets by borrowing a template tagged for a different
+        // puzzleType, but when a (KC, difficulty) combination only had
+        // ONE template total across every format, borrowing just forced
+        // that one template into every request at that combination
+        // instead of adding real variety, and its fields (correctAnswer,
+        // distractors, bugLineIndex) don't necessarily mean the same
+        // thing across formats, which produced the "predict the output
+        // shows a blank" / "spot the bug shows no bug and no correct
+        // option" class of bugs. Straight fallback chain now: exact
+        // match, then same format at any difficulty, then same KC at any
+        // format/difficulty as a last resort.
         List<PuzzleTemplate> candidates = allTemplates
             .Where(t => t.knowledgeComponent == componentName
                      && t.difficulty == forcedTier
                      && t.puzzleType == puzzleType)
             .ToList();
-
-        // Cross-format widening: if the exact-tagged pool is thin, pull in
-        // templates from OTHER puzzleTypes at the SAME (KC, difficulty)
-        // that are structurally eligible for the requested format. This
-        // keeps the requested difficulty intact (unlike the two fallbacks
-        // below, which drop difficulty/puzzleType entirely), it just stops
-        // requiring separately-authored content per format.
-        bool crossFormatUsed = false;
-        if (candidates.Count < 3 && formatEligibility.TryGetValue(puzzleType, out var isEligible))
-        {
-            List<PuzzleTemplate> crossFormat = allTemplates
-                .Where(t => t.knowledgeComponent == componentName
-                         && t.difficulty == forcedTier
-                         && t.puzzleType != puzzleType
-                         && isEligible(t))
-                .ToList();
-            if (crossFormat.Count > 0)
-            {
-                candidates.AddRange(crossFormat);
-                crossFormatUsed = true;
-            }
-        }
 
         if (candidates.Count == 0)
             candidates = allTemplates
@@ -134,18 +88,6 @@ public class PCGEngine : MonoBehaviour
         PuzzleTemplate selected = SelectWithHistory(candidates, bucketKey);
         PuzzleTemplate mutated = MutatePuzzlePublic(selected);
 
-        // If this came from the cross-format pool, its puzzleType still
-        // says whatever it was originally authored/tagged as. Force it to
-        // the REQUESTED type so PuzzleFormatFactory builds the right
-        // handler; the format classes themselves derive their answer key
-        // from codeLines procedurally, so this is safe.
-        if (crossFormatUsed && mutated.puzzleType != puzzleType)
-        {
-            Debug.Log($"[PCG] Cross-format: template {selected.id} (authored as " +
-                      $"{selected.puzzleType}) rendered as {puzzleType}");
-            mutated.puzzleType = puzzleType;
-        }
-
         IPuzzleFormat formatHandler = PuzzleFormatFactory.CreatePuzzleFormat(mutated);
         if (formatHandler == null)
         {
@@ -157,10 +99,6 @@ public class PCGEngine : MonoBehaviour
         return new PuzzleData(mutated, formatHandler);
     }
 
-    /// <summary>
-    /// Legacy method for generating templates only (without format handling).
-    /// Use GeneratePuzzle() instead for the new centralized system.
-    /// </summary>
     public PuzzleTemplate GeneratePuzzleTemplate(string componentName)
     {
         float mastery = BKTEngine.Instance.GetMastery(componentName);
@@ -180,7 +118,6 @@ public class PCGEngine : MonoBehaviour
         return MutatePuzzlePublic(selected);
     }
 
-    // New generation endpoint tailored specifically for the True or False mechanic
     public TrueFalseData GenerateTrueFalsePuzzle(string componentName)
     {
         float mastery = BKTEngine.Instance.GetMastery(componentName);
@@ -203,33 +140,19 @@ public class PCGEngine : MonoBehaviour
         PuzzleTemplate baseTemplate = SelectWithHistory(candidates, bucketKey);
         PuzzleTemplate mutatedTemplate = MutatePuzzlePublic(baseTemplate);
 
-        // Core Procedural Mutation Rule for True/False Format:
-        // System rolls a 50/50 chance to decide if the output code should be correct (True) or bugged (False)
         bool outputShouldBeTrue = Random.Range(0, 2) == 0;
         string finalCodeDisplay = string.Join("\n", mutatedTemplate.codeLines);
 
         if (!outputShouldBeTrue)
         {
-            // Inject a semantic logical bug into the text stream to turn it False.
-            // Only the FIRST occurrence is flipped (not every "+" or "==" in the
-            // whole snippet) so the bug stays a single, findable change rather
-            // than corrupting every matching operator at once.
             if (finalCodeDisplay.Contains("=="))
-            {
                 finalCodeDisplay = ReplaceFirst(finalCodeDisplay, "==", "!=");
-            }
             else if (finalCodeDisplay.Contains(" + "))
-            {
                 finalCodeDisplay = ReplaceFirst(finalCodeDisplay, " + ", " - ");
-            }
             else if (finalCodeDisplay.Contains(" < "))
-            {
                 finalCodeDisplay = ReplaceFirst(finalCodeDisplay, " < ", " > ");
-            }
             else
-            {
                 finalCodeDisplay += "\n# Bug injected: logic trace mismatch";
-            }
         }
 
         TrueFalseData puzzlePackage = new TrueFalseData();
@@ -258,12 +181,6 @@ public class PCGEngine : MonoBehaviour
         return GetTierForMastery(mastery);
     }
 
-    /// <summary>
-    /// Picks a template from candidates, avoiding IDs used recently in the
-    /// same bucket when possible. Falls back to the full candidate pool if
-    /// avoiding recent picks would leave nothing to choose from (e.g. a
-    /// bucket with only 1-2 templates).
-    /// </summary>
     private PuzzleTemplate SelectWithHistory(List<PuzzleTemplate> candidates, string bucketKey)
     {
         if (candidates.Count == 1) return candidates[0];
@@ -287,15 +204,6 @@ public class PCGEngine : MonoBehaviour
         return picked;
     }
 
-    /// <summary>
-    /// Returns a distractor that is guaranteed wrong, not a nuanced
-    /// near-miss, by pulling an actual line from elsewhere in the SAME
-    /// snippet (thematically related, since it's real code from this exact
-    /// puzzle) rather than generating a plausible-looking variant of the
-    /// correct answer. Useful as one option among otherwise-nuanced
-    /// distractors (numeric near-values, operator swaps) so at least one
-    /// choice can never be argued as "almost right."
-    /// </summary>
     public string GenerateGuaranteedWrongOption(List<string> codeLines, string correctAnswer)
     {
         List<string> candidates = codeLines
@@ -305,11 +213,30 @@ public class PCGEngine : MonoBehaviour
         if (candidates.Count > 0)
             return candidates[Random.Range(0, candidates.Count)];
 
-        // Degenerate case: snippet is a single line and it IS the answer.
-        // Fall back to generic statements that are valid Python but make no
-        // sense as a match for a specific line in context.
         string[] genericFallbacks = { "pass", "break", "continue", "return None" };
         return genericFallbacks[Random.Range(0, genericFallbacks.Length)];
+    }
+
+    /// <summary>
+    /// CONFIRMED ROOT CAUSE of the "every word gets mutated" bug in later
+    /// sanctums: naive string.Replace(variableName, newName) treats the
+    /// variable name as a raw substring, not a whole word. Elif
+    /// Labyrinth/Input Mists content frequently uses single-letter
+    /// variable names (variableName="i" is used in 4 of your real loop
+    /// templates), and "i" is a substring of "in", "if", "print",
+    /// "input", and "while" -- every one of those keywords got partially
+    /// overwritten on every mutation. "for i in range(5):" naive-replaced
+    /// "i"->"mana" becomes "for mana manan range(5):", a guaranteed syntax
+    /// error, every single time that template mutates. \b keeps
+    /// replacement scoped to whole tokens only; the same "i" that starts
+    /// "in" no longer matches because it isn't followed by a word
+    /// boundary. Also fixes the equivalent numeric case (replacing "10"
+    /// must not also corrupt "100").
+    /// </summary>
+    private static string ReplaceWholeWord(string text, string oldWord, string newWord)
+    {
+        if (string.IsNullOrEmpty(oldWord)) return text;
+        return Regex.Replace(text, @"\b" + Regex.Escape(oldWord) + @"\b", newWord);
     }
 
     public PuzzleTemplate MutatePuzzlePublic(PuzzleTemplate original)
@@ -326,12 +253,17 @@ public class PCGEngine : MonoBehaviour
             correctOrder = new List<int>(original.correctOrder),
             distractors = new List<string>(original.distractors),
             variableName = original.variableName,
-            variableValue = original.variableValue
+            variableValue = original.variableValue,
+            // Dormant unless a template actually populates it (none do
+            // right now by design, per the decision to hold multi-variable
+            // content back until the single-variable path is confirmed
+            // stable). Safe to leave wired in: an empty list here is a
+            // complete no-op in the loop below.
+            additionalVariables = original.additionalVariables != null
+                ? original.additionalVariables.Select(v => new VariablePair { name = v.name, value = v.value }).ToList()
+                : new List<VariablePair>()
         };
 
-        // Pools expanded (roughly 1.7-2x each) so back-to-back mutations of
-        // the same template have more room to land on genuinely different
-        // values instead of cycling through a small set.
         string[] nameVariantPool = new string[]
         {
             "mana", "health", "score", "level", "gold", "damage",
@@ -380,13 +312,6 @@ public class PCGEngine : MonoBehaviour
 
         if (!string.IsNullOrEmpty(original.variableName))
         {
-            // --- Strategy 1: variable name + value swap (single pass; the
-            // old code ran this exact block twice in a row, which meant the
-            // second pass's Replace() calls almost always found nothing left
-            // to replace, while it still unconditionally overwrote
-            // m.variableName/m.variableValue with a second, different random
-            // pick -- so the stored variable name/value no longer matched
-            // what was actually in codeLines). ---
             string newName = nameVariantPool[Random.Range(0, nameVariantPool.Length)];
             string newValue;
             int parsedInt;
@@ -397,63 +322,109 @@ public class PCGEngine : MonoBehaviour
                 newValue = stringValuePool[Random.Range(0, stringValuePool.Length)].Replace("'", "");
 
             for (int i = 0; i < m.codeLines.Count; i++)
-                m.codeLines[i] = m.codeLines[i]
-                    .Replace(original.variableName, newName)
-                    .Replace(original.variableValue, newValue);
+                m.codeLines[i] = ReplaceWholeWord(
+                    ReplaceWholeWord(m.codeLines[i], original.variableName, newName),
+                    original.variableValue, newValue);
 
-            // FIX: distractors reference the same variable name/value the
-            // codeLines just got renamed to, but were never mutated here
-            // before, so they showed stale/unmutated text every single
-            // time a template was drawn ("same wrong answers" regardless
-            // of how many times the puzzle regenerated). Mirror the exact
-            // same substitution onto them.
             for (int i = 0; i < m.distractors.Count; i++)
-                m.distractors[i] = m.distractors[i]
-                    .Replace(original.variableName, newName)
-                    .Replace(original.variableValue, newValue);
+                m.distractors[i] = ReplaceWholeWord(
+                    ReplaceWholeWord(m.distractors[i], original.variableName, newName),
+                    original.variableValue, newValue);
 
             m.variableName = newName;
             m.variableValue = newValue;
 
-            // --- Strategy 2 + 3: only allowed once MiniPythonEvaluator can
-            // simulate the snippet AND its computed output for the
-            // unmutated codeLines matches the authored correctAnswer. If
-            // either check fails (conditionals/loops/input in the snippet,
-            // or correctAnswer represents something the evaluator doesn't
-            // understand like a formatted string), these two strategies are
-            // skipped entirely for this mutation rather than risking a
-            // correctAnswer that no longer matches the mutated code. ---
-            bool baselineSimulated = MiniPythonEvaluator.TrySimulate(m.codeLines, out string baselineOutput);
-            bool baselineTrustworthy = baselineSimulated && baselineOutput == original.correctAnswer;
-
-            if (baselineTrustworthy)
+            // Multi-variable renaming: dormant for existing content since
+            // additionalVariables is empty unless a template sets it, but
+            // wired in now so it's ready when you decide to author
+            // multi-variable templates later, without another PCGEngine
+            // change at that point.
+            HashSet<string> usedNewNames = new HashSet<string> { newName };
+            foreach (VariablePair extra in m.additionalVariables)
             {
+                string oldExtraName = extra.name;
+                string oldExtraValue = extra.value;
+                if (string.IsNullOrEmpty(oldExtraName)) continue;
+
+                string extraNewName = newName;
+                for (int attempt = 0; attempt < 20 && usedNewNames.Contains(extraNewName); attempt++)
+                    extraNewName = nameVariantPool[Random.Range(0, nameVariantPool.Length)];
+                usedNewNames.Add(extraNewName);
+
+                bool extraIsNumeric = int.TryParse(oldExtraValue, out int _);
+                string extraNewValue = extraIsNumeric
+                    ? intValuePool[Random.Range(0, intValuePool.Length)]
+                    : stringValuePool[Random.Range(0, stringValuePool.Length)].Replace("'", "");
+
+                for (int i = 0; i < m.codeLines.Count; i++)
+                    m.codeLines[i] = ReplaceWholeWord(
+                        ReplaceWholeWord(m.codeLines[i], oldExtraName, extraNewName),
+                        oldExtraValue, extraNewValue);
+
+                for (int i = 0; i < m.distractors.Count; i++)
+                    m.distractors[i] = ReplaceWholeWord(
+                        ReplaceWholeWord(m.distractors[i], oldExtraName, extraNewName),
+                        oldExtraValue, extraNewValue);
+
+                extra.name = extraNewName;
+                extra.value = extraNewValue;
+            }
+
+            bool baselineSimulated = MiniPythonEvaluator.TrySimulate(m.codeLines, out string baselineOutput);
+
+            if (baselineSimulated)
+            {
+                // FIX: previously only trusted the evaluator if its output
+                // happened to already match original.correctAnswer, which
+                // meant a template with a WRONG authored correctAnswer
+                // (content typo, not a code bug) would permanently keep
+                // that wrong value forever, since the mismatch itself was
+                // what blocked the evaluator-based path from ever running.
+                // The evaluator is the one actually executing the logic,
+                // so its output is ground truth; if it disagrees with what
+                // was authored, that's a content mistake worth surfacing,
+                // not a reason to keep serving the wrong answer.
+                if (baselineOutput != original.correctAnswer)
+                    Debug.LogWarning($"[PCG] {original.id}: authored correctAnswer " +
+                                      $"'{original.correctAnswer}' does not match what the " +
+                                      $"code actually computes ('{baselineOutput}'). Using the " +
+                                      $"computed value. Fix this in puzzle_templates.json.");
+
+                m.correctAnswer = baselineOutput;
+
                 List<string> candidateLines = new List<string>(m.codeLines);
 
-                // Strategy 2: randomize a numeric literal
+                // FIX: this used line.Contains(num)/line.Replace(num, ...),
+                // plain substring matching. "5" matches inside "25", "10"
+                // matches inside "100"/"150"/etc, so an UNTRACKED second
+                // variable's value (anything PCGEngine doesn't know about
+                // via variableName/variableValue) could get silently
+                // corrupted here even after Strategy 1's word-boundary fix,
+                // since digits aren't word-bounded the same way identifiers
+                // are unless checked explicitly. Now uses the same \b
+                // word-boundary approach as ReplaceWholeWord.
                 for (int i = 0; i < candidateLines.Count; i++)
                 {
                     string line = candidateLines[i];
                     foreach (string num in new string[] { "80", "18", "5", "10", "100" })
                     {
-                        if (line.Contains(num) && !line.Contains(newValue))
+                        bool wholeNumberPresent = Regex.IsMatch(line, @"\b" + Regex.Escape(num) + @"\b");
+                        if (wholeNumberPresent && !line.Contains(newValue))
                         {
-                            candidateLines[i] = line.Replace(num,
+                            candidateLines[i] = ReplaceWholeWord(line, num,
                                 intValuePool[Random.Range(0, intValuePool.Length)]);
                             break;
                         }
                     }
                 }
 
-                // Strategy 3: randomize an arithmetic operator
                 for (int i = 0; i < candidateLines.Count; i++)
                 {
                     string line = candidateLines[i];
                     if (line.Contains(" + ") || line.Contains(" - ") || line.Contains(" * "))
                     {
                         string op = operatorPairs[Random.Range(0, operatorPairs.Length)];
-                        candidateLines[i] = System.Text.RegularExpressions.Regex
-                            .Replace(line, @" [\+\-\*] ", $" {op} ");
+                        candidateLines[i] = Regex.Replace(line, @" [\+\-\*] ", $" {op} ");
                         break;
                     }
                 }
@@ -463,24 +434,14 @@ public class PCGEngine : MonoBehaviour
                     m.codeLines = candidateLines;
                     m.correctAnswer = newOutput;
                 }
-                // If re-simulation somehow fails after 2/3 (shouldn't happen
-                // since only literals/operators the evaluator already
-                // understood were touched), m.codeLines/correctAnswer stay
-                // at the Strategy-1-only result computed above.
             }
             else if (m.correctAnswer == original.variableValue)
             {
-                // Can't simulate (conditional/loop/input in the snippet, or
-                // correctAnswer isn't derived from plain simulation). Keep
-                // the narrow rename-only sync so the common case -- where
-                // correctAnswer literally equals the mutated variable's
-                // value -- still works.
                 m.correctAnswer = newValue;
             }
         }
         else
         {
-            // --- Strategy 4: String literal replacement ---
             bool mutated = false;
             for (int i = 0; i < m.codeLines.Count; i++)
             {
@@ -503,17 +464,22 @@ public class PCGEngine : MonoBehaviour
                         .Replace("'No'", messagePool[Random.Range(0, messagePool.Length)]);
                     mutated = true;
                 }
-                else if (System.Text.RegularExpressions.Regex.IsMatch(line, @"\b\d+\b"))
+                else if (Regex.IsMatch(line, @"\b\d+\b"))
                 {
-                    // Strategy 5: Replace standalone numbers
-                    m.codeLines[i] = System.Text.RegularExpressions.Regex.Replace(
+                    m.codeLines[i] = Regex.Replace(
                         line, @"\b\d+\b",
                         match => intValuePool[Random.Range(0, intValuePool.Length)]);
                     mutated = true;
                 }
             }
 
-            // Strategy 6: Inject a variable line before print if nothing mutated
+            // Same fix applied here: if the (possibly just-mutated) code is
+            // simulatable, let the evaluator's output be the ground truth
+            // for correctAnswer rather than leaving a possibly-wrong
+            // authored value untouched.
+            if (MiniPythonEvaluator.TrySimulate(m.codeLines, out string noVarOutput))
+                m.correctAnswer = noVarOutput;
+
             if (!mutated)
             {
                 string[] injections = new string[]
@@ -526,16 +492,12 @@ public class PCGEngine : MonoBehaviour
 
                 string injection = injections[Random.Range(0, injections.Length)];
 
+
                 for (int i = 0; i < m.codeLines.Count; i++)
                 {
                     if (m.codeLines[i].Contains("print("))
                     {
                         m.codeLines.Insert(i, injection);
-                        // FIX: inserting a line shifts every line at or after
-                        // index i down by one. bugLineIndex and correctOrder
-                        // are indices INTO codeLines, so they need the same
-                        // shift or they silently point at the wrong lines
-                        // once something downstream actually reads them.
                         if (m.bugLineIndex >= i) m.bugLineIndex++;
                         for (int k = 0; k < m.correctOrder.Count; k++)
                             if (m.correctOrder[k] >= i) m.correctOrder[k]++;
@@ -549,13 +511,10 @@ public class PCGEngine : MonoBehaviour
         return m;
     }
 
-    // Data carrier block declared outside the class boundary to safely pass package information to the UI canvas
     [System.Serializable]
     public class TrueFalseData
     {
         public string snippetText;
         public bool isSnippetTrue;
     }
-
-
 }

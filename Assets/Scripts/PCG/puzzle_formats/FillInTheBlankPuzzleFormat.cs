@@ -202,31 +202,38 @@ public class FillInTheBlankPuzzleFormat : IPuzzleFormat
 
     private List<string> GetKeywordDistractors(string keyword)
     {
-        // Return semantically similar but wrong keywords
+        // FIX: this used to return the exact same 3 distractors, in the
+        // exact same order, every single time a given keyword got blanked.
+        // Across multiple puzzle instances the option set became
+        // memorizable regardless of the code content, since it never
+        // varied with the keyword held fixed. Pools widened to 5-6 each,
+        // and now 3 are sampled at random per generation.
         Dictionary<string, List<string>> similar = new Dictionary<string, List<string>>()
         {
-            { "print",  new List<string> { "input", "output", "display" } },
-            { "input",  new List<string> { "print", "read", "scan" } },
-            { "if",     new List<string> { "elif", "else", "while" } },
-            { "elif",   new List<string> { "if", "else", "when" } },
-            { "else",   new List<string> { "elif", "if", "otherwise" } },
-            { "for",    new List<string> { "while", "loop", "each" } },
-            { "while",  new List<string> { "for", "until", "loop" } },
-            { "in",     new List<string> { "of", "from", "at" } },
-            { "range",  new List<string> { "len", "list", "count" } },
-            { "def",    new List<string> { "class", "func", "var" } },
-            { "return", new List<string> { "yield", "output", "print" } },
-            { "True",   new List<string> { "False", "None", "1" } },
-            { "False",  new List<string> { "True", "None", "0" } },
-            { "len",    new List<string> { "range", "count", "size" } },
-            { "int",    new List<string> { "str", "float", "bool" } },
-            { "str",    new List<string> { "int", "float", "char" } }
+            { "print",  new List<string> { "input", "output", "display", "write", "show" } },
+            { "input",  new List<string> { "print", "read", "scan", "get", "prompt" } },
+            { "if",     new List<string> { "elif", "else", "while", "when", "unless" } },
+            { "elif",   new List<string> { "if", "else", "when", "then", "or" } },
+            { "else",   new List<string> { "elif", "if", "otherwise", "then", "default" } },
+            { "for",    new List<string> { "while", "loop", "each", "repeat", "iterate" } },
+            { "while",  new List<string> { "for", "until", "loop", "repeat", "when" } },
+            { "in",     new List<string> { "of", "from", "at", "within", "on" } },
+            { "range",  new List<string> { "len", "list", "count", "span", "array" } },
+            { "def",    new List<string> { "class", "func", "var", "method", "lambda" } },
+            { "return", new List<string> { "yield", "output", "print", "give", "send" } },
+            { "True",   new List<string> { "False", "None", "1", "yes", "on" } },
+            { "False",  new List<string> { "True", "None", "0", "no", "off" } },
+            { "len",    new List<string> { "range", "count", "size", "sum", "total" } },
+            { "int",    new List<string> { "str", "float", "bool", "num", "digit" } },
+            { "str",    new List<string> { "int", "float", "char", "text", "word" } }
         };
 
-        if (similar.ContainsKey(keyword))
-            return similar[keyword];
+        List<string> pool = similar.ContainsKey(keyword)
+            ? new List<string>(similar[keyword])
+            : new List<string> { "print", "input", "if", "for", "return" };
 
-        return new List<string> { "print", "input", "if" };
+        ShuffleList(pool);
+        return pool.GetRange(0, Mathf.Min(3, pool.Count));
     }
 
     private string GetFallbackKeyword(string exclude)
@@ -242,6 +249,17 @@ public class FillInTheBlankPuzzleFormat : IPuzzleFormat
         {
             int j = Random.Range(0, i + 1);
             int temp = list[i];
+            list[i] = list[j];
+            list[j] = temp;
+        }
+    }
+
+    private void ShuffleList(List<string> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            string temp = list[i];
             list[i] = list[j];
             list[j] = temp;
         }

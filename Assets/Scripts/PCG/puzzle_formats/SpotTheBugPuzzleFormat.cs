@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -183,6 +185,22 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
     /// version. Strategies 7/8 guarantee a real change before that
     /// harmless fallback is ever reached.
     /// </summary>
+    /// <summary>
+    /// Transposes two adjacent characters within an identifier, producing
+    /// a believable typo that no longer matches any defined name (a real
+    /// NameError), rather than an obviously-random replacement.
+    /// </summary>
+    private string MangleIdentifier(string identifier)
+    {
+        if (identifier.Length < 2) return identifier + "x";
+        char[] chars = identifier.ToCharArray();
+        char tmp = chars[0];
+        chars[0] = chars[1];
+        chars[1] = tmp;
+        string result = new string(chars);
+        return result == identifier ? identifier + "x" : result;
+    }
+
     private string InjectBug(string line)
     {
         // Strategy 1: flip comparison operator
@@ -200,9 +218,38 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
         if (line.Contains("while ")) return line.Replace("while ", "whlie ");
         if (line.Contains("elif ")) return line.Replace("elif ", "elseif ");
 
-        // Strategy 3: flip arithmetic operator
-        if (line.Contains(" + ")) return line.Replace(" + ", " - ");
-        if (line.Contains(" * ")) return line.Replace(" * ", " / ");
+        // FIX: previously excluded the DEFINING line ("health = 100"),
+        // reasoning it should only mangle later references. But mangling
+        // the definition itself ALSO produces a real NameError, just from
+        // the other direction: "hnealth = 100" means "health" specifically
+        // is never assigned, so any later "print(health)" fails. Simple
+        // one-variable assignment lines are extremely common in this
+        // content and were the exact case that always fell through every
+        // strategy above to the equals-to-double-equals fallback below,
+        // making that one strategy dominate almost every SpotTheBug
+        // instance. Removing the exclusion gives those lines a real
+        // alternative instead of only ever landing on the same fallback.
+        if (!string.IsNullOrEmpty(template.variableName) && line.Contains(template.variableName))
+        {
+            string mangled = MangleIdentifier(template.variableName);
+            if (mangled != template.variableName)
+                return line.Replace(template.variableName, mangled);
+        }
+
+        Match singleQuoted = Regex.Match(line, @"'[^']*'");
+        if (singleQuoted.Success)
+        {
+            string original = singleQuoted.Value;
+            string askew = "\"" + original.Substring(1);
+            return line.Replace(original, askew);
+        }
+        Match doubleQuoted = Regex.Match(line, "\"[^\"]*\"");
+        if (doubleQuoted.Success)
+        {
+            string original = doubleQuoted.Value;
+            string askew = "'" + original.Substring(1);
+            return line.Replace(original, askew);
+        }
 
         // Strategy 4: wrong assignment operator
         if (line.Contains(" = ") && !line.Contains("=="))
@@ -258,31 +305,42 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
     /// </summary>
     private List<string> GenerateWrongOptions(string correctLine, string buggedLine)
     {
+        // FIX: this was an if/elif chain, so a line matching multiple
+        // patterns (e.g. containing both "==" and " + ") only ever
+        // produced the FIRST matching option, every single time. Now
+        // every applicable pattern is collected, then shuffled, so the
+        // same line can surface a different wrong option across
+        // different puzzle instances instead of being deterministic.
         List<string> result = new List<string>();
 
-        // Wrong option 1: the bugged line itself
         if (buggedLine != correctLine)
             result.Add(buggedLine);
 
-        // Wrong option 2: a different mutation of the correct line
-        if (correctLine.Contains("!="))
-            result.Add(correctLine.Replace("!=", "=="));
-        else if (correctLine.Contains("=="))
-            result.Add(correctLine.Replace("==", ">="));
-        else if (correctLine.Contains(" > "))
-            result.Add(correctLine.Replace(" > ", " >= "));
-        else if (correctLine.Contains(" < "))
-            result.Add(correctLine.Replace(" < ", " <= "));
-        else if (correctLine.Contains("print("))
-            result.Add(correctLine.Replace("print(", "Print("));
-        else if (correctLine.Contains(" + "))
-            result.Add(correctLine.Replace(" + ", " * "));
-        else if (correctLine.Contains(" = ") && !correctLine.Contains("=="))
-            result.Add(correctLine.Replace(" = ", " += "));
-        else if (!string.IsNullOrEmpty(template.variableName)
-              && correctLine.Contains(template.variableName))
-            result.Add(correctLine.Replace(template.variableName,
-                                           $"'{template.variableName}'"));
+        List<string> candidates = new List<string>();
+        if (correctLine.Contains("!=")) candidates.Add(correctLine.Replace("!=", "=="));
+        if (correctLine.Contains("==")) candidates.Add(correctLine.Replace("==", ">="));
+        if (correctLine.Contains("==")) candidates.Add(correctLine.Replace("==", "!="));
+        if (correctLine.Contains(" > ")) candidates.Add(correctLine.Replace(" > ", " >= "));
+        if (correctLine.Contains(" > ")) candidates.Add(correctLine.Replace(" > ", " < "));
+        if (correctLine.Contains(" < ")) candidates.Add(correctLine.Replace(" < ", " <= "));
+        if (correctLine.Contains("print(")) candidates.Add(correctLine.Replace("print(", "Print("));
+        if (correctLine.Contains("print(")) candidates.Add(correctLine.Replace("print(", "pnint("));
+        if (correctLine.Contains(" + ")) candidates.Add(correctLine.Replace(" + ", " * "));
+        if (correctLine.Contains(" + ")) candidates.Add(correctLine.Replace(" + ", " - "));
+        if (correctLine.Contains(" - ")) candidates.Add(correctLine.Replace(" - ", " + "));
+        if (correctLine.Contains(" * ")) candidates.Add(correctLine.Replace(" * ", " / "));
+        if (correctLine.Contains(" = ") && !correctLine.Contains("=="))
+            candidates.Add(correctLine.Replace(" = ", " += "));
+        if (correctLine.Contains(" = ") && !correctLine.Contains("=="))
+            candidates.Add(correctLine.Replace(" = ", " == "));
+        if (!string.IsNullOrEmpty(template.variableName) && correctLine.Contains(template.variableName))
+            candidates.Add(correctLine.Replace(template.variableName, $"'{template.variableName}'"));
+        if (correctLine.Contains("range("))
+            candidates.Add(correctLine.Replace("range(", "rang("));
+
+        candidates = candidates.Where(c => c != correctLine && !result.Contains(c)).Distinct().ToList();
+        ShuffleList(candidates);
+        result.AddRange(candidates);
 
         return result;
     }
@@ -294,48 +352,55 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
     /// </summary>
     private List<string> GenerateDecoys(string cleanLine)
     {
-        List<string> result = new List<string>();
+        // FIX: same issue as GenerateWrongOptions -- if/elif chain meant
+        // only the first matching pattern's 2 decoys were ever available
+        // for a given line shape. Widened to collect from every
+        // applicable pattern and randomize the subset shown.
+        List<string> candidates = new List<string>();
 
         if (cleanLine.Contains("print("))
         {
-            result.Add(cleanLine.Replace("print(", "pritn("));
-            result.Add(cleanLine.Replace("print(", "Print("));
+            candidates.Add(cleanLine.Replace("print(", "pritn("));
+            candidates.Add(cleanLine.Replace("print(", "Print("));
+            candidates.Add(cleanLine.Replace("print(", "pnint("));
         }
-        else if (cleanLine.Contains("=="))
+        if (cleanLine.Contains("=="))
         {
-            result.Add(cleanLine.Replace("==", "="));
-            result.Add(cleanLine.Replace("==", "!="));
+            candidates.Add(cleanLine.Replace("==", "="));
+            candidates.Add(cleanLine.Replace("==", "!="));
         }
-        else if (cleanLine.Contains(" = ") && !cleanLine.Contains("=="))
+        if (cleanLine.Contains(" = ") && !cleanLine.Contains("=="))
         {
-            result.Add(cleanLine.Replace(" = ", " == "));
-            result.Add(cleanLine.Replace(" = ", " += "));
+            candidates.Add(cleanLine.Replace(" = ", " == "));
+            candidates.Add(cleanLine.Replace(" = ", " += "));
         }
-        else if (cleanLine.Contains(" + "))
+        if (cleanLine.Contains(" + "))
         {
-            result.Add(cleanLine.Replace(" + ", " - "));
-            result.Add(cleanLine.Replace(" + ", " * "));
+            candidates.Add(cleanLine.Replace(" + ", " - "));
+            candidates.Add(cleanLine.Replace(" + ", " * "));
         }
-        else if (cleanLine.Contains("range("))
+        if (cleanLine.Contains("range("))
         {
-            result.Add(cleanLine.Replace("range(", "rang("));
-            result.Add(cleanLine.Replace("range(", "Range("));
+            candidates.Add(cleanLine.Replace("range(", "rang("));
+            candidates.Add(cleanLine.Replace("range(", "Range("));
         }
-        else if (cleanLine.Contains("    "))
+        if (cleanLine.Contains("    "))
         {
-            result.Add(cleanLine.TrimStart());
-            result.Add("        " + cleanLine.TrimStart());
+            candidates.Add(cleanLine.TrimStart());
+            candidates.Add("        " + cleanLine.TrimStart());
         }
-        else
+        if (!string.IsNullOrEmpty(template.variableName) && cleanLine.Contains(template.variableName))
         {
-            result.Add("    " + cleanLine);
-            if (!string.IsNullOrEmpty(template.variableName)
-                && cleanLine.Contains(template.variableName))
-                result.Add(cleanLine.Replace(template.variableName,
-                                             template.variableName + "a"));
+            candidates.Add(cleanLine.Replace(template.variableName, template.variableName + "a"));
+        }
+        if (candidates.Count == 0)
+        {
+            candidates.Add("    " + cleanLine);
         }
 
-        return result;
+        candidates = candidates.Where(c => c != cleanLine).Distinct().ToList();
+        ShuffleList(candidates);
+        return candidates;
     }
 
     private string GenerateFallbackOption(int lineIndex)

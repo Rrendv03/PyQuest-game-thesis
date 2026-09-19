@@ -71,11 +71,36 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
         options.Add(correctAnswer);
 
         // Generate distractors dynamically instead of using stale template distractors
+        // FIX: pool widened (ZeroDivisionError, IndentationError added --
+        // both genuinely reachable in this KC scope, unlike some
+        // suggested names that aren't real Python exceptions; using fake
+        // ones risks teaching a wrong exception name or letting a player
+        // rule an option out just by recognizing it isn't real Python).
+        // Also now shuffled before picking: previously this walked the
+        // array in FIXED order, so a given correctAnswer always paired
+        // with the same 2 distractors every time.
         if (isErrorVariant)
         {
-            string[] errorTypes = new string[] { "NameError", "TypeError", "SyntaxError", "IndexError", "ValueError" };
+            List<string> errorTypes = new List<string> {
+                "NameError", "TypeError", "SyntaxError", "IndexError",
+                "ValueError", "ZeroDivisionError", "IndentationError"
+            };
+            errorTypes.RemoveAll(e => e == correctAnswer);
+            ShuffleList(errorTypes);
+
+            // Mix in ONE plausible-looking output as a distractor (not
+            // just other error names), so the player has to recognize
+            // this is an error case in the first place, not just guess
+            // among exception names.
+            if (errorTypes.Count > 0)
+            {
+                string plausibleOutput = GeneratePlausibleOutputDistractor();
+                if (!string.IsNullOrEmpty(plausibleOutput) && options.Count < 3)
+                    options.Add(plausibleOutput);
+            }
+
             foreach (string e in errorTypes)
-                if (e != correctAnswer && options.Count < 3)
+                if (options.Count < 3)
                     options.Add(e);
         }
         else
@@ -130,6 +155,24 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
             options.Add(GenerateFallbackDistractor());
 
         Debug.Log($"[PredictTheOutputPuzzleFormat] Correct: {correctAnswer} | Options: {string.Join(", ", options)}");
+    }
+
+    /// <summary>
+    /// For error-variant questions (correctAnswer is an exception name),
+    /// returns a plausible-looking VALUE as one of the distractors, so
+    /// the player has to recognize "this errors" in the first place
+    /// rather than just picking among exception names by elimination.
+    /// </summary>
+    private string GeneratePlausibleOutputDistractor()
+    {
+        if (!string.IsNullOrEmpty(template.variableValue))
+        {
+            int parsedInt;
+            if (int.TryParse(template.variableValue, out parsedInt))
+                return (parsedInt + Random.Range(1, 10)).ToString();
+            return "'" + template.variableValue + "'";
+        }
+        return null;
     }
 
     private void ShuffleList(List<string> list)

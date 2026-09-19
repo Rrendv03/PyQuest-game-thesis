@@ -79,7 +79,13 @@ public class LogUI : MonoBehaviour
         foreach (Transform child in contentParent)
             Destroy(child.gameObject);
 
-        var logs = StudentLogManager.Instance.ExportLogs();
+        // Fix: was calling ExportLogs(), which stamps sessionEndTime and
+        // adds elapsed time to totalPlayTimeHours on every call. Opening
+        // this panel mid-session (which can happen many times per
+        // session) was silently inflating total play time on each open.
+        // PeekCurrentData() is the read-only snapshot StudentLogManager's
+        // own docs say to use for exactly this case.
+        var logs = StudentLogManager.Instance.PeekCurrentData();
         if (logs == null) return;
 
         // Update summary

@@ -177,6 +177,180 @@ def indent_of(line):
     return len(line) - len(line.lstrip(' '))
 
 
+# ===== Port of MiniPythonEvaluator.cs, kept in lockstep with it =====
+# Used to independently verify that a PredictTheOutput template's authored
+# correctAnswer actually matches what the code computes, rather than
+# trusting the JSON. Royce found a template where lives=12, b=7,
+# print(lives*b) was authored with the wrong correctAnswer; PCGEngine now
+# self-corrects that at runtime, but this check finds every other instance
+# of the same content mistake before a player does.
+
+PYEVAL_UNSUPPORTED = ["if ", "elif ", "else", "for ", "while ", "def ", "input(",
+                      "==", "!=", ">=", "<=", " > ", " < ", "("]
+
+
+def pyeval_split_top_level_commas(expr):
+    parts, in_s, in_d, start = [], False, False, 0
+    for i, c in enumerate(expr):
+        if c == "'" and not in_d: in_s = not in_s
+        elif c == '"' and not in_s: in_d = not in_d
+        elif c == ',' and not in_s and not in_d:
+            parts.append(expr[start:i]); start = i + 1
+    parts.append(expr[start:])
+    return parts
+
+
+def pyeval_split_top_level(expr, delim):
+    return expr.split(delim)
+
+
+def pyeval_resolve_string_token(token, env, env_is_string):
+    token = token.strip()
+    if (token.startswith("'") and token.endswith("'") and len(token) >= 2) or \
+       (token.startswith('"') and token.endswith('"') and len(token) >= 2):
+        return True, token[1:-1]
+    # A variable can only join a string concatenation if it's ALSO
+    # string-typed. A numeric variable being pulled in here is the
+    # str + int TypeError case in real Python; it must fail, not
+    # silently get stringified into the result.
+    if token in env and env_is_string.get(token, False):
+        return True, env[token]
+    return False, None
+
+
+def pyeval_is_string_expr(expr, env, env_is_string):
+    parts = pyeval_split_top_level(expr, '+')
+    first = parts[0].strip()
+    if first.startswith("'") or first.startswith('"'):
+        return True
+    # Check TRACKED type, not just whether the stored text looks numeric:
+    # a string variable holding "5" must not be treated as numeric just
+    # because its digits look like an int.
+    if first in env_is_string:
+        return env_is_string[first]
+    return False
+
+
+def pyeval_resolve_int(token, env, env_is_string):
+    token = token.strip()
+    # A variable KNOWN to be string-typed can never participate in
+    # arithmetic, regardless of whether its stored text looks numeric.
+    if env_is_string.get(token, False):
+        return False, 0
+    try:
+        return True, int(token)
+    except ValueError:
+        pass
+    if token in env:
+        try:
+            return True, int(env[token])
+        except ValueError:
+            return False, 0
+    return False, 0
+
+
+def pyeval_arithmetic(expr, env, env_is_string):
+    compact = expr.replace(" ", "")
+    if not compact:
+        return False, 0
+    terms = re.findall(r'[+-]?[^+-]+', compact)
+    if not terms:
+        return False, 0
+    total = 0
+    for t in terms:
+        sign = 1
+        if t.startswith('-'):
+            sign = -1; t = t[1:]
+        elif t.startswith('+'):
+            t = t[1:]
+        if not t:
+            return False, 0
+        factors = t.split('*')
+        product = 1
+        for f in factors:
+            ok, val = pyeval_resolve_int(f, env, env_is_string)
+            if not ok:
+                return False, 0
+            product *= val
+        total += sign * product
+    return True, total
+
+
+def pyeval_expression(expr, env, env_is_string):
+    expr = expr.strip()
+    if expr.startswith("'") or expr.startswith('"') or pyeval_is_string_expr(expr, env, env_is_string):
+        parts = pyeval_split_top_level(expr, '+')
+        out = []
+        for p in parts:
+            ok, val = pyeval_resolve_string_token(p.strip(), env, env_is_string)
+            if not ok:
+                return False, None, False
+            out.append(val)
+        return True, "".join(out), True
+    ok, val = pyeval_arithmetic(expr, env, env_is_string)
+    if not ok:
+        return False, None, False
+    return True, str(val), False
+
+
+def pyeval_simulate(code_lines):
+    env, env_is_string, printed = {}, {}, []
+    for raw in code_lines:
+        line = raw.strip()
+        if not line or line.startswith('#'):
+            continue
+        m = re.match(r'^print\((.*)\)$', line)
+        if m:
+            args = pyeval_split_top_level_commas(m.group(1).strip())
+            evaluated = []
+            for arg in args:
+                ok, val, _ = pyeval_expression(arg.strip(), env, env_is_string)
+                if not ok:
+                    return False, None
+                evaluated.append(val)
+            printed.append(" ".join(evaluated))
+            continue
+        if any(mk in line for mk in PYEVAL_UNSUPPORTED):
+            return False, None
+        m2 = re.match(r'^(\w+)\s*=(?!=)\s*(.+)$', line)
+        if not m2:
+            return False, None
+        var, expr = m2.group(1), m2.group(2).strip()
+        ok, val, is_str = pyeval_expression(expr, env, env_is_string)
+        if not ok:
+            return False, None
+        env[var] = val
+        env_is_string[var] = is_str
+    if not printed:
+        return False, None
+    return True, "\n".join(printed)
+
+
+def check_broken_print_syntax(template, errors):
+    for line in template.get("codeLines", []):
+        if re.match(r'^\s*print\s*=\s*\(', line):
+            errors.append(
+                f"line {line!r} reassigns the name 'print' instead of calling it "
+                f"(print(x), not print = (x)). This is valid Python that runs silently, "
+                f"not an error, so error-type answer options here are all wrong."
+            )
+
+
+def check_predict_output_answer(template, errors, infos):
+    if template.get("puzzleType") != 4:  # 4 == PredictTheOutput
+        return
+    ok, computed = pyeval_simulate(template.get("codeLines", []))
+    if not ok:
+        return  # has a conditional/loop/input/etc, can't verify statically, not an error
+    authored = template.get("correctAnswer", "")
+    if authored != computed:
+        errors.append(
+            f"authored correctAnswer {authored!r} does not match what the code "
+            f"actually computes ({computed!r}). PCGEngine self-corrects this at "
+            f"runtime now, but fix it in the JSON so the base template is right too."
+        )
+
+
 def build_chunks(code_lines):
     """Mirrors LineScramblePuzzleFormat.cs's BuildChunks exactly: a header
     line plus any more-indented lines that follow it, plus any elif/else
@@ -326,6 +500,8 @@ def main():
         check_bug_line_index(t, errors)
         check_correct_order(t, errors)
         check_line_scramble(t, infos)
+        check_predict_output_answer(t, errors, infos)
+        check_broken_print_syntax(t, errors)
 
         if errors:
             total_errors += len(errors)

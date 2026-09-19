@@ -3,8 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-public class LineScrambleSlot : MonoBehaviour, IBeginDragHandler, IDragHandler,
-                                               IEndDragHandler, IDropHandler
+public class LineScrambleSlot : MonoBehaviour, IPointerDownHandler, IBeginDragHandler,
+                                               IDragHandler, IEndDragHandler, IDropHandler
 {
     [HideInInspector] public int originalRowNumber;
     [HideInInspector] public string lineText;
@@ -19,6 +19,12 @@ public class LineScrambleSlot : MonoBehaviour, IBeginDragHandler, IDragHandler,
     private Vector3 dragStartWorldPosition;
     private Coroutine activeSlideCoroutine;
 
+    // Set when the controller commits a swap for this slot while it is still
+    // the dragged object. The swap slide animation started from this slot's
+    // released position and now owns it, so OnEndDrag must NOT snap it back
+    // to dragStartWorldPosition (that would kill the animation).
+    private bool suppressEndDragSnap;
+
     [Header("Animation")]
     public float slideDuration = 0.25f;
     public AnimationCurve slideEase = AnimationCurve.EaseInOut(0, 0, 1, 1);
@@ -27,8 +33,32 @@ public class LineScrambleSlot : MonoBehaviour, IBeginDragHandler, IDragHandler,
     private Color draggingColor = new Color(0.20f, 0.50f, 0.80f, 0.80f);
     private Color correctColor = new Color(0.20f, 0.70f, 0.30f, 1f);
 
+    // --- Read access used by the controller to choreograph swap animations ---
+
+    /// <summary>True while this slot's slide coroutine is running.</summary>
+    public bool IsAnimating => activeSlideCoroutine != null;
+
+    /// <summary>
+    /// Where this slot was sitting when the current drag began — its original
+    /// slot position before the player dragged it. The replaced (drop target)
+    /// slot slides to this position during a swap.
+    /// </summary>
+    public Vector3 DragStartWorldPosition => dragStartWorldPosition;
+
+    /// <summary>Current on-screen (world) position of this slot.</summary>
+    public Vector3 CurrentWorldPosition =>
+        rectTransform != null ? rectTransform.position : transform.position;
+
     public void Setup(int rowNumber, string text, LineScrambleUIController controller)
     {
+        // A repopulate invalidates any slide animation still in flight.
+        if (activeSlideCoroutine != null)
+        {
+            StopCoroutine(activeSlideCoroutine);
+            activeSlideCoroutine = null;
+        }
+        suppressEndDragSnap = false;
+
         originalRowNumber = rowNumber;
         lineText = text;
         parentController = controller;
@@ -42,10 +72,29 @@ public class LineScrambleSlot : MonoBehaviour, IBeginDragHandler, IDragHandler,
         if (canvasGroup == null)
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
+        // Pointer/drag events reach the slot through its Image, no matter how
+        // the container hierarchy is set up. Force the slot hittable and
+        // clear a blocksRaycasts=false left over from a drag interrupted by a
+        // repopulate (OnEndDrag may never have run to restore it).
+        if (backgroundImage != null)
+            backgroundImage.raycastTarget = true;
+        canvasGroup.blocksRaycasts = true;
+
         if (lineLabel != null)
             lineLabel.text = text;
 
         SetState_Default();
+    }
+
+    /// <summary>
+    /// Press feedback: fires on pointer press, even if the player releases
+    /// without ever dragging. Routed to the controller so all four puzzle
+    /// sounds (press, drag, swap, execute) are assigned in one place.
+    /// </summary>
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        if (parentController != null)
+            parentController.PlaySlotPressSound();
     }
 
     public void OnBeginDrag(PointerEventData eventData)
@@ -61,9 +110,22 @@ public class LineScrambleSlot : MonoBehaviour, IBeginDragHandler, IDragHandler,
             activeSlideCoroutine = null;
         }
 
+        // That interrupted slide may have left the sibling-index refresh
+        // pending (it only runs once every slide finishes). Flush it NOW so
+        // the layout order and on-screen positions agree again before this
+        // drag starts and before we snapshot the drag origin below.
+        if (parentController != null)
+            parentController.FlushPendingLayoutSync();
+
+        // A fresh drag always owns its own end-drag behaviour.
+        suppressEndDragSnap = false;
+
         dragStartWorldPosition = rectTransform.position;
         canvasGroup.blocksRaycasts = false;
         SetState_Dragging();
+
+        if (parentController != null)
+            parentController.StartSlotDragSound();
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -74,7 +136,27 @@ public class LineScrambleSlot : MonoBehaviour, IBeginDragHandler, IDragHandler,
     public void OnEndDrag(PointerEventData eventData)
     {
         canvasGroup.blocksRaycasts = true;
-        rectTransform.position = dragStartWorldPosition;
+
+        // The drag is over either way (swapped or snapped back home), so the
+        // looping drag sound must stop in both branches.
+        if (parentController != null)
+            parentController.StopSlotDragSound();
+
+        if (suppressEndDragSnap)
+        {
+            // A swap was committed on drop (OnDrop fires before OnEndDrag).
+            // The slide animation started from this slot's released position,
+            // so snapping back to dragStartWorldPosition here would teleport
+            // it and kill the animation.
+            suppressEndDragSnap = false;
+        }
+        else
+        {
+            // No swap happened (released over empty space): return to the
+            // slot position this drag started from.
+            rectTransform.position = dragStartWorldPosition;
+        }
+
         SetState_Default();
     }
 
@@ -90,10 +172,22 @@ public class LineScrambleSlot : MonoBehaviour, IBeginDragHandler, IDragHandler,
     }
 
     /// <summary>
+    /// Called by the controller right after it commits a swap that involves
+    /// this slot as the dragged object. The swap slide that was just started
+    /// owns this slot's position from here on, so the upcoming OnEndDrag
+    /// (which fires right after OnDrop in the same frame) must not snap it
+    /// back to its pre-drag home.
+    /// </summary>
+    public void NotifySwapAnimationStarted()
+    {
+        suppressEndDragSnap = true;
+    }
+
+    /// <summary>
     /// Smoothly slides this slot from its current screen position
     /// to the given target world position. Used for both the
-    /// dragged slot snapping into place and the displaced slot
-    /// sliding to where the dragged slot used to be.
+    /// dragged slot gliding into the target's old slot and the
+    /// displaced slot sliding to where the dragged slot used to be.
     /// </summary>
     public void SlideTo(Vector3 targetWorldPosition)
     {

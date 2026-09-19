@@ -7,18 +7,20 @@ using System.Text.RegularExpressions;
 /// mutations can produce: sequential "var = expr" assignments and
 /// "print(expr)" calls, where expr is a flat (no parentheses) chain of
 /// +, -, * over integer literals/variables, or + over string literals/
-/// variables.
+/// variables, or a comma-separated print() argument list.
 ///
-/// Anything outside that (if/elif/else/for/while/def, input(), comparisons,
-/// function calls other than print()) makes it bail out with false rather
-/// than guess, so PCGEngine can fall back to its old narrow correctAnswer
-/// sync instead of trusting a wrong derived value.
+/// Tracks whether each variable was assigned a STRING (quoted literal) or
+/// NUMERIC value, not just its text. Without this, x = '5' (a string) and
+/// x = 5 (an int) were indistinguishable once stored, so x + 2 would
+/// silently compute a number even though real Python raises TypeError for
+/// str + int. That's the difference between "safe to skip" and "silently
+/// wrong": this evaluator now bails out (returns false) on exactly the
+/// cases that would actually error in real Python, rather than guessing.
 ///
-/// Algorithm verified against ~15 hand-built cases (independent inits,
-/// self-referencing updates, string concatenation, operator precedence,
-/// multi-print sequences) via a Python port before being written here.
-/// Still needs a real Unity/C# compile-and-play check on actual templates;
-/// this file has not been run inside Unity.
+/// Anything outside this grammar (if/elif/else/for/while/def, input(),
+/// comparisons, function calls other than print()) also makes it bail
+/// out, so callers can fall back to trusting the authored correctAnswer
+/// instead of trusting a wrong derived one.
 /// </summary>
 public static class MiniPythonEvaluator
 {
@@ -27,16 +29,12 @@ public static class MiniPythonEvaluator
         "if ", "elif ", "else", "for ", "while ", "def ", "input(",
         "==", "!=", ">=", "<=", " > ", " < ", "(", ")"
     };
-    // Note: "(" and ")" are excluded wholesale except for print(...), which
-    // is special-cased below. That means any function call other than
-    // print() (len(), int(), str(), range() used outside a for-header, etc.)
-    // makes this bail out too. That's intentional: better to defer to the
-    // old correctAnswer sync than silently mis-evaluate.
 
     public static bool TrySimulate(List<string> codeLines, out string finalOutput)
     {
         finalOutput = null;
         var env = new Dictionary<string, string>();
+        var envIsString = new Dictionary<string, bool>();
         var printed = new List<string>();
 
         foreach (string raw in codeLines)
@@ -47,9 +45,15 @@ public static class MiniPythonEvaluator
             Match printMatch = Regex.Match(line, @"^print\((.*)\)$");
             if (printMatch.Success)
             {
-                if (!TryEvaluateExpression(printMatch.Groups[1].Value.Trim(), env, out string val))
-                    return false;
-                printed.Add(val);
+                List<string> args = SplitTopLevelCommas(printMatch.Groups[1].Value.Trim());
+                List<string> evaluatedArgs = new List<string>();
+                foreach (string arg in args)
+                {
+                    if (!TryEvaluateExpression(arg.Trim(), env, envIsString, out string argVal, out _))
+                        return false;
+                    evaluatedArgs.Add(argVal);
+                }
+                printed.Add(string.Join(" ", evaluatedArgs));
                 continue;
             }
 
@@ -61,8 +65,10 @@ public static class MiniPythonEvaluator
 
             string varName = assignMatch.Groups[1].Value;
             string expr = assignMatch.Groups[2].Value.Trim();
-            if (!TryEvaluateExpression(expr, env, out string value)) return false;
+            if (!TryEvaluateExpression(expr, env, envIsString, out string value, out bool isString))
+                return false;
             env[varName] = value;
+            envIsString[varName] = isString;
         }
 
         if (printed.Count == 0) return false;
@@ -70,58 +76,73 @@ public static class MiniPythonEvaluator
         return true;
     }
 
-    private static bool TryEvaluateExpression(string expr, Dictionary<string, string> env, out string result)
+    private static bool TryEvaluateExpression(string expr, Dictionary<string, string> env,
+        Dictionary<string, bool> envIsString, out string result, out bool isStringResult)
     {
         result = null;
+        isStringResult = false;
         expr = expr.Trim();
 
-        if (expr.StartsWith("'") || expr.StartsWith("\"") || IsStringExpression(expr, env))
+        if (expr.StartsWith("'") || expr.StartsWith("\"") || IsStringExpression(expr, env, envIsString))
         {
             List<string> parts = SplitTopLevel(expr, '+');
             var sb = new StringBuilder();
             foreach (string part in parts)
             {
-                if (!TryResolveStringToken(part.Trim(), env, out string val)) return false;
+                if (!TryResolveStringToken(part.Trim(), env, envIsString, out string val)) return false;
                 sb.Append(val);
             }
             result = sb.ToString();
+            isStringResult = true;
             return true;
         }
 
-        if (!TryEvalArithmetic(expr, env, out int intResult)) return false;
+        if (!TryEvalArithmetic(expr, env, envIsString, out int intResult)) return false;
         result = intResult.ToString();
+        isStringResult = false;
         return true;
     }
 
-    // IMPORTANT: this checks the FIRST token only, with no minimum part count.
     // A single bare variable reference (e.g. print(name), no '+' involved)
-    // must still be recognized as a string expression when that variable
-    // holds a non-numeric value -- an earlier draft required at least 2
-    // '+'-split parts here and silently failed on exactly this case.
-    private static bool IsStringExpression(string expr, Dictionary<string, string> env)
+    // is a string expression if that variable is KNOWN to be string-typed,
+    // not merely if its stored text happens to parse as a number -- a
+    // string variable holding "5" must NOT be treated as numeric just
+    // because its digits look like an int.
+    private static bool IsStringExpression(string expr, Dictionary<string, string> env,
+        Dictionary<string, bool> envIsString)
     {
         List<string> parts = SplitTopLevel(expr, '+');
         string first = parts[0].Trim();
         if (first.StartsWith("'") || first.StartsWith("\"")) return true;
-        if (env.TryGetValue(first, out string val) && !int.TryParse(val, out _)) return true;
+        if (envIsString.TryGetValue(first, out bool isStr)) return isStr;
         return false;
     }
 
-    private static bool TryResolveStringToken(string token, Dictionary<string, string> env, out string val)
+    private static bool TryResolveStringToken(string token, Dictionary<string, string> env,
+        Dictionary<string, bool> envIsString, out string val)
     {
+        val = null;
         if ((token.StartsWith("'") && token.EndsWith("'") && token.Length >= 2)
          || (token.StartsWith("\"") && token.EndsWith("\"") && token.Length >= 2))
         {
             val = token.Substring(1, token.Length - 2);
             return true;
         }
-        return env.TryGetValue(token, out val);
+        // A variable can only join a string concatenation if IT is also
+        // string-typed. A numeric variable (or bare numeric literal, which
+        // never reaches here since it's not a key in env) being pulled in
+        // here is exactly the str + int TypeError case in real Python: it
+        // must fail, not silently get stringified into the result.
+        if (env.TryGetValue(token, out string stored) && envIsString.TryGetValue(token, out bool isStr) && isStr)
+        {
+            val = stored;
+            return true;
+        }
+        return false;
     }
 
-    // Splits on '+' / '-' at the top level (no parens in this grammar), then
-    // splits each term on '*', so standard precedence (* before +/-) holds
-    // for flat, unparenthesized expressions.
-    private static bool TryEvalArithmetic(string expr, Dictionary<string, string> env, out int result)
+    private static bool TryEvalArithmetic(string expr, Dictionary<string, string> env,
+        Dictionary<string, bool> envIsString, out int result)
     {
         result = 0;
         string compact = expr.Replace(" ", "");
@@ -143,7 +164,7 @@ public static class MiniPythonEvaluator
             int product = 1;
             foreach (string f in factors)
             {
-                if (!TryResolveInt(f, env, out int val)) return false;
+                if (!TryResolveInt(f, env, envIsString, out int val)) return false;
                 product *= val;
             }
             total += sign * product;
@@ -152,20 +173,46 @@ public static class MiniPythonEvaluator
         return true;
     }
 
-    private static bool TryResolveInt(string token, Dictionary<string, string> env, out int val)
+    private static bool TryResolveInt(string token, Dictionary<string, string> env,
+        Dictionary<string, bool> envIsString, out int val)
     {
+        val = 0;
         token = token.Trim();
+
+        // A variable KNOWN to be string-typed can never participate in
+        // arithmetic, regardless of whether its stored text happens to
+        // look numeric ('5' is not the same as 5). This is the fix for
+        // the str + int TypeError case being silently mis-evaluated.
+        if (envIsString.TryGetValue(token, out bool isStr) && isStr) return false;
+
         if (int.TryParse(token, out val)) return true;
         if (env.TryGetValue(token, out string stored) && int.TryParse(stored, out val)) return true;
         val = 0;
         return false;
     }
 
+    private static List<string> SplitTopLevelCommas(string expr)
+    {
+        List<string> parts = new List<string>();
+        bool inSingle = false, inDouble = false;
+        int start = 0;
+        for (int i = 0; i < expr.Length; i++)
+        {
+            char c = expr[i];
+            if (c == '\'' && !inDouble) inSingle = !inSingle;
+            else if (c == '"' && !inSingle) inDouble = !inDouble;
+            else if (c == ',' && !inSingle && !inDouble)
+            {
+                parts.Add(expr.Substring(start, i - start));
+                start = i + 1;
+            }
+        }
+        parts.Add(expr.Substring(start));
+        return parts;
+    }
+
     private static List<string> SplitTopLevel(string expr, char delimiter)
     {
-        // No parentheses in this restricted grammar, and quoted content in
-        // this dataset never contains the delimiter, so a plain split is
-        // safe here.
         return new List<string>(expr.Split(delimiter));
     }
 }

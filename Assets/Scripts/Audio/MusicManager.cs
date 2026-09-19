@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Persistent music player. Auto-creates itself the first time anything
@@ -40,6 +41,16 @@ public class MusicManager : MonoBehaviour
             }
             return _instance;
         }
+    }
+
+    /// <summary>
+    /// The clip currently playing (null when silent). Lets scripts such as
+    /// EncounterManager remember what was playing before they switch to
+    /// fight music, so they can restore it when the encounter ends.
+    /// </summary>
+    public AudioClip CurrentClip
+    {
+        get { return _active != null ? _active.clip : null; }
     }
 
     [Header("Volume")]
@@ -92,7 +103,7 @@ public class MusicManager : MonoBehaviour
     /// <summary>
     /// Plays (or crossfades to) the given track. Safe to call repeatedly:
     /// requesting the track that is already playing does nothing.
-    /// Pass fadeIn < 0 to use defaultFadeTime.
+    /// Pass fadeIn &lt; 0 to use defaultFadeTime.
     /// </summary>
     public void PlayTrack(AudioClip clip, float fadeIn = -1f)
     {

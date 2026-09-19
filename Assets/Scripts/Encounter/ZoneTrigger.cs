@@ -226,7 +226,16 @@ public class ZoneTrigger : MonoBehaviour
             _ => XPManager.EnemyType.Beginner
         };
     }
-    private string GetSanctumIDFromScene()
+    /// <summary>
+    /// Canonical scene-name -> sanctum_id mapping (snake_case). This is the
+    /// single source of truth for sanctum_id everywhere in the codebase.
+    /// Made public static (was private) so EncounterManager can use the
+    /// same canonical ID instead of logging the raw Unity scene name
+    /// ("PrintConsole") while this method logs "print_console" elsewhere,
+    /// which was splitting every sanctum's rows into two casings in the
+    /// student CSV export.
+    /// </summary>
+    public static string GetSanctumIDFromScene()
     {
         string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         return scene switch

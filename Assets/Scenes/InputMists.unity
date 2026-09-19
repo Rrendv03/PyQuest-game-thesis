@@ -26519,7 +26519,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sceneToLoad: MainMap
-  spawnPosition: {x: -2.5, y: 1.36, z: -4}
+  spawnPosition: {x: -36.37, y: 19.66, z: 134.79}
   fadeOverlay: {fileID: 2078806906}
   fadeDuration: 0.5
 --- !u!65 &1711464149
