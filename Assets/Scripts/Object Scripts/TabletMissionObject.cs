@@ -18,6 +18,12 @@ public class TabletMissionObject : InteractableObject
     public float fadeDuration = 0.6f;
     private bool isCompleted = false;
     private Collider triggerCollider;
+    // ANDROID NOTE: MissionTabletQuests.json is fetched asynchronously on
+    // device (it lives inside the APK, read via UnityWebRequest by
+    // MissionTabletManager), so it may not be parsed yet when Start() runs.
+    // The completion check below does NOT depend on the JSON (it reads the
+    // in-memory completed set), so it stays synchronous; only the promptText
+    // lookup waits for the load to finish.
     void Start()
     {
         triggerCollider = GetComponent<Collider>();
@@ -29,15 +35,54 @@ public class TabletMissionObject : InteractableObject
         else
         {
             SetDefaultState();
-            var data = MissionTabletManager.Instance?.GetMissionByID(missionID);
-            if (data != null && !string.IsNullOrEmpty(data.promptText))
-                promptText = data.promptText;
+            StartCoroutine(ApplyMissionDataWhenLoaded());
         }
+    }
+    /// <summary>
+    /// Waits until MissionTabletManager has finished loading
+    /// MissionTabletQuests.json (fast in the editor, async on Android),
+    /// then applies the mission's prompt text. Gives up after 10s and logs
+    /// so a broken load is visible in logcat instead of silently leaving
+    /// the default prompt.
+    /// </summary>
+    private IEnumerator ApplyMissionDataWhenLoaded()
+    {
+        float waited = 0f;
+        while (MissionTabletManager.Instance == null || !MissionTabletManager.Instance.IsLoaded)
+        {
+            waited += Time.unscaledDeltaTime;
+            if (waited > 10f)
+            {
+                Debug.LogWarning($"[TabletMissionObject] Gave up waiting for MissionTabletManager to load " +
+                                 $"MissionTabletQuests.json (missionID '{missionID}'). " +
+                                 "Look for its [MissionTabletManager] load error earlier in logcat.");
+                yield break;
+            }
+            yield return null;
+        }
+
+        var data = MissionTabletManager.Instance.GetMissionByID(missionID);
+        if (data != null && !string.IsNullOrEmpty(data.promptText))
+            promptText = data.promptText;
+        else if (data == null)
+            Debug.LogError($"[TabletMissionObject] missionID '{missionID}' not found in MissionTabletQuests.json " +
+                           "(the file loaded successfully, so check the ID's spelling/casing in the JSON).");
     }
     public override void TriggerInteraction()
     {
         if (isCompleted) return;
-        var data = MissionTabletManager.Instance?.GetMissionByID(missionID);
+        if (MissionTabletManager.Instance == null)
+        {
+            Debug.LogError("[TabletMissionObject] No MissionTabletManager exists in this scene.");
+            return;
+        }
+        if (!MissionTabletManager.Instance.IsLoaded)
+        {
+            // Only possible in the first moments after launch; not an error.
+            Debug.Log("[TabletMissionObject] Missions are still loading; interact again in a moment.");
+            return;
+        }
+        var data = MissionTabletManager.Instance.GetMissionByID(missionID);
         if (data == null)
         {
             Debug.LogError($"[TabletMissionObject] missionID '{missionID}' not found.");

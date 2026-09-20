@@ -1,13 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 
 public class BKTEngine : MonoBehaviour
 {
     public static BKTEngine Instance;
+
+    /// <summary>
+    /// True once bkt_params.json has finished loading (success or failure).
+    /// Any caller that needs mastery data immediately after scene load
+    /// (SanctumManager, ZoneTrigger, PCGEngine's tier lookup, etc.)
+    /// should wait on this before calling GetMastery/UpdateMastery,
+    /// since loading is now asynchronous on Android.
+    /// </summary>
+    public bool IsLoaded { get; private set; } = false;
 
     private Dictionary<string, float> masteryProbabilities = new Dictionary<string, float>();
     private Dictionary<string, KnowledgeComponent> parameters = new Dictionary<string, KnowledgeComponent>();
@@ -18,26 +27,72 @@ public class BKTEngine : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            LoadParameters();
+            StartCoroutine(LoadParametersRoutine());
         }
         else Destroy(gameObject);
     }
 
-    // Update is called once per frame
-    void LoadParameters()
+    /// <summary>
+    /// Loads bkt_params.json from StreamingAssets. On Android,
+    /// Application.streamingAssetsPath points inside the compressed APK
+    /// (jar:file://...!/assets/...), which System.IO.File cannot read.
+    /// UnityWebRequest is the only API that can read through that path
+    /// on Android, so this now runs as a coroutine on every platform for
+    /// consistency, even though the Editor/Standalone branch below still
+    /// uses File.ReadAllText since streamingAssetsPath is a real folder
+    /// on those platforms.
+    /// </summary>
+    private IEnumerator LoadParametersRoutine()
     {
         string path = Path.Combine(Application.streamingAssetsPath, "bkt_params.json");
-        if ( !File.Exists(path)) { Debug.LogError("[BKT] bkt_params.json not found at: " + path); return; }
+        string json = "";
 
-        string json = File.ReadAllText(path);
-        BKTParamWrapper wrapper = JsonUtility.FromJson<BKTParamWrapper>(json);
-
-        foreach (var kc in wrapper.components)
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using (UnityWebRequest req = UnityWebRequest.Get(path))
         {
-            parameters[kc.name] = kc;
-            masteryProbabilities[kc.name] = kc.p_init;
-            Debug.Log($"[BKT] Loaded parameters for {kc.name}: p_init={kc.p_init}, p_transit={kc.p_transit}, p_guess={kc.p_guess}, p_slip={kc.p_slip}, mastery_threshold={kc.mastery_threshold}");
+            yield return req.SendWebRequest();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                json = req.downloadHandler.text;
+            }
+            else
+            {
+                Debug.LogError("[BKT] Failed to load bkt_params.json: " + req.error);
+            }
         }
+#else
+        if (File.Exists(path))
+        {
+            json = File.ReadAllText(path);
+        }
+        else
+        {
+            Debug.LogError("[BKT] bkt_params.json not found at: " + path);
+        }
+        yield return null;
+#endif
+
+        if (!string.IsNullOrEmpty(json))
+        {
+            BKTParamWrapper wrapper = JsonUtility.FromJson<BKTParamWrapper>(json);
+
+            if (wrapper != null && wrapper.components != null)
+            {
+                foreach (var kc in wrapper.components)
+                {
+                    parameters[kc.name] = kc;
+                    masteryProbabilities[kc.name] = kc.p_init;
+                    Debug.Log($"[BKT] Loaded parameters for {kc.name}: p_init={kc.p_init}, p_transit={kc.p_transit}, p_guess={kc.p_guess}, p_slip={kc.p_slip}, mastery_threshold={kc.mastery_threshold}");
+                }
+            }
+            else
+            {
+                Debug.LogError("[BKT] bkt_params.json parsed but contained no components.");
+            }
+        }
+
+        IsLoaded = true;
     }
 
     /// Call after every puzzle attempt. Returns updated P(L).
@@ -46,6 +101,10 @@ public class BKTEngine : MonoBehaviour
     /// back to the static p_guess from bkt_params.json.
     public float UpdateMastery(string componentName, bool isCorrect, float? pGuessOverride = null)
     {
+        if (!IsLoaded)
+            Debug.LogWarning("[BKT] UpdateMastery called before bkt_params.json finished loading. " +
+                              "Result will use whatever partial state exists.");
+
         if (!parameters.ContainsKey(componentName)) return 0f;
 
         KnowledgeComponent kc = parameters[componentName];
@@ -83,7 +142,7 @@ public class BKTEngine : MonoBehaviour
         => masteryProbabilities.ContainsKey(componentName) ? masteryProbabilities[componentName] : 0f;
 
     public bool HasMastered(string componentName)
-    { 
+    {
         if (!parameters.ContainsKey(componentName)) return false;
         return GetMastery(componentName) >= parameters[componentName].mastery_threshold;
     }

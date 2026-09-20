@@ -11514,7 +11514,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7351582664866073371, guid: 92fe009807167474d90f38287541d152, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 7.71
+      value: 7.53
       objectReference: {fileID: 0}
     - target: {fileID: 7351582664866073371, guid: 92fe009807167474d90f38287541d152, type: 3}
       propertyPath: m_LocalPosition.z
@@ -112952,8 +112952,8 @@ MonoBehaviour:
   runThreshold: 0.4
   walkSound: {fileID: 8300000, guid: 0b98c3f133129944e9f5bf6916725d5d, type: 3}
   runSound: {fileID: 8300000, guid: 0b98c3f133129944e9f5bf6916725d5d, type: 3}
-  walkSoundSpeed: 1
-  runSoundSpeed: 1.5
+  walkSoundSpeed: 0.5
+  runSoundSpeed: 1
   walkSoundVolume: 0.8
   runSoundVolume: 0.8
   footstepFadeTime: 0.2

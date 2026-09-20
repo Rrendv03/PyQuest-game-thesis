@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,6 +20,16 @@ using UnityEngine.UI;
 /// a DialogueManager starts. The file is small enough that this cost is
 /// negligible, and it avoids DontDestroyOnLoad conflicts between scenes
 /// that have structurally different dialogue UI.
+///
+/// ANDROID LOADING NOTES (kept deliberately verbose in logs):
+/// - StreamingAssets on Android live inside the APK (jar:file://...), so the
+///   file must be read via UnityWebRequest, not System.IO.File.
+/// - File.ReadAllText (editor) strips a UTF-8 BOM automatically, but
+///   downloadHandler.text (Android) keeps it as U+FEFF, which JsonUtility
+///   rejects. We strip it explicitly so both platforms behave identically.
+/// - A JsonUtility exception used to abort this coroutine before
+///   IsRegistryLoaded was set; parse failures are now caught so callers
+///   never hang waiting on IsRegistryLoaded.
 /// </summary>
 public class DialogueManager : MonoBehaviour
 {
@@ -62,8 +73,6 @@ public class DialogueManager : MonoBehaviour
     private bool isTyping;
     private bool isInCinematicMode;
     private Coroutine typewriterCoroutine;
-
-    // ?????????????????????????????????????????????????????????????????????????
     void Awake()
     {
         Instance = this;
@@ -91,50 +100,123 @@ public class DialogueManager : MonoBehaviour
         StartCoroutine(LoadRegistry());
     }
 
-    // ?? Load dialogue.json ????????????????????????????????????????????????????
+    // === Load dialogue.json ====================================================================
     private IEnumerator LoadRegistry()
     {
-        string path = System.IO.Path.Combine(Application.streamingAssetsPath, "dialogue.json");
+        string path = Path.Combine(Application.streamingAssetsPath, "Dialogue.json");
         string json = "";
 
 #if UNITY_ANDROID && !UNITY_EDITOR
+        // Diagnostic logging: this is the exact URL being requested and the
+        // exact HTTP status that comes back. If dialogue.json truly is
+        // packaged at this path inside the APK, this request cannot 404.
+        // A 404 here means the build does not contain the file at this
+        // path (wrong folder, different casing, or a stale APK), not a bug
+        // in how this script reads it, since puzzle_templates.json and
+        // bkt_params.json use this identical UnityWebRequest pattern and
+        // succeed. Use these log lines together with an APK-as-zip
+        // inspection to confirm packaging.
+        Debug.Log("[DialogueManager] Requesting dialogue.json from: " + path);
         using (var req = UnityEngine.Networking.UnityWebRequest.Get(path))
         {
             yield return req.SendWebRequest();
+            Debug.Log($"[DialogueManager] dialogue.json request finished | " +
+                      $"result={req.result} | responseCode={req.responseCode} | " +
+                      $"url={req.url} | error={req.error}");
+
             if (req.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
-                json = req.downloadHandler.text;
+            {
+                json = req.downloadHandler.text ?? "";
+
+                // Byte-level probe: a UTF-8 BOM is EF BB BF. Logging the raw
+                // first bytes makes a BOM (or a non-UTF-8 file, e.g. saved as
+                // UTF-16 or ANSI in Notepad) visible in logcat instead of only
+                // suspected. File.ReadAllText in the editor silently strips a
+                // BOM, which is why the same file can pass in-editor and fail
+                // on device.
+                byte[] bytes = req.downloadHandler.data;
+                if (bytes != null && bytes.Length >= 3)
+                    Debug.Log($"[DialogueManager] dialogue.json first bytes: " +
+                              $"{bytes[0]:X2} {bytes[1]:X2} {bytes[2]:X2} " +
+                              $"(UTF-8 BOM would be EF BB BF; UTF-16 LE would be FF FE)");
+            }
             else
-                Debug.LogError("[DialogueManager] Failed to load dialogue.json: " + req.error);
+            {
+                Debug.LogError("[DialogueManager] Failed to load dialogue.json: " + req.error +
+                               " | responseCode=" + req.responseCode +
+                               " | If responseCode=404, open the APK as a zip and confirm " +
+                               "assets/dialogue.json exists with this exact casing.");
+            }
         }
 #else
         if (System.IO.File.Exists(path))
-            json = System.IO.File.ReadAllText(path);
+            json = System.IO.File.ReadAllText(path); // note: this strips a BOM automatically
         else
             Debug.LogError("[DialogueManager] dialogue.json not found at: " + path);
         yield return null;
 #endif
 
+        // File.ReadAllText (editor) consumes a leading UTF-8 BOM, but
+        // downloadHandler.text (Android) keeps it as U+FEFF and JsonUtility
+        // then throws "Invalid value" before a single sequence loads. Trim it
+        // here so both platforms parse the exact same string. Harmless when
+        // the file has no BOM.
+        json = (json ?? "").TrimStart('\uFEFF');
+
+        Debug.Log($"[DialogueManager] dialogue.json text length: {json.Length}");
+        if (json.Length > 0)
+            Debug.Log($"[DialogueManager] dialogue.json first char: U+{(int)json[0]:X4}" +
+                  $" ('{(char.IsControl(json[0]) ? '?' : json[0])}')  (normal JSON starts with U+007B '{{')");
+
         registry.Clear();
 
-        if (!string.IsNullOrEmpty(json))
+        if (string.IsNullOrEmpty(json))
         {
-            DialogueRoot root = JsonUtility.FromJson<DialogueRoot>(json);
-            if (root != null && root.sequences != null)
+            Debug.LogError("[DialogueManager] dialogue.json was empty or missing; no dialogue can play.");
+        }
+        else
+        {
+            // try/catch so a malformed/BOM'd file logs a clear error and still
+            // reaches IsRegistryLoaded = true, instead of killing this
+            // coroutine and leaving callers waiting on it forever.
+            try
             {
-                foreach (var seq in root.sequences)
+                DialogueRoot root = JsonUtility.FromJson<DialogueRoot>(json);
+                if (root != null && root.sequences != null)
                 {
-                    if (string.IsNullOrEmpty(seq.sequenceID))
+                    foreach (var seq in root.sequences)
                     {
-                        Debug.LogWarning("[DialogueManager] Sequence with empty sequenceID skipped.");
-                        continue;
+                        if (string.IsNullOrEmpty(seq.sequenceID))
+                        {
+                            Debug.LogWarning("[DialogueManager] Sequence with empty sequenceID skipped.");
+                            continue;
+                        }
+                        if (registry.ContainsKey(seq.sequenceID))
+                        {
+                            Debug.LogWarning($"[DialogueManager] Duplicate sequenceID '{seq.sequenceID}', keeping first.");
+                            continue;
+                        }
+                        registry.Add(seq.sequenceID, seq);
                     }
-                    if (registry.ContainsKey(seq.sequenceID))
-                    {
-                        Debug.LogWarning($"[DialogueManager] Duplicate sequenceID '{seq.sequenceID}', keeping first.");
-                        continue;
-                    }
-                    registry.Add(seq.sequenceID, seq);
                 }
+                else
+                {
+                    // Loaded fine but nothing deserialized: on IL2CPP Android
+                    // builds with Managed Stripping Level above Minimal, the
+                    // fields of [Serializable] classes can be stripped, so
+                    // JsonUtility silently yields null. Fix with link.xml or
+                    // Player Settings > stripping level = Minimal.
+                    Debug.LogError("[DialogueManager] dialogue.json parsed but root.sequences is null. " +
+                                   "If this only happens on device, check Managed Stripping Level " +
+                                   "(Player Settings) and add a link.xml preserving the Dialogue* classes.");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[DialogueManager] JSON parse failed. Read the 'first bytes' / 'first char' " +
+                               "log above: U+FEFF or bytes EF BB BF mean the file was saved as UTF-8 WITH BOM " +
+                               "(re-save as plain UTF-8); U+0000/garbage means it is not UTF-8 at all. " +
+                               "Exception: " + e);
             }
         }
 
@@ -147,12 +229,16 @@ public class DialogueManager : MonoBehaviour
         return registry.ContainsKey(sequenceID);
     }
 
-    // ?? Public Entry Points ??????????????????????????????????????????????????
+    // === Public Entry Points ===================================================================
     public void Play(string sequenceID)
     {
+        if (!IsRegistryLoaded)
+            Debug.LogWarning($"[DialogueManager] Play('{sequenceID}') called before the registry finished loading.");
+
         if (!registry.TryGetValue(sequenceID, out var seq))
         {
-            Debug.LogError($"[DialogueManager] Unknown sequenceID: {sequenceID}");
+            Debug.LogError($"[DialogueManager] Unknown sequenceID: {sequenceID}" +
+                           (IsRegistryLoaded ? "" : " (registry was not loaded yet)"));
             return;
         }
         Play(seq);
@@ -186,7 +272,7 @@ public class DialogueManager : MonoBehaviour
         DisplayCurrentLine();
     }
 
-    // ?? Display Line ??????????????????????????????????????????????????????????
+    // === Display Line =========================================================================
     private void DisplayCurrentLine()
     {
         if (currentLineIndex >= currentSequence.lines.Count)
@@ -237,7 +323,7 @@ public class DialogueManager : MonoBehaviour
         OnLineChanged?.Invoke(line, currentLineIndex);
     }
 
-    // ?? Typewriter ????????????????????????????????????????????????????????????
+    // === Typewriter ===========================================================================
     private IEnumerator TypewriterEffect(string fullText, Text target)
     {
         isTyping = true;
@@ -253,7 +339,7 @@ public class DialogueManager : MonoBehaviour
         if (advanceButtonLabel != null) advanceButtonLabel.text = "Next";
     }
 
-    // ?? Advance Button ????????????????????????????????????????????????????????
+    // === Advance Button =======================================================================
     private void OnAdvancePressed()
     {
         if (currentSequence == null) return;
@@ -276,7 +362,7 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    // ?? Mode Transition ???????????????????????????????????????????????????????
+    // === Mode Transition ======================================================================
     private IEnumerator TransitionMode(bool toCinematic)
     {
         yield return StartCoroutine(FadeOverlayTo(1f, cinematicTransitionDuration));
@@ -310,7 +396,6 @@ public class DialogueManager : MonoBehaviour
             float a = Mathf.Lerp(startAlpha, targetAlpha, elapsed / duration);
             Color c = fadeOverlay.color;
             c.a = a;
-            fadeOverlay.color = c;
             yield return null;
         }
 
@@ -319,7 +404,7 @@ public class DialogueManager : MonoBehaviour
         fadeOverlay.color = final;
     }
 
-    // ?? End Sequence ??????????????????????????????????????????????????????????
+    // === End Sequence =========================================================================
     private void EndCurrentSequence()
     {
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
@@ -337,7 +422,7 @@ public class DialogueManager : MonoBehaviour
     }
 }
 
-// ?? Data Structures ????????????????????????????????????????????????????????????
+// === Data Structures ======================================================================
 [System.Serializable]
 public class DialogueLine
 {

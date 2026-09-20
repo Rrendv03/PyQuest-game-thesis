@@ -1,12 +1,23 @@
+using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class PCGEngine : MonoBehaviour
 {
     public static PCGEngine Instance;
+
+    /// <summary>
+    /// True once puzzle_templates.json has finished loading (success or
+    /// failure). Loading is now asynchronous on Android (UnityWebRequest
+    /// is the only API that can read StreamingAssets out of a compressed
+    /// APK), so any caller that needs allTemplates immediately after
+    /// scene load must wait on this first, same as BKTEngine.IsLoaded.
+    /// </summary>
+    public bool IsLoaded { get; private set; } = false;
 
     private List<PuzzleTemplate> allTemplates = new List<PuzzleTemplate>();
 
@@ -18,25 +29,50 @@ public class PCGEngine : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            LoadTemplates();
+            StartCoroutine(LoadTemplatesRoutine());
         }
         else Destroy(gameObject);
     }
 
-    void LoadTemplates()
+    private IEnumerator LoadTemplatesRoutine()
     {
         string path = Path.Combine(Application.streamingAssetsPath, "puzzle_templates.json");
+        string json = "";
 
-        if (!File.Exists(path))
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using (UnityWebRequest req = UnityWebRequest.Get(path))
+        {
+            yield return req.SendWebRequest();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                json = req.downloadHandler.text;
+            }
+            else
+            {
+                Debug.LogError("[PCG] Failed to load puzzle_templates.json: " + req.error);
+            }
+        }
+#else
+        if (File.Exists(path))
+        {
+            json = File.ReadAllText(path);
+        }
+        else
         {
             Debug.LogError("[PCG] puzzle_templates.json not found at: " + path);
-            return;
+        }
+        yield return null;
+#endif
+
+        if (!string.IsNullOrEmpty(json))
+        {
+            PuzzleTemplateLibrary lib = JsonUtility.FromJson<PuzzleTemplateLibrary>(json);
+            allTemplates = lib != null && lib.templates != null ? lib.templates : new List<PuzzleTemplate>();
+            Debug.Log($"[PCG] Loaded {allTemplates.Count} puzzle templates");
         }
 
-        string json = File.ReadAllText(path);
-        PuzzleTemplateLibrary lib = JsonUtility.FromJson<PuzzleTemplateLibrary>(json);
-        allTemplates = lib.templates;
-        Debug.Log($"[PCG] Loaded {allTemplates.Count} puzzle templates");
+        IsLoaded = true;
     }
 
     public PuzzleData GeneratePuzzle(string componentName, PuzzleType puzzleType)
@@ -49,6 +85,12 @@ public class PCGEngine : MonoBehaviour
     public PuzzleData GeneratePuzzle(string componentName, PuzzleType puzzleType,
                                       DifficultyTier forcedTier)
     {
+        if (!IsLoaded)
+            Debug.LogWarning("[PCG] GeneratePuzzle called before puzzle_templates.json finished " +
+                              "loading. allTemplates may still be empty; this call will likely " +
+                              "return null. Wait on PCGEngine.Instance.IsLoaded before entering " +
+                              "gameplay.");
+
         // Cross-format widening was removed entirely. It solved thin
         // buckets by borrowing a template tagged for a different
         // puzzleType, but when a (KC, difficulty) combination only had
