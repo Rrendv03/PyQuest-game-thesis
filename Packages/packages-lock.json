@@ -1,5 +1,6 @@
 {
   "dependencies": {
+<<<<<<< HEAD
     "com.autodesk.fbx": {
       "version": "4.2.1",
       "depth": 2,
@@ -23,6 +24,8 @@
       },
       "url": "https://packages.unity.com"
     },
+=======
+>>>>>>> 26a6181 (fixing design)
     "com.unity.burst": {
       "version": "1.8.12",
       "depth": 1,
@@ -33,6 +36,7 @@
       },
       "url": "https://packages.unity.com"
     },
+<<<<<<< HEAD
     "com.unity.cinemachine": {
       "version": "2.9.5",
       "depth": 1,
@@ -42,6 +46,8 @@
       },
       "url": "https://packages.unity.com"
     },
+=======
+>>>>>>> 26a6181 (fixing design)
     "com.unity.editorcoroutines": {
       "version": "1.0.0",
       "depth": 1,
@@ -116,6 +122,7 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+<<<<<<< HEAD
     "com.unity.inputsystem": {
       "version": "1.7.0",
       "depth": 0,
@@ -125,6 +132,8 @@
       },
       "url": "https://packages.unity.com"
     },
+=======
+>>>>>>> 26a6181 (fixing design)
     "com.unity.mathematics": {
       "version": "1.2.6",
       "depth": 1,
