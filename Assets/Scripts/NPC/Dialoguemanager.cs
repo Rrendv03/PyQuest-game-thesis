@@ -61,6 +61,20 @@ public class DialogueManager : MonoBehaviour
     [Header("Transient Fade Mask (shared by swaps and callers' own end-fades)")]
     public Image fadeOverlay;
 
+    [Header("NPC Audio")]
+    [Tooltip("One entry per NPC speaker name. Plays once, the first time that NPC's dialogue starts (the 'encounter hello').")]
+    public List<EncounterAudioEntry> encounterClips = new List<EncounterAudioEntry>();
+    [Tooltip("Undertale-style voice blip played repeatedly while the typewriter reveals text.")]
+    public AudioClip dialogueBlip;
+    [Tooltip("Play the blip at most once every N revealed characters (1 = every character).")]
+    public int blipEveryNChars = 2;
+    [Range(0f, 1f)] public float encounterVolume = 1f;
+    [Range(0f, 1f)] public float blipVolume = 1f;
+
+    private AudioSource audioSource;
+    private readonly HashSet<string> encounteredSpeakers = new HashSet<string>(StringComparer.Ordinal);
+    private int charsSinceLastBlip;
+
     public event Action<DialogueSequence> OnSequenceStart;
     public event Action<DialogueLine, int> OnLineChanged;
     public event Action<DialogueSequence> OnSequenceComplete;
@@ -76,6 +90,11 @@ public class DialogueManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
     }
 
     void Start()
@@ -103,7 +122,7 @@ public class DialogueManager : MonoBehaviour
     // === Load dialogue.json ====================================================================
     private IEnumerator LoadRegistry()
     {
-        string path = Path.Combine(Application.streamingAssetsPath, "Dialogue.json");
+        string path = Path.Combine(Application.streamingAssetsPath, "dialogue.json");
         string json = "";
 
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -268,8 +287,42 @@ public class DialogueManager : MonoBehaviour
         if (dialoguePanel != null)
             dialoguePanel.SetActive(true);
 
+        PlayEncounterAudioIfNeeded(sequence);
+
         OnSequenceStart?.Invoke(sequence);
         DisplayCurrentLine();
+    }
+
+    // === NPC Audio ============================================================================
+    [System.Serializable]
+    public class EncounterAudioEntry
+    {
+        [Tooltip("Must match the speakerName used on the NPC's dialogue lines.")]
+        public string speakerName;
+        public AudioClip clip;
+    }
+
+    private void PlayEncounterAudioIfNeeded(DialogueSequence sequence)
+    {
+        string speaker = null;
+        if (sequence.lines != null && sequence.lines.Count > 0)
+            speaker = sequence.lines[0].speakerName;
+
+        if (string.IsNullOrEmpty(speaker)) return;
+        if (!encounteredSpeakers.Add(speaker)) return; // already met this NPC
+
+        EncounterAudioEntry entry = encounterClips.Find(e =>
+            string.Equals(e.speakerName, speaker, StringComparison.Ordinal));
+        if (entry?.clip != null)
+            audioSource.PlayOneShot(entry.clip, encounterVolume);
+    }
+
+    private void PlayBlip()
+    {
+        if (dialogueBlip == null) return;
+        if (++charsSinceLastBlip < Mathf.Max(1, blipEveryNChars)) return;
+        charsSinceLastBlip = 0;
+        audioSource.PlayOneShot(dialogueBlip, blipVolume);
     }
 
     // === Display Line =========================================================================
@@ -327,11 +380,17 @@ public class DialogueManager : MonoBehaviour
     private IEnumerator TypewriterEffect(string fullText, Text target)
     {
         isTyping = true;
+        charsSinceLastBlip = 0;
         if (advanceButtonLabel != null) advanceButtonLabel.text = "Skip";
 
         for (int i = 0; i <= fullText.Length; i++)
         {
             if (target != null) target.text = fullText.Substring(0, i);
+
+            // Undertale-style voice blip: fire on each newly revealed letter.
+            if (i > 0 && i <= fullText.Length && char.IsLetterOrDigit(fullText[i - 1]))
+                PlayBlip();
+
             yield return new WaitForSeconds(typewriterSpeed);
         }
 

@@ -16,6 +16,11 @@ public class TabletMissionObject : InteractableObject
     [Tooltip("Drag a full-screen black Image here (under a canvas). It will fade in/out on completion.")]
     public Image darkOverlay;
     public float fadeDuration = 0.6f;
+    [Header("Notifications (auto-wired, nothing to assign)")]
+    [Tooltip("Seconds the success toast stays on screen.")]
+    public float successToastDuration = 3.5f;
+    [Tooltip("Seconds the failure toast stays on screen.")]
+    public float failureToastDuration = 2.5f;
     private bool isCompleted = false;
     private Collider triggerCollider;
     // ANDROID NOTE: MissionTabletQuests.json is fetched asynchronously on
@@ -121,6 +126,13 @@ public class TabletMissionObject : InteractableObject
         else
         {
             Debug.Log($"[TabletMissionObject] Mission {missionID} failed. Player can retry.");
+
+            // Tell the notification manager the puzzle attempt failed.
+            // UIManager.Notify auto-creates UIManager (with its runtime fallback
+            // toast UI) if no scene contains one, so this never needs anything
+            // assigned in the scene hierarchy.
+            UIManager.Notify("Mission failed - try again.", failureToastDuration);
+
             // Re-enable HUD immediately on failure (no transition needed)
             if (hudCanvas != null) hudCanvas.SetActive(true);
             PlayerMovement pm = FindObjectOfType<PlayerMovement>();
@@ -164,6 +176,10 @@ public class TabletMissionObject : InteractableObject
         if (hudCanvas != null) hudCanvas.SetActive(true);
         // 8. Refresh dashboard
         MissionTabletUI.Instance?.Refresh();
+        // 9. Success toast - raised after the fade so it is actually visible
+        //    once the screen comes back. Routed through the notification
+        //    manager with zero scene wiring (UIManager.Notify).
+        UIManager.Notify($"Mission complete: {GetMissionLabel()}", successToastDuration);
     }
     private IEnumerator FadeImageAlpha(Image img, float from, float to, float duration)
     {
@@ -197,6 +213,20 @@ public class TabletMissionObject : InteractableObject
         if (triggerCollider != null) triggerCollider.enabled = false;
         InteractButtonController hud = FindObjectOfType<InteractButtonController>();
         if (hud != null) hud.ClearInteractable(this);
+    }
+    /// <summary>
+    /// Human-readable label for toasts: the mission's description from
+    /// MissionTabletQuests.json, falling back to the raw missionID so a
+    /// missing/typo'd ID still produces a debuggable toast.
+    /// </summary>
+    private string GetMissionLabel()
+    {
+        var data = MissionTabletManager.Instance != null
+            ? MissionTabletManager.Instance.GetMissionByID(missionID)
+            : null;
+        return data != null && !string.IsNullOrEmpty(data.description)
+            ? data.description
+            : missionID;
     }
     private PuzzleType GetRandomPuzzleType()
     {

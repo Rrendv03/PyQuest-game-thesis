@@ -36,14 +36,14 @@
       "puzzleType": 3,
       "difficulty": 0,
       "codeLines": [
-        "name = 'Alice'",
-        "print(name)"
+        "{name} = 'Alice'",
+        "print({name})"
       ],
       "correctAnswer": "true",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "name",
+      "variableName": "{name}",
       "variableValue": "Alice"
     },
     {
@@ -52,15 +52,15 @@
       "puzzleType": 3,
       "difficulty": 1,
       "codeLines": [
-        "first = 'John'",
+        "{name} = 'John'",
         "last = 'Doe'",
-        "print(first, last)"
+        "print({name}, last)"
       ],
       "correctAnswer": "true",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "first",
+      "variableName": "{name}",
       "variableValue": "John"
     },
     {
@@ -69,15 +69,15 @@
       "puzzleType": 3,
       "difficulty": 1,
       "codeLines": [
-        "x = 10",
+        "{name} = 10",
         "y = 5",
-        "print(x + y)"
+        "print({name} + y)"
       ],
       "correctAnswer": "true",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "x",
+      "variableName": "{name}",
       "variableValue": "10"
     },
     {
@@ -86,15 +86,15 @@
       "puzzleType": 3,
       "difficulty": 1,
       "codeLines": [
-        "greeting = 'Welcome'",
+        "{name} = 'Welcome'",
         "name = 'Player'",
-        "print(greeting + ' ' + name)"
+        "print({name} + ' ' + name)"
       ],
       "correctAnswer": "true",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "greeting",
+      "variableName": "{name}",
       "variableValue": "Welcome"
     },
     {
@@ -103,14 +103,14 @@
       "puzzleType": 3,
       "difficulty": 0,
       "codeLines": [
-        "score = 100",
-        "print('Score:', score)"
+        "{name} = 100",
+        "print('Score:', {name})"
       ],
       "correctAnswer": "true",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "score",
+      "variableName": "{name}",
       "variableValue": "100"
     },
     {
@@ -119,14 +119,14 @@
       "puzzleType": 3,
       "difficulty": 1,
       "codeLines": [
-        "is_ready = True",
-        "print(is_ready)"
+        "{name} = True",
+        "print({name})"
       ],
       "correctAnswer": "true",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "is_ready",
+      "variableName": "{name}",
       "variableValue": "True"
     },
     {
@@ -135,14 +135,14 @@
       "puzzleType": 3,
       "difficulty": 1,
       "codeLines": [
-        "items = ['apple', 'banana', 'cherry']",
-        "print(items)"
+        "{name} = ['apple', 'banana', 'cherry']",
+        "print({name})"
       ],
       "correctAnswer": "true",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "items",
+      "variableName": "{name}",
       "variableValue": "apple"
     },
     {
@@ -167,19 +167,20 @@
       "puzzleType": 5,
       "difficulty": 0,
       "codeLines": [
-        "runes = 25",
-        "print(runes)"
+        "{name} = 25",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [
-        "runes == 25",
-        "print('runes')",
-        "runic(25)"
+        "print({name} + 5)",
+        "print('Well met!')",
+        "print({name}, {name})"
       ],
-      "variableName": "runes",
-      "variableValue": "25"
+      "variableName": "{name}",
+      "variableValue": "25",
+      "goalText": "Show how many {name} the hero has collected."
     },
     {
       "id": "pac_002_variable_assignment",
@@ -187,19 +188,20 @@
       "puzzleType": 5,
       "difficulty": 0,
       "codeLines": [
-        "health = 100",
-        "print(health)"
+        "{name} = 100",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [
-        "health == 100",
-        "print('health')",
-        "health(100)"
+        "print({name} + 10)",
+        "print('Ready!')",
+        "print({name}, {name})"
       ],
-      "variableName": "health",
-      "variableValue": "100"
+      "variableName": "{name}",
+      "variableValue": "100",
+      "goalText": "Display the hero's current {name}."
     },
     {
       "id": "pac_003_string_print",
@@ -207,20 +209,21 @@
       "puzzleType": 5,
       "difficulty": 1,
       "codeLines": [
-        "name = 'Hero'",
+        "{name} = 'Hero'",
         "greeting = 'Welcome'",
-        "print(greeting, name)"
+        "print(greeting, {name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [
-        "print(name, greeting)",
-        "print('greeting', 'name')",
-        "output(greeting, name)"
+        "print({name}, greeting)",
+        "print(greeting)",
+        "print(greeting, {name}, {name})"
       ],
-      "variableName": "name",
-      "variableValue": "Hero"
+      "variableName": "{name}",
+      "variableValue": "Hero",
+      "goalText": "Greet the player: message first, then their name."
     },
     {
       "id": "fitb_001_print_keyword",
@@ -228,18 +231,18 @@
       "puzzleType": 0,
       "difficulty": 0,
       "codeLines": [
-        "message = 'Hello'",
-        "print(message)"
+        "{name} = 'Hello'",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [
         "input",
-        "output",
-        "display"
+        "int",
+        "str"
       ],
-      "variableName": "message",
+      "variableName": "{name}",
       "variableValue": "Hello"
     },
     {
@@ -248,19 +251,19 @@
       "puzzleType": 0,
       "difficulty": 0,
       "codeLines": [
-        "name = input('Enter name: ')",
-        "print(name)"
+        "{name} = input('Enter name: ')",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [
         "print",
-        "read",
-        "scan"
+        "int",
+        "str"
       ],
-      "variableName": "name",
-      "variableValue": "name"
+      "variableName": "{name}",
+      "variableValue": "{name}"
     },
     {
       "id": "fitb_003_if_keyword",
@@ -268,8 +271,8 @@
       "puzzleType": 0,
       "difficulty": 1,
       "codeLines": [
-        "score = 85",
-        "if score > 80:",
+        "{name} = 85",
+        "if {name} > 80:",
         "print('Pass')"
       ],
       "correctAnswer": "",
@@ -280,7 +283,7 @@
         "for",
         "else"
       ],
-      "variableName": "score",
+      "variableName": "{name}",
       "variableValue": "85"
     },
     {
@@ -289,8 +292,8 @@
       "puzzleType": 0,
       "difficulty": 1,
       "codeLines": [
-        "for i in range(5):",
-        "    print(i)"
+        "for {name} in range(5):",
+        "    print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
@@ -298,9 +301,9 @@
       "distractors": [
         "while",
         "if",
-        "each"
+        "elif"
       ],
-      "variableName": "i",
+      "variableName": "{name}",
       "variableValue": "5"
     },
     {
@@ -309,9 +312,9 @@
       "puzzleType": 0,
       "difficulty": 1,
       "codeLines": [
-        "count = 0",
-        "while count < 5:",
-        "    count += 1"
+        "{name} = 0",
+        "while {name} < 5:",
+        "    {name} += 1"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
@@ -319,9 +322,9 @@
       "distractors": [
         "for",
         "if",
-        "until"
+        "elif"
       ],
-      "variableName": "count",
+      "variableName": "{name}",
       "variableValue": "0"
     },
     {
@@ -330,8 +333,8 @@
       "puzzleType": 0,
       "difficulty": 1,
       "codeLines": [
-        "for i in range(10):",
-        "    print(i)"
+        "for {name} in range(10):",
+        "    print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
@@ -339,9 +342,9 @@
       "distractors": [
         "len",
         "list",
-        "count"
+        "str"
       ],
-      "variableName": "i",
+      "variableName": "{name}",
       "variableValue": "10"
     },
     {
@@ -350,8 +353,8 @@
       "puzzleType": 0,
       "difficulty": 2,
       "codeLines": [
-        "mana = 12",
-        "bonus = mana * 3 - 5",
+        "{name} = 12",
+        "bonus = {name} * 3 - 5",
         "print(bonus)"
       ],
       "correctAnswer": "",
@@ -359,10 +362,10 @@
       "correctOrder": [],
       "distractors": [
         "input",
-        "output",
-        "display"
+        "int",
+        "str"
       ],
-      "variableName": "mana",
+      "variableName": "{name}",
       "variableValue": "12"
     },
     {
@@ -371,8 +374,8 @@
       "puzzleType": 0,
       "difficulty": 1,
       "codeLines": [
-        "is_ready = True",
-        "if is_ready:",
+        "{name} = True",
+        "if {name}:",
         "    print('Ready')"
       ],
       "correctAnswer": "",
@@ -383,7 +386,7 @@
         "None",
         "1"
       ],
-      "variableName": "is_ready",
+      "variableName": "{name}",
       "variableValue": "True"
     },
     {
@@ -392,17 +395,17 @@
       "puzzleType": 4,
       "difficulty": 0,
       "codeLines": [
-        "x = 5",
-        "print(x)"
+        "{name} = 5",
+        "print({name})"
       ],
       "correctAnswer": "5",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [
-        "x",
+        "{name}",
         "10"
       ],
-      "variableName": "x",
+      "variableName": "{name}",
       "variableValue": "5"
     },
     {
@@ -411,17 +414,17 @@
       "puzzleType": 4,
       "difficulty": 0,
       "codeLines": [
-        "name = 'Hero'",
-        "print(name)"
+        "{name} = 'Hero'",
+        "print({name})"
       ],
       "correctAnswer": "Hero",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [
         "'Hero'",
-        "name"
+        "{name}"
       ],
-      "variableName": "name",
+      "variableName": "{name}",
       "variableValue": "Hero"
     },
     {
@@ -430,9 +433,9 @@
       "puzzleType": 4,
       "difficulty": 1,
       "codeLines": [
-        "a = 10",
+        "{name} = 10",
         "b = 5",
-        "print(a + b)"
+        "print({name} + b)"
       ],
       "correctAnswer": "15",
       "bugLineIndex": -1,
@@ -441,7 +444,7 @@
         "10",
         "5"
       ],
-      "variableName": "a",
+      "variableName": "{name}",
       "variableValue": "10"
     },
     {
@@ -450,8 +453,8 @@
       "puzzleType": 4,
       "difficulty": 1,
       "codeLines": [
-        "score = 90",
-        "if score > 80:",
+        "{name} = 90",
+        "if {name} > 80:",
         "    print('Pass')"
       ],
       "correctAnswer": "Pass",
@@ -461,7 +464,7 @@
         "Fail",
         "90"
       ],
-      "variableName": "score",
+      "variableName": "{name}",
       "variableValue": "90"
     },
     {
@@ -470,8 +473,8 @@
       "puzzleType": 4,
       "difficulty": 2,
       "codeLines": [
-        "for i in range(3):",
-        "    print(i)"
+        "for {name} in range(3):",
+        "    print({name})"
       ],
       "correctAnswer": "0\n1\n2",
       "bugLineIndex": -1,
@@ -480,7 +483,7 @@
         "1\n2\n3",
         "0\n1\n2\n3"
       ],
-      "variableName": "i",
+      "variableName": "{name}",
       "variableValue": "3"
     },
     {
@@ -507,9 +510,9 @@
       "puzzleType": 4,
       "difficulty": 2,
       "codeLines": [
-        "x = '5'",
+        "{name} = '5'",
         "y = 2",
-        "print(x + y)"
+        "print({name} + y)"
       ],
       "correctAnswer": "TypeError",
       "bugLineIndex": 2,
@@ -518,7 +521,7 @@
         "52",
         "NameError"
       ],
-      "variableName": "x",
+      "variableName": "{name}",
       "variableValue": "5"
     },
     {
@@ -527,8 +530,8 @@
       "puzzleType": 4,
       "difficulty": 1,
       "codeLines": [
-        "age = 18",
-        "print('Age:', age)"
+        "{name} = 18",
+        "print('Age:', {name})"
       ],
       "correctAnswer": "Age: 18",
       "bugLineIndex": -1,
@@ -537,7 +540,7 @@
         "18",
         "Age:"
       ],
-      "variableName": "age",
+      "variableName": "{name}",
       "variableValue": "18"
     },
     {
@@ -584,15 +587,15 @@
       "puzzleType": 4,
       "difficulty": 1,
       "codeLines": [
-        "first = 'Hello'",
+        "{name} = 'Hello'",
         "second = 'World'",
-        "print(first + ' ' + second)"
+        "print({name} + ' ' + second)"
       ],
       "correctAnswer": "Hello World",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "first",
+      "variableName": "{name}",
       "variableValue": "Hello"
     },
     {
@@ -601,14 +604,14 @@
       "puzzleType": 4,
       "difficulty": 1,
       "codeLines": [
-        "x = 10",
-        "print(x > 5)"
+        "{name} = 10",
+        "print({name} > 5)"
       ],
       "correctAnswer": "True",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "x",
+      "variableName": "{name}",
       "variableValue": "10"
     },
     {
@@ -617,8 +620,8 @@
       "puzzleType": 4,
       "difficulty": 1,
       "codeLines": [
-        "score = 50",
-        "if score > 80:",
+        "{name} = 50",
+        "if {name} > 80:",
         "    print('Pass')",
         "else:",
         "    print('Fail')"
@@ -627,7 +630,7 @@
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "score",
+      "variableName": "{name}",
       "variableValue": "50"
     },
     {
@@ -636,14 +639,14 @@
       "puzzleType": 4,
       "difficulty": 0,
       "codeLines": [
-        "level = 5",
-        "print('Level:', level)"
+        "{name} = 5",
+        "print('Level:', {name})"
       ],
       "correctAnswer": "Level: 5",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "level",
+      "variableName": "{name}",
       "variableValue": "5"
     },
     {
@@ -652,16 +655,16 @@
       "puzzleType": 4,
       "difficulty": 2,
       "codeLines": [
-        "x = 0",
-        "while x < 3:",
-        "    print(x)",
-        "    x += 1"
+        "{name} = 0",
+        "while {name} < 3:",
+        "    print({name})",
+        "    {name} += 1"
       ],
       "correctAnswer": "0\n1\n2",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "x",
+      "variableName": "{name}",
       "variableValue": "0"
     },
     {
@@ -670,14 +673,14 @@
       "puzzleType": 4,
       "difficulty": 2,
       "codeLines": [
-        "items = [1, 2, 3]",
-        "print(items[5])"
+        "{name} = [1, 2, 3]",
+        "print({name}[5])"
       ],
       "correctAnswer": "IndexError",
       "bugLineIndex": 1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "items",
+      "variableName": "{name}",
       "variableValue": "5"
     },
     {
@@ -686,15 +689,15 @@
       "puzzleType": 4,
       "difficulty": 1,
       "codeLines": [
-        "a = 6",
+        "{name} = 6",
         "b = 7",
-        "print(a * b)"
+        "print({name} * b)"
       ],
       "correctAnswer": "42",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "a",
+      "variableName": "{name}",
       "variableValue": "6"
     },
     {
@@ -703,14 +706,14 @@
       "puzzleType": 4,
       "difficulty": 1,
       "codeLines": [
-        "hp = 75",
-        "print('HP:', hp)"
+        "{name} = 75",
+        "print('HP:', {name})"
       ],
       "correctAnswer": "HP: 75",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "hp",
+      "variableName": "{name}",
       "variableValue": "75"
     },
     {
@@ -719,15 +722,15 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "score = 75",
-        "if score != 80:",
+        "{name} = 75",
+        "if {name} != 80:",
         "    print('Pass')"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "score",
+      "variableName": "{name}",
       "variableValue": "75"
     },
     {
@@ -736,14 +739,14 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "for i in range(5):",
-        "    print(i)"
+        "for {name} in range(5):",
+        "    print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "i",
+      "variableName": "{name}",
       "variableValue": "5"
     },
     {
@@ -752,15 +755,15 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "score = 20",
-        "score = 75",
-        "print(score)"
+        "{name} = 20",
+        "{name} = 75",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": 1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "score",
+      "variableName": "{name}",
       "variableValue": "75"
     },
     {
@@ -769,16 +772,16 @@
       "puzzleType": 1,
       "difficulty": 2,
       "codeLines": [
-        "a = 10",
+        "{name} = 10",
         "b = 5",
-        "result = a + b",
+        "result = {name} + b",
         "print(result)"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "a",
+      "variableName": "{name}",
       "variableValue": "10"
     },
     {
@@ -787,14 +790,14 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "name = 'Hero'",
-        "print(name)"
+        "{name} = 'Hero'",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "name",
+      "variableName": "{name}",
       "variableValue": "Hero"
     },
     {
@@ -803,16 +806,16 @@
       "puzzleType": 1,
       "difficulty": 2,
       "codeLines": [
-        "total = 0",
+        "{name} = 0",
         "for i in range(5):",
-        "    total += i",
-        "print(total)"
+        "    {name} += i",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "total",
+      "variableName": "{name}",
       "variableValue": "0"
     },
     {
@@ -821,15 +824,15 @@
       "puzzleType": 1,
       "difficulty": 2,
       "codeLines": [
-        "age = 20",
-        "if age == 18:",
+        "{name} = 20",
+        "if {name} == 18:",
         "    print('Adult')"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "age",
+      "variableName": "{name}",
       "variableValue": "20"
     },
     {
@@ -838,14 +841,14 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "mana = 50",
-        "print(mana)"
+        "{name} = 50",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "mana",
+      "variableName": "{name}",
       "variableValue": "50"
     },
     {
@@ -854,14 +857,14 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "message = 'Hello'",
-        "print(message)"
+        "{name} = 'Hello'",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "message",
+      "variableName": "{name}",
       "variableValue": "Hello"
     },
     {
@@ -870,14 +873,14 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "level = 5",
-        "print('Level:', level)"
+        "{name} = 5",
+        "print('Level:', {name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "level",
+      "variableName": "{name}",
       "variableValue": "5"
     },
     {
@@ -886,15 +889,15 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "name = input('Enter name: ')",
-        "print(name)"
+        "{name} = input('Enter name: ')",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "name",
-      "variableValue": "name"
+      "variableName": "{name}",
+      "variableValue": "{name}"
     },
     {
       "id": "stb_012_basic_math",
@@ -902,15 +905,15 @@
       "puzzleType": 1,
       "difficulty": 1,
       "codeLines": [
-        "x = 8",
+        "{name} = 8",
         "y = 4",
-        "print(x * y)"
+        "print({name} * y)"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "x",
+      "variableName": "{name}",
       "variableValue": "8"
     },
     {
@@ -919,16 +922,16 @@
       "puzzleType": 1,
       "difficulty": 2,
       "codeLines": [
-        "count = 0",
-        "while count < 5:",
-        "    count += 1",
-        "print(count)"
+        "{name} = 0",
+        "while {name} < 5:",
+        "    {name} += 1",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
       "correctOrder": [],
       "distractors": [],
-      "variableName": "count",
+      "variableName": "{name}",
       "variableValue": "0"
     },
     {
@@ -937,8 +940,8 @@
       "puzzleType": 2,
       "difficulty": 0,
       "codeLines": [
-        "name = 'Hero'",
-        "print(name)"
+        "{name} = 'Hero'",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
@@ -947,7 +950,7 @@
         1
       ],
       "distractors": [],
-      "variableName": "name",
+      "variableName": "{name}",
       "variableValue": "Hero"
     },
     {
@@ -956,8 +959,8 @@
       "puzzleType": 2,
       "difficulty": 1,
       "codeLines": [
-        "score = 85",
-        "if score > 80:",
+        "{name} = 85",
+        "if {name} > 80:",
         "    print('Pass')",
         "else:",
         "    print('Fail')"
@@ -972,7 +975,7 @@
         4
       ],
       "distractors": [],
-      "variableName": "score",
+      "variableName": "{name}",
       "variableValue": "85"
     },
     {
@@ -981,10 +984,10 @@
       "puzzleType": 2,
       "difficulty": 1,
       "codeLines": [
-        "total = 0",
+        "{name} = 0",
         "for i in range(5):",
-        "    total += i",
-        "print(total)"
+        "    {name} += i",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
@@ -995,7 +998,7 @@
         3
       ],
       "distractors": [],
-      "variableName": "total",
+      "variableName": "{name}",
       "variableValue": "0"
     },
     {
@@ -1004,10 +1007,10 @@
       "puzzleType": 2,
       "difficulty": 0,
       "codeLines": [
-        "health = 100",
+        "{name} = 100",
         "damage = 25",
-        "health = health - damage",
-        "print(health)"
+        "{name} = {name} - damage",
+        "print({name})"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
@@ -1018,7 +1021,7 @@
         3
       ],
       "distractors": [],
-      "variableName": "health",
+      "variableName": "{name}",
       "variableValue": "100"
     },
     {
@@ -1027,8 +1030,8 @@
       "puzzleType": 2,
       "difficulty": 1,
       "codeLines": [
-        "name = input('Enter name: ')",
-        "greeting = 'Hello ' + name",
+        "{name} = input('Enter name: ')",
+        "greeting = 'Hello ' + {name}",
         "print(greeting)"
       ],
       "correctAnswer": "",
@@ -1039,8 +1042,8 @@
         2
       ],
       "distractors": [],
-      "variableName": "name",
-      "variableValue": "name"
+      "variableName": "{name}",
+      "variableValue": "{name}"
     },
     {
       "id": "ls_006_basic_operations",
@@ -1048,9 +1051,9 @@
       "puzzleType": 2,
       "difficulty": 1,
       "codeLines": [
-        "a = 10",
+        "{name} = 10",
         "b = 5",
-        "result = a + b",
+        "result = {name} + b",
         "print(result)"
       ],
       "correctAnswer": "",
@@ -1062,7 +1065,7 @@
         3
       ],
       "distractors": [],
-      "variableName": "a",
+      "variableName": "{name}",
       "variableValue": "10"
     },
     {
@@ -1071,10 +1074,10 @@
       "puzzleType": 2,
       "difficulty": 2,
       "codeLines": [
-        "count = 0",
-        "while count < 3:",
-        "    print(count)",
-        "    count += 1"
+        "{name} = 0",
+        "while {name} < 3:",
+        "    print({name})",
+        "    {name} += 1"
       ],
       "correctAnswer": "",
       "bugLineIndex": -1,
@@ -1085,7 +1088,7 @@
         3
       ],
       "distractors": [],
-      "variableName": "count",
+      "variableName": "{name}",
       "variableValue": "0"
     },
     {
@@ -1094,10 +1097,10 @@
       "puzzleType": 2,
       "difficulty": 2,
       "codeLines": [
-        "level = 10",
-        "if level >= 10:",
+        "{name} = 10",
+        "if {name} >= 10:",
         "    print('Advanced')",
-        "elif level >= 5:",
+        "elif {name} >= 5:",
         "    print('Intermediate')",
         "else:",
         "    print('Beginner')"
@@ -1114,8 +1117,1910 @@
         6
       ],
       "distractors": [],
-      "variableName": "level",
+      "variableName": "{name}",
       "variableValue": "10"
+    },
+    {
+      "id": "var_pac_001",
+      "knowledgeComponent": "variables",
+      "puzzleType": 5,
+      "difficulty": 0,
+      "codeLines": [
+        "{name2} = {num2}",
+        "{name} = {num}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name} = {num3}",
+        "print({name})",
+        "{name2} = {num}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Store the player's starting {name} value so it can be used later."
+    },
+    {
+      "id": "var_pac_002",
+      "knowledgeComponent": "variables",
+      "puzzleType": 5,
+      "difficulty": 1,
+      "codeLines": [
+        "{name2} = {num}",
+        "{name} = {name2}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name} = {num2}",
+        "{name2} = {name}",
+        "print({name2})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Copy the {name2} total into {name} without changing it."
+    },
+    {
+      "id": "var_pac_003",
+      "knowledgeComponent": "variables",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num}",
+        "{name} = {name} + {num2}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name} + {num2}",
+        "print({name} + {num2})",
+        "{name2} = {name} + {num2}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Increase the player's {name} by {num2} and store the new total back in {name}."
+    },
+    {
+      "id": "var_pto_001",
+      "knowledgeComponent": "variables",
+      "puzzleType": 4,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "print({name})"
+      ],
+      "correctAnswer": "{num}",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{num2}",
+        "{name}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_pto_002",
+      "knowledgeComponent": "variables",
+      "puzzleType": 4,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name}",
+        "print({name2})"
+      ],
+      "correctAnswer": "{num}",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{num2}",
+        "{name}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_stb_001",
+      "knowledgeComponent": "variables",
+      "puzzleType": 1,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "print({name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_stb_002",
+      "knowledgeComponent": "variables",
+      "puzzleType": 1,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "{name3} = {name} + {num2}",
+        "print({name3})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_tof_001",
+      "knowledgeComponent": "variables",
+      "puzzleType": 3,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "print({name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_tof_002",
+      "knowledgeComponent": "variables",
+      "puzzleType": 3,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "{name} = {name} + {num2}",
+        "print({name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_fitb_001",
+      "knowledgeComponent": "variables",
+      "puzzleType": 0,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "print({name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{num2}",
+        "{num3}",
+        "{name}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_pac_001",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 5,
+      "difficulty": 0,
+      "codeLines": [
+        "{name2} = {num}",
+        "{name3} = {num2}",
+        "{name} = {name2} + {name3}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name} = {name2} - {name3}",
+        "print({name2} + {name3})",
+        "{name} = {name3}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Add the two amounts together and store the result in {name}."
+    },
+    {
+      "id": "bo_pac_002",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "{name2} = {num2}",
+        "{name3} = {num3}",
+        "{name} = {name2} * {name3} - {num}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name} = {name2} * {name3} + {num}",
+        "print({name2} * {name3} - {num})",
+        "{name} = {name2} + {name3} * {num}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Buy {name3} items at {name2} gold each, then subtract a {num} gold discount. Store the final price in {name}."
+    },
+    {
+      "id": "bo_pac_004",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 5,
+      "difficulty": 1,
+      "codeLines": [
+        "{name2} = {num}",
+        "{name3} = {num2}",
+        "{name} = {name2} * {name3}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name} = {name2} + {name3}",
+        "print({name2} * {name3})",
+        "{name} = {name2} - {name3}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Multiply the two amounts together and store the result in {name}."
+    },
+    {
+      "id": "bo_pac_005",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 5,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "{name} = {name} - {num2}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "print({name} - {num2})",
+        "{name} = {name} + {num2}",
+        "{name} = {num2} - {name}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Start with {num} {name}, then spend {num2} of it and store the remaining amount back in {name}."
+    },
+    {
+      "id": "bo_pac_006",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "{name2} = {num}",
+        "{name3} = {num2}",
+        "{name} = {name2} + {name3}",
+        "{name} = {name} + {num3}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name2} = {name} + {num3}",
+        "{name} = {name} - {num3}",
+        "print({name} + {num3})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Add the two amounts together and store the result in {name}, then add a {num3} bonus on top and store the final total back in {name}."
+    },
+    {
+      "id": "bo_pac_007",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "{name2} = {num}",
+        "{name3} = {num2}",
+        "{name} = {name2} / {name3}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name} = {name2} * {name3}",
+        "{name} = {name3} / {name2}",
+        "print({name2} / {name3})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Divide the first amount by the second and store the result in {name}."
+    },
+    {
+      "id": "bo_pto_001",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 4,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {num2}",
+        "print({name} + {name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{num}",
+        "{name2}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_pto_002",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 4,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {num2}",
+        "print({name} * {num3} - {name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_stb_001",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 1,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name} * {num2}",
+        "print({name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_tof_001",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 3,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {num2}",
+        "print({name} + {name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_tof_002",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {num2}",
+        "print({name} * {num3} - {name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_fitb_001",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 0,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name} * {num2}",
+        "print({name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "input",
+        "int",
+        "str"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "print_pac_001",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 5,
+      "difficulty": 1,
+      "codeLines": [
+        "greeting = {msg}",
+        "name = {str}",
+        "print(greeting + ' ' + name)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "print(name + ' ' + greeting)",
+        "print(greeting + name)",
+        "print(greeting)"
+      ],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": "Greet the player: show the message, a space, then their name."
+    },
+    {
+      "id": "print_pac_002",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "level = {num}",
+        "print(hero, level)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "print(level, hero)",
+        "print(hero + level)",
+        "print(hero, level, hero)"
+      ],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": "Show the hero's name and level on one line, name first."
+    },
+    {
+      "id": "print_pto_001",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 4,
+      "difficulty": 1,
+      "codeLines": [
+        "greeting = {msg}",
+        "name = {str}",
+        "print(greeting, name)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "name",
+      "variableValue": "Hero",
+      "goalText": ""
+    },
+    {
+      "id": "print_stb_001",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 1,
+      "difficulty": 0,
+      "codeLines": [
+        "print({msg}",
+        "{name} = {num}",
+        "print({name})"
+      ],
+      "correctAnswer": "print({msg})",
+      "bugLineIndex": 0,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "print_tof_001",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 3,
+      "difficulty": 0,
+      "codeLines": [
+        "print({msg})",
+        "print({msg2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_tof_002",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "title = {msg}",
+        "print(title + ' ' + hero)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_fitb_002",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 0,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "print({name}, 'gold')"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "input",
+        "int",
+        "str"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "print_ls_002",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 2,
+      "difficulty": 1,
+      "codeLines": [
+        "hero = {str}",
+        "title = {msg}",
+        "print(title + ' ' + hero)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2
+      ],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "input_pac_001",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 5,
+      "difficulty": 0,
+      "codeLines": [
+        "print({msg})",
+        "{name} = input('Enter name: ')"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "print('Enter name: ')",
+        "input('Enter name: ')",
+        "{name} = 'Enter name: '"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": "Ask for the player's name and save their answer in {name}."
+    },
+    {
+      "id": "input_pac_002",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = input('How many? ')",
+        "{name2} = int({name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name2} = {name}",
+        "{name2} = str({name})",
+        "int({name})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": "Ask how many {name2} the player found, convert the answer to a number, and store that number in {name2}."
+    },
+    {
+      "id": "input_tof_001",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 3,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = input('Enter name: ')",
+        "print('Hello ' + {name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "input_tof_002",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 3,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = input('How many? ')",
+        "stash = int({name}) * 2",
+        "print(stash)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "input_pto_002",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 4,
+      "difficulty": 1,
+      "codeLines": [
+        "# Player types: 25",
+        "{name} = input('Enter gold: ')",
+        "print({name})"
+      ],
+      "correctAnswer": "25",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "Enter gold: ",
+        "'25'",
+        "{name}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "input_pto_003",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 4,
+      "difficulty": 2,
+      "codeLines": [
+        "# Player types: 25",
+        "gold = input('Enter gold: ')",
+        "print(int(gold) + 10)"
+      ],
+      "correctAnswer": "35",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "25",
+        "2510",
+        "TypeError"
+      ],
+      "variableName": "gold",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "input_stb_001",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 1,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = input('Enter name: ')",
+        "print('Hello ' + {name}"
+      ],
+      "correctAnswer": "print('Hello ' + {name})",
+      "bugLineIndex": 1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "input_ls_001",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 2,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = input('Enter name: ')",
+        "print('Hello ' + {name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1
+      ],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "input_fitb_001",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 0,
+      "difficulty": 1,
+      "codeLines": [
+        "gold = input('Enter gold: ')",
+        "stash = int(gold) + {num}",
+        "print(stash)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "str",
+        "float",
+        "print"
+      ],
+      "variableName": "gold",
+      "variableValue": "gold",
+      "goalText": ""
+    },
+    {
+      "id": "cond_pac_001",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 5,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num2}",
+        "if {name} >= {num3}:",
+        "    print({msg})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "    print({msg2})",
+        "    print({name})",
+        "    print({msg}, {name})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num2}",
+      "goalText": "If the player's {name} is at least {num3}, show {msg}."
+    },
+    {
+      "id": "cond_pac_002",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 5,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num2}",
+        "if {name} >= {num3}:",
+        "    print({msg})",
+        "else:",
+        "    print({msg2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "    print({msg})",
+        "    print({name})",
+        "    print({msg2}, {name})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num2}",
+      "goalText": "Show {msg} when {name} reaches {num3}; otherwise show {msg2}."
+    },
+    {
+      "id": "cond_pac_003",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "level = {num}",
+        "if level >= 15:",
+        "    print({msg})",
+        "elif level >= 8:",
+        "    print({msg2})",
+        "else:",
+        "    print('Beginner')"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "    print({msg})",
+        "    print({msg2})",
+        "    print('Beginner', level)"
+      ],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": "Label the player {msg} at level 15 or higher, {msg2} at level 8 or higher, otherwise 'Beginner'."
+    },
+    {
+      "id": "cond_tof_001",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 3,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "if {name} > {num2}:",
+        "    print({msg})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "cond_tof_002",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "level = 12",
+        "if level >= 15:",
+        "    print({msg})",
+        "elif level >= 8:",
+        "    print({msg2})",
+        "else:",
+        "    print('Beginner')"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "cond_pto_002",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 4,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = 15",
+        "if {name} > 10:",
+        "    print({msg})"
+      ],
+      "correctAnswer": "{msg}",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{msg2}",
+        "15"
+      ],
+      "variableName": "{name}",
+      "variableValue": "15",
+      "goalText": ""
+    },
+    {
+      "id": "cond_pto_003",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 4,
+      "difficulty": 2,
+      "codeLines": [
+        "level = 12",
+        "if level >= 15:",
+        "    print({msg})",
+        "elif level >= 8:",
+        "    print({msg2})",
+        "else:",
+        "    print('Beginner')"
+      ],
+      "correctAnswer": "{msg2}",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{msg}",
+        "'Beginner'",
+        "12"
+      ],
+      "variableName": "level",
+      "variableValue": "12",
+      "goalText": ""
+    },
+    {
+      "id": "cond_stb_001",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 1,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "if {name} > {num2}",
+        "    print({msg})"
+      ],
+      "correctAnswer": "if {name} > {num2}:",
+      "bugLineIndex": 1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "cond_fitb_001",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 0,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = 15",
+        "if {name} > 10:",
+        "    print({msg})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "while",
+        "for",
+        "else"
+      ],
+      "variableName": "{name}",
+      "variableValue": "15",
+      "goalText": ""
+    },
+    {
+      "id": "cond_ls_001",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 2,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "if {name} > {num2}:",
+        "    print({msg})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2
+      ],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "loop_pac_001",
+      "knowledgeComponent": "loops",
+      "puzzleType": 5,
+      "difficulty": 0,
+      "codeLines": [
+        "for {name} in range({num}):",
+        "    print({name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "    print({num})",
+        "    print({name} + 1)",
+        "    print({msg})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Print every number from 0 up to (but not including) {num}."
+    },
+    {
+      "id": "loop_pac_002",
+      "knowledgeComponent": "loops",
+      "puzzleType": 5,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = 0",
+        "for {name2} in range({num}):",
+        "    {name} = {name} + {name2}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "    {name} = {name2} + {num}",
+        "    {name2} = {name} + {name2}",
+        "    print({name})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Add every number from 0 up to (but not including) {num} into {name}."
+    },
+    {
+      "id": "loop_pac_003",
+      "knowledgeComponent": "loops",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = 0",
+        "while {name} < {num}:",
+        "    {name} = {name} + 1"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "    print({name})",
+        "    {name} = {name} - 1",
+        "{name} = {name} + 1"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Keep counting {name} up by one until it reaches {num}, then stop."
+    },
+    {
+      "id": "loop_tof_001",
+      "knowledgeComponent": "loops",
+      "puzzleType": 3,
+      "difficulty": 0,
+      "codeLines": [
+        "total = 0",
+        "for i in range({num}):",
+        "    total = total + i",
+        "print(total)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "loop_tof_002",
+      "knowledgeComponent": "loops",
+      "puzzleType": 3,
+      "difficulty": 1,
+      "codeLines": [
+        "count = 0",
+        "while count < {num}:",
+        "    count = count + 1",
+        "print(count)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "loop_pto_001",
+      "knowledgeComponent": "loops",
+      "puzzleType": 4,
+      "difficulty": 0,
+      "codeLines": [
+        "for {name} in range(3):",
+        "    print({name})"
+      ],
+      "correctAnswer": "0\n1\n2",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "1\n2\n3",
+        "0\n1\n2\n3",
+        "{name}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "3",
+      "goalText": ""
+    },
+    {
+      "id": "loop_pto_002b",
+      "knowledgeComponent": "loops",
+      "puzzleType": 4,
+      "difficulty": 1,
+      "codeLines": [
+        "count = 0",
+        "while count < 6:",
+        "    count = count + 1",
+        "print(count)"
+      ],
+      "correctAnswer": "6",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "5",
+        "0\n1\n2\n3\n4\n5",
+        "7"
+      ],
+      "variableName": "count",
+      "variableValue": "6",
+      "goalText": ""
+    },
+    {
+      "id": "loop_pto_002",
+      "knowledgeComponent": "loops",
+      "puzzleType": 4,
+      "difficulty": 1,
+      "codeLines": [
+        "count = 0",
+        "while count < 4:",
+        "    count = count + 1",
+        "print(count)"
+      ],
+      "correctAnswer": "4",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "3",
+        "0\n1\n2\n3",
+        "5"
+      ],
+      "variableName": "count",
+      "variableValue": "4",
+      "goalText": ""
+    },
+    {
+      "id": "loop_stb_001",
+      "knowledgeComponent": "loops",
+      "puzzleType": 1,
+      "difficulty": 0,
+      "codeLines": [
+        "count = {num}",
+        "while count > 0:",
+        "    count = count + 1"
+      ],
+      "correctAnswer": "count = count - 1",
+      "bugLineIndex": 2,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "count",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "loop_fitb_001",
+      "knowledgeComponent": "loops",
+      "puzzleType": 0,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = 0",
+        "while {name} < {num}:",
+        "    {name} = {name} + 1"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "for",
+        "if",
+        "else"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "loop_ls_001",
+      "knowledgeComponent": "loops",
+      "puzzleType": 2,
+      "difficulty": 0,
+      "codeLines": [
+        "count = 0",
+        "while count < {num}:",
+        "    count = count + 1",
+        "print(count)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "distractors": [],
+      "variableName": "count",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "print_pto_004",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 4,
+      "difficulty": 2,
+      "codeLines": [
+        "greeting = {msg}",
+        "name = {str}",
+        "print(greeting + ' ' + name)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{str} {msg}",
+        "{msg}{str}",
+        "{msg}"
+      ],
+      "variableName": "name",
+      "variableValue": "Hero",
+      "goalText": ""
+    },
+    {
+      "id": "input_pto_004",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 4,
+      "difficulty": 2,
+      "codeLines": [
+        "# Player types: 12",
+        "{name} = input('How many? ')",
+        "print(int({name}) * 2)"
+      ],
+      "correctAnswer": "24",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "12",
+        "1212",
+        "{name}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "loop_pto_003",
+      "knowledgeComponent": "loops",
+      "puzzleType": 4,
+      "difficulty": 1,
+      "codeLines": [
+        "total = 0",
+        "for i in range(4):",
+        "    total = total + i",
+        "print(total)"
+      ],
+      "correctAnswer": "6",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "10",
+        "4",
+        "0\n1\n2\n3"
+      ],
+      "variableName": "i",
+      "variableValue": "4",
+      "goalText": ""
+    },
+    {
+      "id": "input_fitb_003",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 0,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = input('Enter age: ')",
+        "years = int({name}) * 2",
+        "print(years)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "str",
+        "print",
+        "len"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "input_ls_003",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 2,
+      "difficulty": 2,
+      "codeLines": [
+        "name = input('Enter name: ')",
+        "title = 'Sir '",
+        "greeting = title + name",
+        "print(greeting)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "input_tof_004",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "gold = input('Enter gold: ')",
+        "stash = int(gold) + 5",
+        "print(stash)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "gold",
+      "variableValue": "gold",
+      "goalText": ""
+    },
+    {
+      "id": "loop_tof_004",
+      "knowledgeComponent": "loops",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "count = 0",
+        "while count < 2:",
+        "    count = count + 2",
+        "print(count)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_fitb_003",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 0,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "title = {msg}",
+        "print(title + ' ' + hero)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "input",
+        "int",
+        "str"
+      ],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_stb_003",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 1,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "title = {msg}",
+        "print(title + ' ' + 'hero')"
+      ],
+      "correctAnswer": "print(title + ' ' + hero)",
+      "bugLineIndex": 2,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_ls_003",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 2,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "level = {num}",
+        "banner = 'Champion '",
+        "print(banner + hero)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "input_fitb_002",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 0,
+      "difficulty": 2,
+      "codeLines": [
+        "gold = input('Enter gold: ')",
+        "if int(gold) > 10:",
+        "    print('Rich')"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "str",
+        "print",
+        "len"
+      ],
+      "variableName": "gold",
+      "variableValue": "gold",
+      "goalText": ""
+    },
+    {
+      "id": "input_stb_002",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 1,
+      "difficulty": 2,
+      "codeLines": [
+        "# Player types: 7",
+        "{name} = input('How many? ')",
+        "print({name} + 1)"
+      ],
+      "correctAnswer": "print(int({name}) + 1)",
+      "bugLineIndex": 2,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "input_ls_002",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 2,
+      "difficulty": 2,
+      "codeLines": [
+        "name = input('Enter name: ')",
+        "greeting = 'Hello ' + name",
+        "shout = greeting + '!'",
+        "print(shout)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "input_tof_003",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "age = input('Enter age: ')",
+        "print(int(age) + 1)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "age",
+      "variableValue": "age",
+      "goalText": ""
+    },
+    {
+      "id": "input_pto_001",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 4,
+      "difficulty": 0,
+      "codeLines": [
+        "# Player types: Ada",
+        "{name} = input('Enter name: ')",
+        "print('Hi ' + {name})"
+      ],
+      "correctAnswer": "Hi Ada",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "Hi {name}",
+        "Enter name: Ada",
+        "Ada"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": ""
+    },
+    {
+      "id": "input_pac_003",
+      "knowledgeComponent": "input_handling",
+      "puzzleType": 5,
+      "difficulty": 1,
+      "codeLines": [
+        "print('Welcome!')",
+        "{name} = input('How many? ')",
+        "print({name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "input('How many? ')",
+        "{name} = 'How many? '",
+        "print('How many? ')"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{name}",
+      "goalText": "Welcome the player, then ask how many {name2} they want and save the answer in {name}."
+    },
+    {
+      "id": "cond_fitb_002",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 0,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num2}",
+        "if {name} >= {num3}:",
+        "    print({msg})",
+        "else:",
+        "    print({msg2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "elif",
+        "while",
+        "for"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num2}",
+      "goalText": ""
+    },
+    {
+      "id": "cond_tof_003",
+      "knowledgeComponent": "conditionals",
+      "puzzleType": 3,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "if {name} >= {num2}:",
+        "    print({msg})",
+        "else:",
+        "    print({msg2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "loop_fitb_002",
+      "knowledgeComponent": "loops",
+      "puzzleType": 0,
+      "difficulty": 2,
+      "codeLines": [
+        "total = 0",
+        "for i in range({num}):",
+        "    total = total + i",
+        "print(total)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "while",
+        "if",
+        "elif"
+      ],
+      "variableName": "total",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "loop_tof_003",
+      "knowledgeComponent": "loops",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "total = 0",
+        "for i in range(3):",
+        "    for j in range(2):",
+        "        total = total + 1",
+        "print(total)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "var_fitb_002",
+      "knowledgeComponent": "variables",
+      "puzzleType": 0,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name}",
+        "print({name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{num2}",
+        "{name2}",
+        "{name}"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_fitb_003",
+      "knowledgeComponent": "variables",
+      "puzzleType": 0,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num}",
+        "{name} = {name} + {num2}",
+        "print({name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "input",
+        "int",
+        "str"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_stb_003",
+      "knowledgeComponent": "variables",
+      "puzzleType": 1,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name} * {num2}",
+        "print({name} + {name3})"
+      ],
+      "correctAnswer": "print({name} + {name2})",
+      "bugLineIndex": 2,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_ls_001",
+      "knowledgeComponent": "variables",
+      "puzzleType": 2,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name} + {num2}",
+        "{name3} = {name2} * 2",
+        "print({name3})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_ls_002",
+      "knowledgeComponent": "variables",
+      "puzzleType": 2,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name} + {num2}",
+        "{name2} = {name2} - {num3}",
+        "{name3} = {name2} * 2",
+        "print({name3})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "var_tof_003",
+      "knowledgeComponent": "variables",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name} * 2",
+        "{name2} = {name2} - {num}",
+        "print({name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_fitb_002",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 0,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name} - {num2}",
+        "print({name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "input",
+        "int",
+        "str"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_ls_001",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 2,
+      "difficulty": 0,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {num2}",
+        "{name3} = {name} + {name2}",
+        "print({name3})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_ls_002",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 2,
+      "difficulty": 2,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {name} * 2",
+        "{name3} = {name2} - {num2}",
+        "print({name3} + {name})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_tof_003",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 3,
+      "difficulty": 1,
+      "codeLines": [
+        "{name} = {num}",
+        "{name2} = {num2}",
+        "print({name} - {name2})"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": ""
+    },
+    {
+      "id": "bo_pac_003",
+      "knowledgeComponent": "basic_operations",
+      "puzzleType": 5,
+      "difficulty": 1,
+      "codeLines": [
+        "{name2} = {num}",
+        "{name3} = {num2}",
+        "{name} = {name2} - {name3}"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "{name} = {name3} - {name2}",
+        "{name} = {name2} + {name3}",
+        "print({name2} - {name3})"
+      ],
+      "variableName": "{name}",
+      "variableValue": "{num}",
+      "goalText": "Subtract the damage from the starting total and store what is left in {name}."
     }
   ]
 }

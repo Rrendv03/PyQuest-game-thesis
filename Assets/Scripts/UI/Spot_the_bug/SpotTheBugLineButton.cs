@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
 public class SpotTheBugLineButton : MonoBehaviour, IPointerClickHandler,
+                                                   IPointerDownHandler,
                                                    IPointerEnterHandler,
                                                    IPointerExitHandler
 {
@@ -33,6 +34,14 @@ public class SpotTheBugLineButton : MonoBehaviour, IPointerClickHandler,
             lineLabel.text = (index + 1) + ".  " + text;
 
         SetState_Default();
+    }
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        // Click sound fires on press, matching the PredictTheOutput option
+        // cards -- even if the release happens elsewhere.
+        if (parentController != null)
+            parentController.PlayOptionClickSound();
     }
 
     public void OnPointerClick(PointerEventData eventData)

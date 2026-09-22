@@ -365,6 +365,10 @@ public class EncounterManager : MonoBehaviour
         // hidden, because the encounter panel hides right after anyway).
         if (puzzleUIRoot != null) puzzleUIRoot.SetActive(false);
 
+        // Answer feedback: correct/wrong clip fires the instant the answer is confirmed,
+        // before the hit sequence starts (new EncounterEffectsManager field, empty = skip).
+        Effects.PlayAnswerSound(playerAnsweredCorrectly);
+
         if (playerAnsweredCorrectly)
         {
             // PLAYER STRIKES ENEMY: ice ball player->enemy, impact (hit sound +
@@ -792,7 +796,14 @@ public class EncounterManager : MonoBehaviour
         SaveLoadManager.IsSafeToSave = true;
         SaveRestrictionEnforcer.Instance?.RemoveBlocker("encounter");
         if (activeSourceZone != null)
+        {
             activeSourceZone.OnEncounterCompleted(standardVictoryOutcome, true);
+            // Loss: the player respawns at their entry spot INSIDE this zone, so
+            // disarm it until they walk out - otherwise the respawn teleport
+            // re-fires OnTriggerEnter and instantly locks them in a rematch loop.
+            if (!standardVictoryOutcome)
+                activeSourceZone.DisarmUntilPlayerExits();
+        }
         // Notify SanctumManager to handle boss rewards, crystal spawn, and state update
         if (standardVictoryOutcome && isBossEncounter && SanctumManager.Instance != null)
         {
@@ -800,8 +811,21 @@ public class EncounterManager : MonoBehaviour
         }
         if (activePlayerMovement != null)
         {
-            activePlayerMovement.transform.position = playerInitialPosition;
-            activePlayerMovement.transform.rotation = playerInitialRotation;
+            // Teleport through the Rigidbody, not just the transform: the player
+            // moves via rb.MovePosition, so a transform-only write leaves the body's
+            // simulation pose stale and the respawn landed drifted/sliding.
+            activePlayerMovement.transform.SetPositionAndRotation(playerInitialPosition, playerInitialRotation);
+            Rigidbody playerBody = activePlayerMovement.GetComponent<Rigidbody>();
+            if (playerBody != null)
+            {
+                playerBody.position = playerInitialPosition;
+                playerBody.rotation = playerInitialRotation;
+#if UNITY_6000_0_OR_NEWER
+                playerBody.linearVelocity = Vector3.zero;
+#else
+                playerBody.velocity = Vector3.zero;
+#endif
+            }
             activePlayerMovement.enabled = true;
         }
         // --- CAMERA RESTORATION ---

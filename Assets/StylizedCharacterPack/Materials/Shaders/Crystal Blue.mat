@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-2018737357855304688
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.AssetVersion
+  version: 10
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Crystal Blue
+  m_Shader: {fileID: -6465566751694194690, guid: 2db1de773326a684bb3ef4882ad23bf8, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 2
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _Albedo_Texture:
+        m_Texture: {fileID: 2800000, guid: 66749aeaf8a1df24aa875f0184b166cd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Inside_Texture:
+        m_Texture: {fileID: 2800000, guid: fd78b1f710115934da2e4fe1a6318cbd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Outside_Texture:
+        m_Texture: {fileID: 2800000, guid: fcf0c9fa7c75fc04c858049b26f95a8b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_Albedo:
+        m_Texture: {fileID: 2800000, guid: 66749aeaf8a1df24aa875f0184b166cd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Inner_Power: 0.487
+    - _Inner_power: 0.206
+    - _Parallax_Amplitude: 36.74
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _Steps: 22.27
+    - _Top_Layer_Fog: 0.34
+    - _Top_Layer_fog: 0.19
+    - _Top_Layer_fres: 1.26
+    - _surface_thcikness: 0.531
+    m_Colors:
+    - _Color: {r: 0.17702028, g: 0.19432475, b: 0.24528301, a: 1}
+    - _Color_Inside: {r: 0.16862746, g: 0.5812785, b: 0.83137256, a: 1}
+    - _Color_inside_two: {r: 0.47710574, g: 0.047058806, b: 0.6039216, a: 1}
+    - _EmmisionColor: {r: 1.1132076, g: 0.20478821, b: 0.74610627, a: 1}
+    - _Emmision_Color: {r: 0.07538381, g: 0.76343596, b: 1.599813, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

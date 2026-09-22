@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
 public class SpotTheBugFixOption : MonoBehaviour, IPointerClickHandler,
+                                                  IPointerDownHandler,
                                                   IPointerEnterHandler,
                                                   IPointerExitHandler
 {
@@ -28,6 +29,14 @@ public class SpotTheBugFixOption : MonoBehaviour, IPointerClickHandler,
             optionLabel.text = text;
 
         SetState_Default();
+    }
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        // Click sound fires on press, matching the PredictTheOutput option
+        // cards -- even if the release happens elsewhere.
+        if (parentController != null)
+            parentController.PlayOptionClickSound();
     }
 
     public void OnPointerClick(PointerEventData eventData)

@@ -60,6 +60,9 @@ public class DropSlot : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPoin
 
         Debug.Log($"[DropSlot] Received: {currentAnswer}");
 
+        if (dropped.parentController != null)
+            dropped.parentController.StopOptionHoldSound();
+
         // Auto-submit on drop
         PuzzleManager.Instance.UserSubmission(currentAnswer);
     }

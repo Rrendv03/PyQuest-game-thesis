@@ -41,6 +41,15 @@ public class PuzzleTemplate
     // before. Not currently populated by any shipped template -- wired in
     // for later, not exercised yet.
     public List<VariablePair> additionalVariables = new List<VariablePair>();
+
+    // Optional goal line for PairACode: rendered as the first line of the
+    // snippet ("# Goal: ...") so the blanked line's INTENT is visible to the
+    // player. This is what makes distractors verifiably wrong by reasoning
+    // against the goal instead of by spotting a one-character difference.
+    // Templates that never set it (JsonUtility defaults to null/empty) keep
+    // the legacy "Complete the missing line" header exactly as before.
+    // Slot tokens like {name} are filled by PuzzleVariationEngine.
+    public string goalText;
 }
 
 [Serializable]

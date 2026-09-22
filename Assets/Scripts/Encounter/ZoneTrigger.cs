@@ -27,6 +27,10 @@ public class ZoneTrigger : MonoBehaviour
     private bool hasAwardedXP = false;  // first-clear-only XP gate
     private Collider zoneCollider;
     private EnemyDifficultyCategory _actualDifficultyUsed;
+    // Set after a lost encounter: the player respawns at their entry spot INSIDE
+    // this zone, so triggering stays suppressed until they walk out (OnTriggerExit
+    // re-arms) and deliberately re-enter.
+    private bool disarmedUntilExit = false;
     void Awake()
     {
         zoneCollider = GetComponent<Collider>();
@@ -52,6 +56,7 @@ public class ZoneTrigger : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
+        if (disarmedUntilExit) return;  // post-loss respawn: silent until the player exits and re-enters
         if (triggered) return;
         if (!other.CompareTag("Player")) return;
 
@@ -145,7 +150,17 @@ public class ZoneTrigger : MonoBehaviour
     void OnTriggerExit(Collider other)
     {
         if (other.CompareTag("Player"))
+        {
             triggered = false;
+            disarmedUntilExit = false;  // player left the zone: re-arm for the next deliberate entry
+        }
+    }
+    /// <summary> Called by EncounterManager after a lost encounter: the player respawns
+    /// inside this zone, so stay silent until they exit and deliberately re-enter.
+    /// </summary>
+    public void DisarmUntilPlayerExits()
+    {
+        disarmedUntilExit = true;
     }
     public void OnEncounterCompleted(bool playerWon, bool awardXP)
     {

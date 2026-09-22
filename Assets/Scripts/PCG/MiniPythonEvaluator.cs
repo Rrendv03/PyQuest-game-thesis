@@ -21,6 +21,13 @@ using System.Text.RegularExpressions;
 /// comparisons, function calls other than print()) also makes it bail
 /// out, so callers can fall back to trusting the authored correctAnswer
 /// instead of trusting a wrong derived one.
+///
+/// CHANGES (variety engine): the execution loop now lives in TrySimulateCore,
+/// which also exposes the per-variable string/numeric typing environment.
+/// TrySimulate keeps its exact previous signature and behavior;
+/// PuzzleVariationEngine uses TrySimulateDetailed to decide whether a
+/// skeleton's last assignment is numerically extendable before deriving
+/// higher-difficulty variants from it.
 /// </summary>
 public static class MiniPythonEvaluator
 {
@@ -32,10 +39,40 @@ public static class MiniPythonEvaluator
 
     public static bool TrySimulate(List<string> codeLines, out string finalOutput)
     {
-        finalOutput = null;
-        var env = new Dictionary<string, string>();
+        List<string> printed;
+        Dictionary<string, string> env;
+        Dictionary<string, bool> envIsString;
+
+        bool ok = TrySimulateCore(codeLines, true, out printed, out env, out envIsString);
+        finalOutput = ok ? string.Join("\n", printed.ToArray()) : null;
+        return ok;
+    }
+
+    /// <summary>
+    /// Same simulation, but also reports the string/numeric typing of every
+    /// variable after the run. Used by PuzzleVariationEngine.CanScale so
+    /// difficulty scaling never appends arithmetic to a string-typed tail
+    /// (greeting = 'Hello' + small would be a TypeError, not a variant).
+    /// </summary>
+    public static bool TrySimulateDetailed(List<string> codeLines,
+        out string finalOutput, out Dictionary<string, bool> envIsString)
+    {
+        List<string> printed;
+        Dictionary<string, string> env;
+        bool ok = TrySimulateCore(codeLines, false, out printed, out env,
+            out envIsString);
+        finalOutput = ok ? string.Join("\n", printed.ToArray()) : null;
+        return ok;
+    }
+
+    private static bool TrySimulateCore(List<string> codeLines, bool requirePrint,
+        out List<string> printed, out Dictionary<string, string> env,
+        out Dictionary<string, bool> envIsStringOut)
+    {
+        printed = new List<string>();
+        env = new Dictionary<string, string>();
+        envIsStringOut = new Dictionary<string, bool>();
         var envIsString = new Dictionary<string, bool>();
-        var printed = new List<string>();
 
         foreach (string raw in codeLines)
         {
@@ -71,8 +108,12 @@ public static class MiniPythonEvaluator
             envIsString[varName] = isString;
         }
 
-        if (printed.Count == 0) return false;
-        finalOutput = string.Join("\n", printed);
+        envIsStringOut = envIsString;
+        // Assignment-only snippets are still fully traced (PairACode tails
+        // need the typing environment for difficulty scaling), but callers
+        // that need OUTPUT (TrySimulate) bail out on them, exactly like the
+        // original implementation did.
+        if (requirePrint && printed.Count == 0) return false;
         return true;
     }
 

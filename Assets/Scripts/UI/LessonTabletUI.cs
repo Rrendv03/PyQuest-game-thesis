@@ -109,6 +109,9 @@ public class LessonTabletUI : MonoBehaviour
         currentKC = knowledgeComponentID;
         StudentLogManager.Instance?.StartLessonTabletTracking(knowledgeComponentID);
 
+        if (!string.IsNullOrEmpty(sanctumID))
+            TabletReadTracker.MarkLessonRead(sanctumID);
+
         if (titleText != null) titleText.text = lesson.title;
         if (bodyText != null)
         {
@@ -122,7 +125,7 @@ public class LessonTabletUI : MonoBehaviour
         if (panelRoot != null) panelRoot.SetActive(true);
         if (HUDController.Instance != null)
             HUDController.Instance.SetVisible(false);
-        
+
         _pendingSanctumID = sanctumID;
     }
 

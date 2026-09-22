@@ -28,10 +28,58 @@ using UnityEngine.UI;
 ///    working in every scene, including scenes with no wired UI at all.
 /// 4. All coroutines re-validate their targets after every yield and bail out
 ///    safely instead of throwing MissingReferenceException.
+/// 5. Binding repair (Android "New Text" fix): a name-based re-bind can latch
+///    onto a stray, never-configured object that merely shares the wired
+///    name. If the re-bound notificationText is not a child of the re-bound
+///    notificationRoot, the stray is hidden and the persistent fallback pair
+///    is used, so a default "New Text" object can never sit visible on the
+///    screen, uncontrolled. Re-bound fade overlays are likewise deactivated
+///    while idle (Fade() re-activates them when a fade starts).
+/// 6. Diagnostics: Awake and every scene load log the binding state with the
+///    "[UIManager]" prefix (wired / RUNTIME FALLBACK / MISSING per field), so
+///    wired-vs-fallback-vs-missing is provable in adb logcat on device.
 /// </summary>
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
+
+    #region Static notification facade (zero scene setup)
+
+    /// <summary>
+    /// Returns the live UIManager, creating a bare one at runtime if no scene
+    /// contains one. Lets any system fire a notification with no Inspector
+    /// wiring at all: the auto-created copy immediately builds its persistent
+    /// runtime toast canvas (EnsureUsableUI), so toasts work even in a scene
+    /// with no UI set up. If a real UIManager already exists anywhere, it is
+    /// reused untouched.
+    /// </summary>
+    public static UIManager EnsureInstance()
+    {
+        if (Instance == null)
+        {
+            // AddComponent runs Awake synchronously, which sets Instance,
+            // DontDestroyOnLoad's the object and builds the fallback toast UI.
+            new GameObject("UIManager (Auto-Created)").AddComponent<UIManager>();
+            Debug.Log("[UIManager] No UIManager existed in the scene; auto-created one " +
+                      "so notifications work without any scene-hierarchy wiring.");
+        }
+        return Instance;
+    }
+
+    /// <summary>
+    /// One-line fire-and-forget toast, callable from anywhere:
+    /// UIManager.Notify("Mission complete!");
+    /// Never needs a scene reference - use this from world objects, managers
+    /// and puzzle callbacks instead of dragging the UIManager into fields.
+    /// </summary>
+    public static void Notify(string message, float duration = 3f)
+    {
+        UIManager ui = EnsureInstance();
+        if (ui != null)
+            ui.ShowNotification(message, duration);
+    }
+
+    #endregion
 
     [Header("Fade Overlay")]
     public Image fadeImage;
@@ -67,11 +115,12 @@ public class UIManager : MonoBehaviour
 
         CacheWiredNames();
         EnsureUsableUI();
+        EnsureToastBindingConsistency();
+        HideFadeOverlay();
+
+        LogUiState("Awake (initial bindings)");
 
         SceneManager.sceneLoaded += OnSceneLoaded;
-
-        if (notificationRoot != null)
-            notificationRoot.SetActive(false);
     }
 
     void OnDestroy()
@@ -106,8 +155,12 @@ public class UIManager : MonoBehaviour
         // Whatever is still missing gets the persistent runtime fallback.
         EnsureUsableUI();
 
-        if (notificationRoot != null)
-            notificationRoot.SetActive(false);
+        // A name-based re-bind can latch onto a stray same-named object that
+        // is not part of a real wired toast. Validate the pair, hide strays.
+        EnsureToastBindingConsistency();
+        HideFadeOverlay();
+
+        LogUiState("Scene loaded: '" + scene.name + "' (" + mode + ")");
     }
 
     private void KillNotification()
@@ -137,21 +190,48 @@ public class UIManager : MonoBehaviour
         {
             Image img = FindComponentInScene<Image>(scene, fadeImageName);
             if (img != null)
+            {
                 fadeImage = img;
+                Debug.Log("[UIManager] Re-bound fadeImage -> '" + GetTransformPath(img.transform) +
+                          "' in scene '" + scene.name + "'");
+            }
+            else
+            {
+                Debug.Log("[UIManager] No object named '" + fadeImageName +
+                          "' in scene '" + scene.name + "' - fadeImage will use the runtime fallback.");
+            }
         }
 
         if (rootDead)
         {
             Transform t = FindInScene(scene, notificationRootName);
             if (t != null)
+            {
                 notificationRoot = t.gameObject;
+                Debug.Log("[UIManager] Re-bound notificationRoot -> '" + GetTransformPath(t) +
+                          "' in scene '" + scene.name + "'");
+            }
+            else
+            {
+                Debug.Log("[UIManager] No object named '" + notificationRootName +
+                          "' in scene '" + scene.name + "' - toast root will use the runtime fallback.");
+            }
         }
 
         if (textDead)
         {
             TMP_Text txt = FindComponentInScene<TMP_Text>(scene, notificationTextName);
             if (txt != null)
+            {
                 notificationText = txt;
+                Debug.Log("[UIManager] Re-bound notificationText -> '" + GetTransformPath(txt.transform) +
+                          "' in scene '" + scene.name + "'");
+            }
+            else
+            {
+                Debug.Log("[UIManager] No object named '" + notificationTextName +
+                          "' in scene '" + scene.name + "' - toast text will use the runtime fallback.");
+            }
         }
     }
 
@@ -316,8 +396,139 @@ public class UIManager : MonoBehaviour
         // Only relevant for the runtime fallback text; a scene-wired TMP text
         // already carries its own font. Guarded so a project that hasn't
         // imported TMP Essentials still runs (text just renders unstyled).
-        try { return TMP_Settings.defaultFontAsset; }
-        catch { return null; }
+        try
+        {
+            TMP_FontAsset asset = TMP_Settings.defaultFontAsset;
+            if (asset != null)
+                return asset;
+        }
+        catch { }
+
+        // TMP_Settings can come back empty in builds whose TMP Essentials were
+        // never imported. Try the standard Essentials install location, which
+        // lives inside a Resources folder and is therefore packaged into the
+        // build (unlike editor-only asset lookups).
+        string[] resourceCandidates =
+        {
+            "Fonts & Materials/LiberationSans SDF",
+            "LiberationSans SDF"
+        };
+
+        foreach (string candidate in resourceCandidates)
+        {
+            TMP_FontAsset asset = Resources.Load<TMP_FontAsset>(candidate);
+            if (asset != null)
+                return asset;
+        }
+
+        return null;
+    }
+
+    #endregion
+
+    #region Binding validation & diagnostics
+
+    /// <summary>
+    /// The name-based re-bind can latch onto ANY object in a newly loaded
+    /// scene that merely shares the wired name - including a leftover default
+    /// text ("New Text") that was never wired to anything. This method makes
+    /// the toast binding self-consistent again:
+    /// - a notificationText that is NOT a child of notificationRoot is a
+    ///   stray: it gets hidden (it would otherwise sit on screen showing its
+    ///   default text, uncontrolled) and the persistent fallback pair is used;
+    /// - a notificationRoot with no notificationText under it would only ever
+    ///   show an empty backdrop: it is hidden and the fallback pair is used.
+    /// </summary>
+    private void EnsureToastBindingConsistency()
+    {
+        if (notificationText != null && !IsFallbackToastText(notificationText) &&
+            (notificationRoot == null || !notificationText.transform.IsChildOf(notificationRoot.transform)))
+        {
+            Debug.LogWarning("[UIManager] notificationText '" + GetTransformPath(notificationText.transform) +
+                             "' is not under notificationRoot. Hiding the stray text; toasts will use the runtime fallback UI.");
+            notificationText.gameObject.SetActive(false);
+            notificationText = null;
+        }
+
+        if (notificationRoot != null && !IsFallbackToastRoot(notificationRoot) &&
+            (notificationText == null || !notificationText.transform.IsChildOf(notificationRoot.transform)))
+        {
+            Debug.LogWarning("[UIManager] notificationRoot '" + GetTransformPath(notificationRoot.transform) +
+                             "' has no matching notificationText under it. Hiding it; toasts will use the runtime fallback UI.");
+            notificationRoot.SetActive(false);
+            notificationRoot = null;
+        }
+
+        // Rebuild the persistent fallback pair if a stray binding was dropped.
+        EnsureUsableUI();
+
+        // The toast is hidden until something calls ShowNotification.
+        if (notificationRoot != null)
+            notificationRoot.SetActive(false);
+    }
+
+    private bool IsFallbackToastText(TMP_Text text)
+    {
+        return ReferenceEquals(text, fallbackNotificationText);
+    }
+
+    private bool IsFallbackToastRoot(GameObject root)
+    {
+        return ReferenceEquals(root, fallbackNotificationRoot);
+    }
+
+    /// <summary>
+    /// A re-bound fade overlay must not sit visible while idle (a stray
+    /// same-named Image would otherwise show as a white rectangle). Fade()
+    /// re-activates the object every time a fade actually starts, so hiding
+    /// it here is safe and matches the end-of-fade behaviour.
+    /// </summary>
+    private void HideFadeOverlay()
+    {
+        if (fadeImage != null && fadeImage.gameObject.activeSelf)
+            fadeImage.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// One-line binding report, logged on Awake and after every scene load.
+    /// Filter adb logcat by "[UIManager]" to see whether the device build is
+    /// using the wired UI, the runtime fallback, or nothing at all.
+    /// </summary>
+    private void LogUiState(string context)
+    {
+        Debug.Log("[UIManager] " + context +
+                  " | scene '" + SceneManager.GetActiveScene().name + "'" +
+                  " | fadeImage=" + DescribeUiRef(fadeImage, fallbackFadeImage) +
+                  " | notificationRoot=" + DescribeUiRef(notificationRoot, fallbackNotificationRoot) +
+                  " | notificationText=" + DescribeUiRef(notificationText, fallbackNotificationText));
+    }
+
+    private static string DescribeUiRef(Object wired, Object runtimeFallback)
+    {
+        if (wired != null)
+            return "wired '" + wired.name + "'";
+
+        if (runtimeFallback != null)
+            return "RUNTIME FALLBACK";
+
+        return "MISSING";
+    }
+
+    private static string GetTransformPath(Transform t)
+    {
+        if (t == null)
+            return "<null>";
+
+        string path = t.name;
+        Transform parent = t.parent;
+
+        while (parent != null)
+        {
+            path = parent.name + "/" + path;
+            parent = parent.parent;
+        }
+
+        return path;
     }
 
     #endregion
@@ -384,7 +595,14 @@ public class UIManager : MonoBehaviour
     {
         if (notificationRoot == null || notificationText == null)
         {
-            Debug.Log("[UIManager] Notification: " + message);
+            // Loud, greppable signal: the device build has no toast UI bound
+            // at all. Usually means the wired scene never made it into the
+            // build (unsaved scene, wrong scene list) or the references were
+            // never assigned on the built object.
+            Debug.LogWarning("[UIManager] ShowNotification skipped - no toast UI is bound. " +
+                             "scene '" + SceneManager.GetActiveScene().name + "', message was: " + message +
+                             " (check earlier [UIManager] logs: wired references are missing in this build - " +
+                             "was the scene saved and added to Build Settings before building?)");
             return;
         }
 
@@ -408,7 +626,7 @@ public class UIManager : MonoBehaviour
             yield return null;
 
             // The wired UI can be destroyed by a scene change while this
-            // routine is waiting — bail out instead of throwing.
+            // routine is waiting - bail out instead of throwing.
             if (notificationRoot == null || notificationText == null)
             {
                 notificationRoutine = null;

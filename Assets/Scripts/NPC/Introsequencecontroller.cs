@@ -41,7 +41,52 @@ public class IntroSequenceController : MonoBehaviour
     [Tooltip("The parent GameObject of Pythariel's character model.")]
     public GameObject pytharielMesh;
 
+    [Header("Portal Sounds")]
+    [Tooltip("Plays when Glyph reaches into the rift (case 3), and again at the final line (case 23).")]
+    public AudioClip portalSound;
+    public float portalVolume = 1f;
+
     private Coroutine bgFadeCoroutine;
+    private Canvas loadingCanvas;
+    private AudioSource audioSource;
+
+    private void Awake()
+    {
+        // Build a topmost black overlay BEFORE the first frame renders,
+        // so nothing in the scene is ever visible while loading.
+        CreateLoadingBlackScreen();
+
+        // Audio source for portal sounds
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+    }
+
+    private void CreateLoadingBlackScreen()
+    {
+        GameObject go = new GameObject("LoadingBlackScreen");
+        loadingCanvas = go.AddComponent<Canvas>();
+        loadingCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        loadingCanvas.sortingOrder = 32767; // above every other canvas
+
+        GameObject img = new GameObject("BlackImage");
+        img.transform.SetParent(go.transform, false);
+        Image black = img.AddComponent<Image>();
+        black.color = Color.black;
+
+        // Stretch to fill the whole screen
+        RectTransform rt = black.rectTransform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        // OPTIONAL: survive into MainMap so the next scene is also covered
+        // until you hide it there. Uncomment ONLY if you also add the
+        // cleanup code in MainMap (see notes below the script).
+        // DontDestroyOnLoad(go);
+    }
 
     private void Start()
     {
@@ -80,32 +125,40 @@ public class IntroSequenceController : MonoBehaviour
 
     private void HandleLineChanged(DialogueLine line, int lineIndex)
     {
-        // Choreograph the 3D mesh groups and the black background image.
-        // Indices match the array order in dialogue.json (starting at 0).
+        // Indices match the array order in dialogue.json for "intro_prologue"
+        // (24 lines, indices 0-23). If you add/remove lines from the sequence,
+        // these cases MUST be updated to match.
         switch (lineIndex)
         {
-            case 1: // "Nothing about this night suggests..."
+            case 0: // "On a quiet, rainy night."
+                // The cinematic dialogue has started: the loading black screen
+                // has served its purpose, so remove it.
+                if (loadingCanvas != null)
+                    Destroy(loadingCanvas.gameObject);
+                break;
+
+            case 1: // "Glyph sits at his desk seeking inspiration..."
                 // Fade out black screen, show the room group
                 StartBGFade(0f);
                 SetMeshes(room: true, dimension: false, pyth: false);
                 break;
-            case 3:
+
+            case 3: // "Startled, Glyph drops his pen and instinctively reaches out into the yielding darkness."
+                // Portal opens: play the sound and pull Glyph through
+                PlayPortalSound();
                 SetMeshes(room: false, dimension: true, pyth: true);
                 break;
 
-            case 4: // "There is no tunnel. No countdown..."
-                // Hide room group, show the inside dimension group (falling through script)
-                SetMeshes(room: false, dimension: true, pyth: true);
-                break;
-
-            case 6: // "But her eyes, when they find Glyph, are completely clear."
-                // Fade the background BACK to black before the UI switches
+            case 22: // Glyph: "Wait-"
+                // Pythariel is fading: fade the background back to black
                 StartBGFade(1f);
                 break;
 
-            case 48: // "And then, like an inscription... she is gone."
-                // Back to cinematic mode. NOW we hide everything to match the text.
+            case 23: // Pythariel: "Don't fear getting it wrong..." (final line)
+                // Back to cinematic mode. Hide everything to match the text,
+                // and close with a portal sound.
                 SetMeshes(false, false, false);
+                PlayPortalSound();
                 if (cinematicBlackBG != null)
                 {
                     Color c = cinematicBlackBG.color;
@@ -130,7 +183,7 @@ public class IntroSequenceController : MonoBehaviour
     private IEnumerator EndSequence()
     {
         // If pythariel's specific renderer is still somehow visible, fade her out.
-        // (Note: Because she is disabled at line 48, this will safely skip itself).
+        // (Note: Because she is disabled at line 23, this will safely skip itself).
         if (pytharielRenderer != null && pytharielRenderer.enabled)
             yield return StartCoroutine(FadePythariel());
 
@@ -194,6 +247,12 @@ public class IntroSequenceController : MonoBehaviour
         Color final = cinematicBlackBG.color;
         final.a = targetAlpha;
         cinematicBlackBG.color = final;
+    }
+
+    private void PlayPortalSound()
+    {
+        if (portalSound == null || audioSource == null) return;
+        audioSource.PlayOneShot(portalSound, portalVolume);
     }
     // ----------------------
 

@@ -53,6 +53,8 @@ public class MissionTabletUI : MonoBehaviour
 
         SaveLoadManager.IsSafeToSave = false;
 
+        TabletReadTracker.MarkSanctumMissionsRead(currentSanctumID);
+
         Refresh();
     }
 

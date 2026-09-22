@@ -88,8 +88,8 @@ public class LineScrambleSlot : MonoBehaviour, IPointerDownHandler, IBeginDragHa
 
     /// <summary>
     /// Press feedback: fires on pointer press, even if the player releases
-    /// without ever dragging. Routed to the controller so all four puzzle
-    /// sounds (press, drag, swap, execute) are assigned in one place.
+    /// without ever dragging. Routed to the controller so every puzzle sound
+    /// (press, drag, swap, return, execute) is assigned in one place.
     /// </summary>
     public void OnPointerDown(PointerEventData eventData)
     {
@@ -152,9 +152,16 @@ public class LineScrambleSlot : MonoBehaviour, IPointerDownHandler, IBeginDragHa
         }
         else
         {
-            // No swap happened (released over empty space): return to the
-            // slot position this drag started from.
-            rectTransform.position = dragStartWorldPosition;
+            // No swap happened (released over empty space): glide back to the
+            // slot position this drag started from — the same smooth pullback
+            // the PairACode options get, reusing the swap slide (same duration
+            // and ease). Reusing the slide coroutine also means grabbing the
+            // slot again mid-return cancels it cleanly, and a layout refresh
+            // deferred by another swap waits for this slide to finish.
+            SlideTo(dragStartWorldPosition);
+
+            if (parentController != null)
+                parentController.PlaySlotReturnSound();
         }
 
         SetState_Default();

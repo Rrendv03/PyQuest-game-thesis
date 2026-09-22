@@ -20,6 +20,8 @@ public class LineScrambleUIController : MonoBehaviour
     public AudioClip slotDragSound;
     [Tooltip("Played when a drop commits a swap between the dragged slot and the slot under it.")]
     public AudioClip slotSwapSound;
+    [Tooltip("Played when a released slot animates back to the position it was dragged from (drag ended without a swap).")]
+    public AudioClip slotReturnSound;
     [Tooltip("Played when the Check/execute button is pressed.")]
     public AudioClip executeButtonSound;
     [Tooltip("Log every sound trigger to the Console. Turn on to diagnose missing audio.")]
@@ -94,6 +96,9 @@ public class LineScrambleUIController : MonoBehaviour
     /// <summary>Plays the swap sound. Called by SwapByReference when a swap commits.</summary>
     public void PlaySlotSwapSound() => PlayOneShot(slotSwapSound, "slot swap");
 
+    /// <summary>Plays the return sound. Called by LineScrambleSlot.OnEndDrag when a drag ends with no swap and the slot glides back home.</summary>
+    public void PlaySlotReturnSound() => PlayOneShot(slotReturnSound, "slot return");
+
     /// <summary>Plays the execute button sound. Called by OnCheckPressed.</summary>
     public void PlayExecuteSound() => PlayOneShot(executeButtonSound, "execute button");
 
@@ -159,7 +164,7 @@ public class LineScrambleUIController : MonoBehaviour
         orderedSlots = new List<LineScrambleSlot>();
 
         if (instructionText != null)
-            instructionText.text = "Drag the lines to reorder them, then press Check.";
+            instructionText.text = "Drag the code to other code to reorder them, then press Execute.";
 
         foreach (var obj in slotObjects)
             obj.SetActive(false);

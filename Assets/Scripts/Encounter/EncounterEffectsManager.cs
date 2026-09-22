@@ -24,6 +24,16 @@ public class EncounterEffectsManager : MonoBehaviour
     public AudioClip victorySound;
     [Tooltip("Played when the PLAYER LOSES the encounter, at the same moment the end animation starts (after the enemy has turned to face the player). Leave empty to skip.")]
     public AudioClip loseSound;
+    [Tooltip("Optional SECOND win clip layered over victorySound for a richer win moment. Leave empty to skip.")]
+    public AudioClip victorySoundSecondary;
+    [Tooltip("Optional SECOND loss clip layered over loseSound for a richer loss moment. Leave empty to skip.")]
+    public AudioClip loseSoundSecondary;
+
+    [Header("Answer Feedback (NEW)")]
+    [Tooltip("Played the moment a correct answer is confirmed, right before the ice-ball strike plays. Leave empty to skip.")]
+    public AudioClip correctAnswerSound;
+    [Tooltip("Played the moment a wrong answer is confirmed, right before the enemy's walk-up strike plays. Leave empty to skip.")]
+    public AudioClip wrongAnswerSound;
     [Range(0f, 1f)] public float sfxVolume = 1f;
 
     [Header("Impact Timing (moved from EncounterManager)")]
@@ -208,6 +218,7 @@ public class EncounterEffectsManager : MonoBehaviour
     }
 
     private AudioSource sfxSource;
+    private AudioSource secondarySource;
     void Awake()
     {
         // One AudioSource on this component for all encounter one-shots
@@ -215,11 +226,20 @@ public class EncounterEffectsManager : MonoBehaviour
         sfxSource = GetComponent<AudioSource>();
         if (sfxSource == null) sfxSource = gameObject.AddComponent<AudioSource>();
         sfxSource.playOnAwake = false;
+        // Dedicated second source so a secondary win/lose jingle can never be
+        // swallowed by (or collide with) one-shots on the main SFX source.
+        secondarySource = gameObject.AddComponent<AudioSource>();
+        secondarySource.playOnAwake = false;
     }
     public void PlaySfx(AudioClip clip)
     {
         if (clip == null || sfxSource == null) return;
         sfxSource.PlayOneShot(clip, sfxVolume);
+    }
+    void PlaySecondary(AudioClip clip)
+    {
+        if (clip == null || secondarySource == null) return;
+        secondarySource.PlayOneShot(clip, sfxVolume);
     }
 
     /// <summary>Plays victorySound on a player win, loseSound on a loss; called at the exact moment the end-of-fight
@@ -228,6 +248,14 @@ public class EncounterEffectsManager : MonoBehaviour
     public void PlayOutcomeSound(bool playerWon)
     {
         PlaySfx(playerWon ? victorySound : loseSound);
+        PlaySecondary(playerWon ? victorySoundSecondary : loseSoundSecondary);
+    }
+
+    /// <summary>Plays the correct/wrong answer feedback clip the instant a round's answer is confirmed — before
+    /// the hit sequence starts, so it reads as "you got it right/wrong", not as the impact. Unassigned = skip.</summary>
+    public void PlayAnswerSound(bool answeredCorrectly)
+    {
+        PlaySfx(answeredCorrectly ? correctAnswerSound : wrongAnswerSound);
     }
 
     /// <summary>(moved - same logic, same moment) Remember MusicManager's current clip, then switch to fightMusic, or to

@@ -68,8 +68,16 @@ public class PCGEngine : MonoBehaviour
         if (!string.IsNullOrEmpty(json))
         {
             PuzzleTemplateLibrary lib = JsonUtility.FromJson<PuzzleTemplateLibrary>(json);
-            allTemplates = lib != null && lib.templates != null ? lib.templates : new List<PuzzleTemplate>();
-            Debug.Log($"[PCG] Loaded {allTemplates.Count} puzzle templates");
+            var authored = lib != null && lib.templates != null ? lib.templates : new List<PuzzleTemplate>();
+            // Slot expansion: every template carrying {name}/{num}/{msg}/...
+            // tokens becomes VariantsPerSkeleton concrete instances, and
+            // evaluator-safe skeletons also derive Intermediate/Advanced
+            // variants. Hand-authored templates pass through untouched, so
+            // the shipped JSON stays small while each (KC, format, tier)
+            // bucket gets a deep, non-repeating pool.
+            allTemplates = PuzzleVariationEngine.ExpandAll(authored);
+            Debug.Log($"[PCG] Loaded {authored.Count} authored templates -> " +
+                      $"{allTemplates.Count} playable instances");
         }
 
         IsLoaded = true;
@@ -296,6 +304,7 @@ public class PCGEngine : MonoBehaviour
             distractors = new List<string>(original.distractors),
             variableName = original.variableName,
             variableValue = original.variableValue,
+            goalText = original.goalText,
             // Dormant unless a template actually populates it (none do
             // right now by design, per the decision to hold multi-variable
             // content back until the single-variable path is confirmed
@@ -363,18 +372,63 @@ public class PCGEngine : MonoBehaviour
             else
                 newValue = stringValuePool[Random.Range(0, stringValuePool.Length)].Replace("'", "");
 
+            // MUTATION SAFETY GATE: control-flow snippets (for/while/if and
+            // input()) have answers authored for their LITERAL loop bounds
+            // and branch values. Re-shuffling numbers in them produced the
+            // "range(3) became range(500) while correctAnswer stayed 0\n1\n2"
+            // class of wrong answers, so they only ever get NAME mutations.
+            bool controlFlow = PuzzleVariationEngine.ContainsControlFlow(m.codeLines);
+
             for (int i = 0; i < m.codeLines.Count; i++)
-                m.codeLines[i] = ReplaceWholeWord(
-                    ReplaceWholeWord(m.codeLines[i], original.variableName, newName),
-                    original.variableValue, newValue);
+                m.codeLines[i] = ReplaceWholeWord(m.codeLines[i], original.variableName, newName);
 
             for (int i = 0; i < m.distractors.Count; i++)
-                m.distractors[i] = ReplaceWholeWord(
-                    ReplaceWholeWord(m.distractors[i], original.variableName, newName),
-                    original.variableValue, newValue);
+                m.distractors[i] = ReplaceWholeWord(m.distractors[i], original.variableName, newName);
+
+            // goalText is the player-facing contract ("Add the two amounts
+            // together and store the result in mana"), so it must undergo the
+            // SAME rename as the code it describes. It used to be copied over
+            // verbatim, which produced the playtested bug where the goal
+            // named one variable ("store the result in mana") while the code
+            // and every option used the renamed one ("lives = defense +
+            // shield") -- an undecidable puzzle. Mirrors the code rename
+            // below, including the control-flow carve-out for values.
+            m.goalText = ReplaceWholeWord(m.goalText ?? "", original.variableName, newName);
+
+            // correctAnswer must undergo the SAME rename as the code it
+            // belongs to. SpotTheBug templates that author their bug
+            // directly in codeLines (bugLineIndex >= 0) store the clean
+            // line in correctAnswer; renaming only codeLines would leave
+            // the "correct fix" pointing at the old variable while the
+            // served snippet uses the new one -- the same undecidable
+            // mismatch class as the goalText bug fixed above. No-op for
+            // every other format: PredictTheOutput/FillInTheBlank
+            // overwrite correctAnswer after this point, PairACode ignores
+            // it, and TrueOrFalse's true/false contains no identifiers.
+            m.correctAnswer = ReplaceWholeWord(m.correctAnswer ?? "", original.variableName, newName);
+
+            if (!controlFlow)
+            {
+                for (int i = 0; i < m.codeLines.Count; i++)
+                    m.codeLines[i] = ReplaceWholeWord(m.codeLines[i], original.variableValue, newValue);
+
+                for (int i = 0; i < m.distractors.Count; i++)
+                    m.distractors[i] = ReplaceWholeWord(m.distractors[i], original.variableValue, newValue);
+
+                // Keep the goal's numbers in lockstep with the code's (the
+                // same contract argument as the rename above): bo_pac_002's
+                // goal quotes the discount as a bare number, and that number
+                // IS variableValue, so leaving it behind after a value
+                // mutation re-creates the goal/code mismatch class.
+                m.goalText = ReplaceWholeWord(m.goalText ?? "", original.variableValue, newValue);
+
+                // Same contract for values quoted inside an authored
+                // SpotTheBug fix line (e.g. cond_stb_001's "if x > N:").
+                m.correctAnswer = ReplaceWholeWord(m.correctAnswer ?? "", original.variableValue, newValue);
+            }
 
             m.variableName = newName;
-            m.variableValue = newValue;
+            m.variableValue = controlFlow ? original.variableValue : newValue;
 
             // Multi-variable renaming: dormant for existing content since
             // additionalVariables is empty unless a template sets it, but
@@ -408,11 +462,25 @@ public class PCGEngine : MonoBehaviour
                         ReplaceWholeWord(m.distractors[i], oldExtraName, extraNewName),
                         oldExtraValue, extraNewValue);
 
+                // Same contract as the primary rename: any prose reference to
+                // a renamed secondary variable/value moves with the code.
+                m.goalText = ReplaceWholeWord(
+                    ReplaceWholeWord(m.goalText ?? "", oldExtraName, extraNewName),
+                    oldExtraValue, extraNewValue);
+
+                // Same contract for secondary variables inside an authored
+                // SpotTheBug fix line.
+                m.correctAnswer = ReplaceWholeWord(
+                    ReplaceWholeWord(m.correctAnswer ?? "", oldExtraName, extraNewName),
+                    oldExtraValue, extraNewValue);
+
                 extra.name = extraNewName;
                 extra.value = extraNewValue;
             }
 
-            bool baselineSimulated = MiniPythonEvaluator.TrySimulate(m.codeLines, out string baselineOutput);
+            string baselineOutput = null;
+            bool baselineSimulated = !controlFlow
+                && MiniPythonEvaluator.TrySimulate(m.codeLines, out baselineOutput);
 
             if (baselineSimulated)
             {
@@ -426,13 +494,20 @@ public class PCGEngine : MonoBehaviour
                 // so its output is ground truth; if it disagrees with what
                 // was authored, that's a content mistake worth surfacing,
                 // not a reason to keep serving the wrong answer.
-                if (baselineOutput != original.correctAnswer)
-                    Debug.LogWarning($"[PCG] {original.id}: authored correctAnswer " +
-                                      $"'{original.correctAnswer}' does not match what the " +
-                                      $"code actually computes ('{baselineOutput}'). Using the " +
-                                      $"computed value. Fix this in puzzle_templates.json.");
+                // ANSWER-AUTHORITY GATE: only PredictTheOutput's correct
+                // answer IS the computed output. Clobbering other formats'
+                // answers (e.g. TrueOrFalse's "true") with the printed text
+                // corrupted them at generation time.
+                if (original.puzzleType == PuzzleType.PredictTheOutput)
+                {
+                    if (baselineOutput != original.correctAnswer)
+                        Debug.LogWarning($"[PCG] {original.id}: authored correctAnswer " +
+                                          $"'{original.correctAnswer}' does not match what the " +
+                                          $"code actually computes ('{baselineOutput}'). Using the " +
+                                          $"computed value. Fix this in puzzle_templates.json.");
 
-                m.correctAnswer = baselineOutput;
+                    m.correctAnswer = baselineOutput;
+                }
 
                 List<string> candidateLines = new List<string>(m.codeLines);
 
@@ -471,7 +546,18 @@ public class PCGEngine : MonoBehaviour
                     }
                 }
 
-                if (MiniPythonEvaluator.TrySimulate(candidateLines, out string newOutput))
+                // ANSWER-AUTHORITY GATE: this reshuffle exists to recompute
+                // PredictTheOutput's answer after the number/operator
+                // shuffle above. Serving the shuffled snippet to OTHER
+                // formats (a) silently flipped basic operators (+ -> * or
+                // -) inside SpotTheBug and TrueOrFalse snippets -- exactly
+                // the nuance-gotcha mutation the design notes prohibit --
+                // and (b) clobbered their authored correctAnswer with the
+                // printed output, the same corruption class the PTO gate
+                // above fixed. Non-PTO formats keep the renamed snippet
+                // verbatim now.
+                if (original.puzzleType == PuzzleType.PredictTheOutput
+                    && MiniPythonEvaluator.TrySimulate(candidateLines, out string newOutput))
                 {
                     m.codeLines = candidateLines;
                     m.correctAnswer = newOutput;
@@ -484,8 +570,13 @@ public class PCGEngine : MonoBehaviour
         }
         else
         {
+            // MUTATION SAFETY GATE (no primary variable): string literal and
+            // numeric shuffles only run for control-flow-FREE snippets, for
+            // the same reason as the primary-variable path -- loop bounds
+            // and branch values are load-bearing for authored answers.
+            bool controlFlow = PuzzleVariationEngine.ContainsControlFlow(m.codeLines);
             bool mutated = false;
-            for (int i = 0; i < m.codeLines.Count; i++)
+            for (int i = 0; i < m.codeLines.Count && !controlFlow; i++)
             {
                 string line = m.codeLines[i];
 
@@ -517,12 +608,13 @@ public class PCGEngine : MonoBehaviour
 
             // Same fix applied here: if the (possibly just-mutated) code is
             // simulatable, let the evaluator's output be the ground truth
-            // for correctAnswer rather than leaving a possibly-wrong
-            // authored value untouched.
-            if (MiniPythonEvaluator.TrySimulate(m.codeLines, out string noVarOutput))
+            // for correctAnswer -- but only for PredictTheOutput, whose
+            // correct answer IS the printed output (answer-authority gate).
+            if (!controlFlow && MiniPythonEvaluator.TrySimulate(m.codeLines, out string noVarOutput)
+                && original.puzzleType == PuzzleType.PredictTheOutput)
                 m.correctAnswer = noVarOutput;
 
-            if (!mutated)
+            if (!mutated && !controlFlow)
             {
                 string[] injections = new string[]
                 {
@@ -548,6 +640,23 @@ public class PCGEngine : MonoBehaviour
                 }
             }
         }
+
+        // FITB blank rotation: choose WHICH token is missing. The cursor
+        // rotates per skeleton so consecutive encounters never blank the
+        // same token -- the old behavior blanked print every single time
+        // because the authored templates ship correctAnswer == "" and the
+        // format file inferred one fixed blank. Runs AFTER renaming so the
+        // candidates are scanned from the served snippet; ForgeDistractors
+        // below then rebuilds category-matched options for the new answer.
+        if (m.puzzleType == PuzzleType.FillInTheBlank)
+            PuzzleVariationEngine.RotateFitbBlank(m);
+
+        // Distractor forge: guarantee three options that are distinct from
+        // the correct answer, same-statement-family, free of nuance gotchas
+        // (==/quotes/case) and free of invented identifiers, and for
+        // PredictTheOutput verifiably different from the real output. Runs
+        // AFTER renaming so synthesized options use the served variables.
+        PuzzleVariationEngine.ForgeDistractors(m);
 
         Debug.Log($"[PCG] Mutated: {m.id} | Type: {m.puzzleType} | Tier: {m.difficulty}");
         return m;

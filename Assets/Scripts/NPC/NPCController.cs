@@ -38,6 +38,9 @@ public class NPCController : MonoBehaviour
     [Tooltip("Only show the compass when THIS sequenceID is the one that just finished. Leave empty to fire on ANY sequence completion for this NPC, which is what currently causes the compass to appear after first-meeting/intro dialogue too.")]
     public string compassTriggerSequenceID = "";
 
+    // NPC ANIMATION HOOK — sibling NPCAnimationController (same InteractTrigger object).
+    private NPCAnimationController npcAnim;
+
     private bool playerInRange = false;
     private bool interactionActive = false;
     private string currentSequenceID;
@@ -61,6 +64,11 @@ public class NPCController : MonoBehaviour
 
         if (interactPromptText != null)
             interactPromptText.text = $"Talk to {npcDisplayName}";
+
+        // NPC ANIMATION HOOK — lives on this same InteractTrigger object.
+        npcAnim = GetComponent<NPCAnimationController>();
+        if (npcAnim == null && npcModel != null)
+            npcAnim = npcModel.GetComponent<NPCAnimationController>();
     }
 
     private void Update()
@@ -122,6 +130,9 @@ public class NPCController : MonoBehaviour
 
         interactionActive = true;
 
+        // NPC ANIMATION HOOK — start the Talk loop while this NPC's dialogue plays.
+        if (npcAnim != null) npcAnim.PlayTalk();
+
         if (interactPromptUI != null) interactPromptUI.SetActive(false);
 
         if (playerTransform != null)
@@ -152,6 +163,9 @@ public class NPCController : MonoBehaviour
         DialogueManager.Instance.OnSequenceComplete -= HandleSequenceComplete;
 
         interactionActive = false;
+
+        // NPC ANIMATION HOOK — dialogue finished, back to the Idle loop.
+        if (npcAnim != null) npcAnim.BackToIdle();
 
         if (playerTransform != null)
         {
@@ -202,6 +216,9 @@ public class NPCController : MonoBehaviour
         // dialogue during the 1.5s fade. Also clean up HUD references
         // because gameObject.SetActive(false) does NOT fire OnTriggerExit.
         hasDeparted = true;
+
+        // NPC ANIMATION HOOK — stop gesturing before the fade-out.
+        if (npcAnim != null) npcAnim.BackToIdle();
 
         playerInRange = false;
         playerTransform = null;

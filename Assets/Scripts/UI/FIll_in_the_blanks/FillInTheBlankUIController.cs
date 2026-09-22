@@ -2,6 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+// Bare `Random` means UnityEngine.Random (Random.Range API) -- keeps CS0104
+// away if `using System;` is ever added to this file. Do not remove.
+using Random = UnityEngine.Random;
+
 public class FillInTheBlankUIController : MonoBehaviour
 {
     [Header("Left - Code Display")]
@@ -10,7 +14,31 @@ public class FillInTheBlankUIController : MonoBehaviour
     [Header("Right - Token Buttons")]
     public List<GameObject> tokenObjects;
 
+    [Header("Audio (optional)")]
+    [Tooltip("Played once every time a token box is clicked (select or deselect). Leave empty for silence.")]
+    public AudioClip clickSound;
+
     private FillInTheBlankToken selectedToken = null;
+    private AudioSource clickAudio;
+
+    void Awake()
+    {
+        // The AudioSource is created at runtime on this controller's object,
+        // so no prefab or scene edit is needed. If you prefer a configured
+        // source, put an AudioSource on this GameObject and it will be used.
+        clickAudio = GetComponent<AudioSource>();
+        if (clickAudio == null)
+            clickAudio = gameObject.AddComponent<AudioSource>();
+        clickAudio.playOnAwake = false;
+    }
+
+    /// <summary>Plays the click sound if one is assigned. Safe to call
+    /// when the field is empty -- it just stays silent.</summary>
+    public void PlayClickSound()
+    {
+        if (clickSound != null && clickAudio != null)
+            clickAudio.PlayOneShot(clickSound);
+    }
 
     public void PopulateUI(string codeSnippet, List<string> tokens)
     {
@@ -42,6 +70,8 @@ public class FillInTheBlankUIController : MonoBehaviour
 
     public void OnTokenSelected(FillInTheBlankToken token)
     {
+        PlayClickSound();
+
         if (selectedToken != null)
             selectedToken.SetState_Default();
 
@@ -58,6 +88,8 @@ public class FillInTheBlankUIController : MonoBehaviour
 
     public void OnTokenDeselected(FillInTheBlankToken token)
     {
+        PlayClickSound();
+
         if (selectedToken == token)
         {
             selectedToken = null;
