@@ -58,6 +58,12 @@ public class DialogueManager : MonoBehaviour
     [Header("Typewriter")]
     public float typewriterSpeed = 0.03f;
 
+    // NOTE: The dialogue file name is deliberately NOT a serialized/Inspector
+    // field. A public field on this component re-serialized every scene that
+    // contains a DialogueManager, which kept altering the scene files. The
+    // name is a constant below, and on Android the exact casing is
+    // auto-discovered from the APK itself, so no editable field is needed.
+
     [Header("Transient Fade Mask (shared by swaps and callers' own end-fades)")]
     public Image fadeOverlay;
 
@@ -122,8 +128,9 @@ public class DialogueManager : MonoBehaviour
     // === Load dialogue.json ====================================================================
     private IEnumerator LoadRegistry()
     {
-        string path = Path.Combine(Application.streamingAssetsPath, "dialogue.json");
         string json = "";
+        bool fileRead = false;
+        string[] candidatePaths = BuildCandidatePaths();
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         // Diagnostic logging: this is the exact URL being requested and the
@@ -135,45 +142,73 @@ public class DialogueManager : MonoBehaviour
         // bkt_params.json use this identical UnityWebRequest pattern and
         // succeed. Use these log lines together with an APK-as-zip
         // inspection to confirm packaging.
-        Debug.Log("[DialogueManager] Requesting dialogue.json from: " + path);
-        using (var req = UnityEngine.Networking.UnityWebRequest.Get(path))
+        //
+        // Candidate names are tried in order, but first Android reports the
+        // EXACT name of the dialogue file inside the APK (zip lookups are
+        // case-sensitive while the desktop project folder is not), so casing
+        // drift can no longer 404 on device. If the file is missing entirely,
+        // the listing log below proves it instead of leaving it to guesswork.
+        List<string> attemptPaths = new List<string>(candidatePaths);
+        string exactApkName = FindAndroidDialogueAsset();
+        if (!string.IsNullOrEmpty(exactApkName))
+            attemptPaths.Insert(0, Path.Combine(Application.streamingAssetsPath, exactApkName));
+
+        foreach (string path in attemptPaths)
         {
-            yield return req.SendWebRequest();
-            Debug.Log($"[DialogueManager] dialogue.json request finished | " +
-                      $"result={req.result} | responseCode={req.responseCode} | " +
-                      $"url={req.url} | error={req.error}");
-
-            if (req.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+            Debug.Log("[DialogueManager] Requesting dialogue.json from: " + path);
+            using (var req = UnityEngine.Networking.UnityWebRequest.Get(path))
             {
-                json = req.downloadHandler.text ?? "";
+                yield return req.SendWebRequest();
+                Debug.Log($"[DialogueManager] dialogue.json request finished | " +
+                          $"result={req.result} | responseCode={req.responseCode} | " +
+                          $"url={req.url} | error={req.error}");
 
-                // Byte-level probe: a UTF-8 BOM is EF BB BF. Logging the raw
-                // first bytes makes a BOM (or a non-UTF-8 file, e.g. saved as
-                // UTF-16 or ANSI in Notepad) visible in logcat instead of only
-                // suspected. File.ReadAllText in the editor silently strips a
-                // BOM, which is why the same file can pass in-editor and fail
-                // on device.
-                byte[] bytes = req.downloadHandler.data;
-                if (bytes != null && bytes.Length >= 3)
-                    Debug.Log($"[DialogueManager] dialogue.json first bytes: " +
-                              $"{bytes[0]:X2} {bytes[1]:X2} {bytes[2]:X2} " +
-                              $"(UTF-8 BOM would be EF BB BF; UTF-16 LE would be FF FE)");
-            }
-            else
-            {
-                Debug.LogError("[DialogueManager] Failed to load dialogue.json: " + req.error +
-                               " | responseCode=" + req.responseCode +
-                               " | If responseCode=404, open the APK as a zip and confirm " +
-                               "assets/dialogue.json exists with this exact casing.");
+                if (req.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+                {
+                    json = req.downloadHandler.text ?? "";
+
+                    // Byte-level probe: a UTF-8 BOM is EF BB BF. Logging the raw
+                    // first bytes makes a BOM (or a non-UTF-8 file, e.g. saved as
+                    // UTF-16 or ANSI in Notepad) visible in logcat instead of only
+                    // suspected. File.ReadAllText in the editor silently strips a
+                    // BOM, which is why the same file can pass in-editor and fail
+                    // on device.
+                    byte[] bytes = req.downloadHandler.data;
+                    if (bytes != null && bytes.Length >= 3)
+                        Debug.Log($"[DialogueManager] dialogue.json first bytes: " +
+                                  $"{bytes[0]:X2} {bytes[1]:X2} {bytes[2]:X2} " +
+                                  $"(UTF-8 BOM would be EF BB BF; UTF-16 LE would be FF FE)");
+                    fileRead = true;
+                    break; // success — no need to try the next candidate name
+                }
+                else
+                {
+                    Debug.LogError("[DialogueManager] Failed to load dialogue.json: " + req.error +
+                                   " | responseCode=" + req.responseCode +
+                                   " | If responseCode=404, open the APK as a zip and confirm " +
+                                   "assets/dialogue.json exists with this exact casing.");
+                }
             }
         }
 #else
-        if (System.IO.File.Exists(path))
-            json = System.IO.File.ReadAllText(path); // note: this strips a BOM automatically
-        else
-            Debug.LogError("[DialogueManager] dialogue.json not found at: " + path);
+        foreach (string path in candidatePaths)
+        {
+            if (System.IO.File.Exists(path))
+            {
+                json = System.IO.File.ReadAllText(path); // note: this strips a BOM automatically
+                fileRead = true;
+                break;
+            }
+        }
+        if (!fileRead)
+            Debug.LogError("[DialogueManager] dialogue.json not found. Tried: " + string.Join(", ", candidatePaths));
         yield return null;
 #endif
+
+        if (!fileRead)
+            Debug.LogError("[DialogueManager] LOAD FAILED: dialogue.json was not read on this platform. " +
+                           "No dialogue will play. On device this almost always means the APK does not " +
+                           "contain the file (stale build) or the file lives in a subfolder of StreamingAssets.");
 
         // File.ReadAllText (editor) consumes a leading UTF-8 BOM, but
         // downloadHandler.text (Android) keeps it as U+FEFF and JsonUtility
@@ -240,7 +275,78 @@ public class DialogueManager : MonoBehaviour
         }
 
         IsRegistryLoaded = true;
-        Debug.Log($"[DialogueManager] Loaded {registry.Count} sequences.");
+        if (registry.Count > 0)
+            Debug.Log($"[DialogueManager] LOAD RESULT: OK — {registry.Count} sequences loaded from dialogue.json.");
+        else
+            Debug.LogError("[DialogueManager] LOAD RESULT: FAILED — 0 sequences. No dialogue will play. " +
+                           "Read the errors above: 'not found' = packaging/path problem; 'parse failed' = file " +
+                           "encoding/content problem; 'root.sequences is null' = IL2CPP code stripping problem; " +
+                           "no error at all = the JSON's field names no longer match this script's data classes " +
+                           "(sequenceID / lines / speakerName / dialogueText / isCinematic).");
+    }
+
+    // The file name is hardcoded (see note above Awake). The second entry is
+    // a static safety net for packaging drift; on Android the exact name is
+    // discovered at runtime and tried first anyway.
+    private const string DialogueFileName = "dialogue.json";
+
+    private static string[] BuildCandidatePaths()
+    {
+        string[] names = { DialogueFileName, "Dialogue.json" };
+        var paths = new List<string>(names.Length);
+        foreach (string name in names)
+            paths.Add(Path.Combine(Application.streamingAssetsPath, name));
+        return paths.ToArray();
+    }
+
+    // Asks Android's AssetManager for the exact name of the dialogue file in
+    // the APK. Zip lookups are case-sensitive while the desktop project folder
+    // is not, so "Dialogue.json" vs "dialogue.json" only ever breaks on device
+    // — this removes that failure mode entirely. Returns null when the file is
+    // not found (or listing failed), in which case the static candidate names
+    // are used as before. The log also lists every .json in the APK, so "the
+    // file is not in this build" becomes provable straight from logcat.
+    private static string FindAndroidDialogueAsset()
+    {
+        try
+        {
+            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+            using (var assets = activity.Call<AndroidJavaObject>("getAssets"))
+            {
+                string[] entries = assets.Call<string[]>("list", "");
+                if (entries == null || entries.Length == 0)
+                {
+                    Debug.LogWarning("[DialogueManager] APK assets root listing was empty — StreamingAssets were not packaged into this build.");
+                    return null;
+                }
+
+                string match = null;
+                var jsonNames = new List<string>();
+                foreach (string entry in entries)
+                {
+                    if (entry.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                        jsonNames.Add(entry);
+                    if (match == null &&
+                        string.Equals(entry, DialogueFileName, StringComparison.OrdinalIgnoreCase))
+                        match = entry;
+                }
+
+                Debug.Log("[DialogueManager] APK assets root contains: " + string.Join(", ", entries));
+                if (match != null)
+                    Debug.Log("[DialogueManager] Dialogue file packaged in APK as: \"" + match + "\" — requesting that exact name.");
+                else
+                    Debug.LogError("[DialogueManager] No dialogue.json (any casing) in the APK assets root. .json files present: " +
+                                   (jsonNames.Count > 0 ? string.Join(", ", jsonNames) : "none") +
+                                   " — rebuild the APK; if it still fails, the file is not directly inside Assets/StreamingAssets.");
+                return match;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("[DialogueManager] Could not list APK assets (" + ex.Message + "); using candidate names instead.");
+            return null;
+        }
     }
 
     public bool HasSequence(string sequenceID)

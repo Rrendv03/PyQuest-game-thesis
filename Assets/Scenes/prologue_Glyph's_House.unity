@@ -1128,7 +1128,7 @@ MonoBehaviour:
   showcasePoints: []
   showcaseMoveSpeed: 2
   showcaseHoldTime: 1.2
-  fadeToBlackDuration: 0
+  fadeToBlackDuration: 0.1
   cinematicBlackBG: {fileID: 1267231702}
   bgFadeDuration: 0.2
   roomMesh: {fileID: 1883666150}
@@ -1136,6 +1136,7 @@ MonoBehaviour:
   pytharielMesh: {fileID: 906207850}
   portalSound: {fileID: 8300000, guid: b5f87f2186d3e6f4d9aa11d26048c3f3, type: 3}
   portalVolume: 1
+  useOwnedFadeOverlay: 1
 --- !u!4 &828341071
 Transform:
   m_ObjectHideFlags: 0

@@ -50,6 +50,7 @@ public class NPCController : MonoBehaviour
     private Vector3 originalCameraPosition;
     private Quaternion originalCameraRotation;
     private Coroutine cameraPanCoroutine;
+    private Coroutine waitForRegistryRoutine;
 
     public bool IsPlayerInRange() => playerInRange;
     public bool HasDeparted() => hasDeparted;
@@ -122,7 +123,19 @@ public class NPCController : MonoBehaviour
     {
         if (interactionActive || hasDeparted) return;
 
-        if (DialogueManager.Instance == null || !DialogueManager.Instance.HasSequence(currentSequenceID))
+        // dialogue.json loads asynchronously (on Android it lives inside the
+        // APK and must be fetched via UnityWebRequest), so early in a scene
+        // the registry may legitimately not exist yet. Wait for it instead of
+        // permanently failing — the old check here treated "not loaded yet"
+        // as "sequence doesn't exist" and dead-ended the NPC forever.
+        if (DialogueManager.Instance == null || !DialogueManager.Instance.IsRegistryLoaded)
+        {
+            if (waitForRegistryRoutine == null)
+                waitForRegistryRoutine = StartCoroutine(WaitForRegistryThenInteract());
+            return;
+        }
+
+        if (!DialogueManager.Instance.HasSequence(currentSequenceID))
         {
             Debug.LogWarning($"[NPCController] No sequence '{currentSequenceID}' found for {npcID}.");
             return;
@@ -156,6 +169,34 @@ public class NPCController : MonoBehaviour
         DialogueManager.Instance.Play(currentSequenceID);
 
         Debug.Log($"[NPCController] Starting interaction: {currentSequenceID}");
+    }
+
+    // Waits for DialogueManager's async dialogue.json load, then retries the
+    // normal interaction path. Bounded at 5s so a missing manager or a failed
+    // JSON load can never soft-lock the interaction silently.
+    private IEnumerator WaitForRegistryThenInteract()
+    {
+        float waited = 0f;
+        while (DialogueManager.Instance != null &&
+               !DialogueManager.Instance.IsRegistryLoaded &&
+               waited < 5f)
+        {
+            waited += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        waitForRegistryRoutine = null;
+
+        if (DialogueManager.Instance == null)
+        {
+            Debug.LogWarning($"[NPCController] No DialogueManager in this scene; cannot start '{currentSequenceID}'.");
+            yield break;
+        }
+
+        if (!DialogueManager.Instance.IsRegistryLoaded)
+            Debug.LogWarning($"[NPCController] dialogue.json still not loaded after 5s; attempting interaction anyway for {npcID}.");
+
+        TriggerInteraction(); // normal path — fails cleanly if the sequence truly doesn't exist
     }
 
     private void HandleSequenceComplete(DialogueSequence finished)
@@ -330,6 +371,29 @@ public class NPCController : MonoBehaviour
     /// </summary>
     public void RestoreState(string sequenceID, bool departed)
     {
+        // BUGFIX (save-load) self-heal: a save can only legitimately record
+        // the guide NPC as departed once the crystal farewell has played —
+        // which is the same moment '{sanctum}_restore_crystal' completes.
+        // If that quest is still open, a departed=true flag in the save is
+        // stale data written while the old despawn-on-load bug was live.
+        // Detect the guide the same way SanctumManager.BossRewardSequence
+        // does (it owns the '{npcID}_after_restore' sequence) and keep it
+        // active so the departure sequence can still play.
+        if (departed &&
+            StoryProgressionManager.Instance != null &&
+            DialogueManager.Instance != null)
+        {
+            string restoreSanctum = ZoneTrigger.GetSanctumIDFromScene();
+            if (!string.IsNullOrEmpty(restoreSanctum) &&
+                !StoryProgressionManager.Instance.IsQuestComplete($"{restoreSanctum}_restore_crystal") &&
+                DialogueManager.Instance.HasSequence($"{npcID}_after_restore"))
+            {
+                Debug.LogWarning($"[NPCController] {npcID} RestoreState ignored departed=true: " +
+                                 $"'{restoreSanctum}_restore_crystal' is still open — reviving guide (stale save data from the old despawn bug).");
+                departed = false;
+            }
+        }
+
         currentSequenceID = sequenceID;
         hasDeparted = departed;
 
@@ -349,6 +413,22 @@ public class NPCController : MonoBehaviour
     /// </summary>
     public void ForceDepart()
     {
+        // BUGFIX (save-load): a sanctum whose crystal-restore quest is still
+        // open is NOT "already cleared" — the boss is dead, but the guide's
+        // farewell (triggered from the Rune Crystal interact) is what plays
+        // the departure sequence and points the compass at the exit. Refuse
+        // to despawn in that window so loading a save taken mid-restore can't
+        // silently remove the guide and dead-end the crystal interaction.
+        // Once '{sanctum}_restore_crystal' is complete, behavior is unchanged.
+        string forceDepartSanctum = ZoneTrigger.GetSanctumIDFromScene();
+        if (StoryProgressionManager.Instance != null &&
+            !string.IsNullOrEmpty(forceDepartSanctum) &&
+            !StoryProgressionManager.Instance.IsQuestComplete($"{forceDepartSanctum}_restore_crystal"))
+        {
+            Debug.LogWarning($"[NPCController] {npcID} ForceDepart blocked: '{forceDepartSanctum}_restore_crystal' is still open — the guide must stay for the crystal departure sequence.");
+            return;
+        }
+
         hasDeparted = true;
         gameObject.SetActive(false);
 

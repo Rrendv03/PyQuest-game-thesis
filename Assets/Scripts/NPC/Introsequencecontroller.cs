@@ -46,8 +46,14 @@ public class IntroSequenceController : MonoBehaviour
     public AudioClip portalSound;
     public float portalVolume = 1f;
 
+    [Header("End-of-Sequence Fade (device-safe)")]
+    [Tooltip("If true, the controller creates its own topmost fade canvas instead of using DialogueManager.fadeOverlay.")]
+    public bool useOwnedFadeOverlay = true;
+
     private Coroutine bgFadeCoroutine;
     private Canvas loadingCanvas;
+    private Canvas endFadeCanvas;
+    private Image endFadeImage;
     private AudioSource audioSource;
 
     private void Awake()
@@ -86,6 +92,26 @@ public class IntroSequenceController : MonoBehaviour
         // until you hide it there. Uncomment ONLY if you also add the
         // cleanup code in MainMap (see notes below the script).
         // DontDestroyOnLoad(go);
+
+        // --- Device-safe end-of-sequence fade overlay ---
+        // Topmost, fully transparent until EndSequence activates it.
+        GameObject fgo = new GameObject("EndFadeCanvas");
+        endFadeCanvas = fgo.AddComponent<Canvas>();
+        endFadeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        endFadeCanvas.sortingOrder = 32766; // just under the loading screen
+
+        GameObject fimg = new GameObject("FadeImage");
+        fimg.transform.SetParent(fgo.transform, false);
+        endFadeImage = fimg.AddComponent<Image>();
+        endFadeImage.color = new Color(0f, 0f, 0f, 0f); // fully transparent
+
+        RectTransform frt = endFadeImage.rectTransform;
+        frt.anchorMin = Vector2.zero;
+        frt.anchorMax = Vector2.one;
+        frt.offsetMin = Vector2.zero;
+        frt.offsetMax = Vector2.zero;
+
+        fgo.SetActive(false); // hidden until the end sequence needs it
     }
 
     private void Start()
@@ -152,13 +178,13 @@ public class IntroSequenceController : MonoBehaviour
             case 22: // Glyph: "Wait-"
                 // Pythariel is fading: fade the background back to black
                 StartBGFade(1f);
+                SetMeshes(room: false, dimension: true, pyth: true);
                 break;
 
             case 23: // Pythariel: "Don't fear getting it wrong..." (final line)
                 // Back to cinematic mode. Hide everything to match the text,
                 // and close with a portal sound.
-                SetMeshes(false, false, false);
-                PlayPortalSound();
+                SetMeshes(room: false, dimension: true, pyth: true);
                 if (cinematicBlackBG != null)
                 {
                     Color c = cinematicBlackBG.color;
@@ -192,8 +218,27 @@ public class IntroSequenceController : MonoBehaviour
         if (showcasePoints != null && showcasePoints.Length > 0 && introCamera != null)
             yield return StartCoroutine(RunCameraShowcase());
 
-        if (DialogueManager.Instance != null && DialogueManager.Instance.fadeOverlay != null)
+        if (useOwnedFadeOverlay && endFadeImage != null)
         {
+            // Activate the topmost overlay FIRST so it covers the despawn,
+            // then fade in over it. unscaledDeltaTime: immune to Time.timeScale
+            // and mobile frame pacing.
+            endFadeCanvas.gameObject.SetActive(true);
+            Color c = endFadeImage.color;
+            float elapsed = 0f;
+            while (elapsed < fadeToBlackDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                c.a = Mathf.Clamp01(elapsed / fadeToBlackDuration);
+                endFadeImage.color = c;
+                yield return null;
+            }
+            c.a = 1f;
+            endFadeImage.color = c;
+        }
+        else if (DialogueManager.Instance != null && DialogueManager.Instance.fadeOverlay != null)
+        {
+            // Editor fallback (old behavior)
             Image overlay = DialogueManager.Instance.fadeOverlay;
             float elapsed = 0f;
             while (elapsed < fadeToBlackDuration)
@@ -205,6 +250,9 @@ public class IntroSequenceController : MonoBehaviour
                 yield return null;
             }
         }
+
+        // Hold black for a beat so the scene load itself is fully hidden
+        yield return new WaitForSecondsRealtime(0.25f);
         LoadMainMap();
     }
 
@@ -283,6 +331,7 @@ public class IntroSequenceController : MonoBehaviour
             Quaternion startRot = introCamera.transform.rotation;
             float elapsed = 0f;
             float moveDuration = Vector3.Distance(startPos, point.position) / showcaseMoveSpeed;
+            moveDuration = Mathf.Clamp(moveDuration, 0.5f, 4f);
             moveDuration = Mathf.Clamp(moveDuration, 0.5f, 4f);
 
             while (elapsed < moveDuration)

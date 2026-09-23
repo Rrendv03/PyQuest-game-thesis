@@ -110,7 +110,27 @@ public class SanctumManager : MonoBehaviour
         {
             OpenAllBossGates();
             ActivateAllRuneCrystals();
-            CleanupCompletedSanctum();
+            // BUGFIX (save-load): "boss defeated" stays true for the rest of
+            // the game, including the window where the mission is still
+            // "restore the crystal". CleanupCompletedSanctum() restores the
+            // crystal mesh AND force-departs the guide NPC, so running it in
+            // that window is exactly what despawned the guide the moment a
+            // save was loaded and left the crystal permanently "already
+            // restored" (interact no-op, no departure sequence, no exit
+            // compass). Only clean up once the crystal restore is ACTUALLY
+            // done — the same authoritative '{sanctumID}_restore_crystal'
+            // quest signal RuneCrystal.Start() and NPCController.ForceDepart()
+            // already use.
+            if (IsCrystalRestoreComplete())
+            {
+                CleanupCompletedSanctum();
+            }
+            else
+            {
+                Debug.Log("[SanctumManager] " + sanctumID +
+                          ": boss defeated but crystal restore still pending — " +
+                          "skipping completed-sanctum cleanup (guide NPC stays, crystal stays interactable).");
+            }
         }
         Debug.Log("[SanctumManager] " + sanctumID + " initialized. State: " + currentState +
                   ", Missions: " + completedMissionsCount + "/" + requiredTabletMissions +
@@ -312,6 +332,20 @@ public class SanctumManager : MonoBehaviour
     }
     #endregion
     #region Helper Methods
+    /// <summary>
+    /// BUGFIX (save-load): authoritative "crystal actually restored" check.
+    /// The '{sanctumID}_restore_crystal' quest is completed by the guide's
+    /// post-boss farewell (the departure sequence played from the rune
+    /// crystal interact), so it is the exact signal separating "boss dead,
+    /// crystal still pending" from "sanctum fully cleared". Defaults to
+    /// false when StoryProgressionManager is unavailable, so we never
+    /// restore the crystal or despawn the guide on a guess.
+    /// </summary>
+    private bool IsCrystalRestoreComplete()
+    {
+        return StoryProgressionManager.Instance != null &&
+               StoryProgressionManager.Instance.IsQuestComplete($"{sanctumID}_restore_crystal");
+    }
     private void OpenAllBossGates()
     {
         BossGate[] gates = FindObjectsOfType<BossGate>();
@@ -367,7 +401,11 @@ public class SanctumManager : MonoBehaviour
         {
             OpenAllBossGates();
             ActivateAllRuneCrystals();
-            CleanupCompletedSanctum();
+            // BUGFIX (save-load): same gate as InitializeSanctumState — only
+            // run the completed-sanctum cleanup when the crystal restore
+            // quest is actually complete, never while it is still pending.
+            if (IsCrystalRestoreComplete())
+                CleanupCompletedSanctum();
         }
     }
     #endregion

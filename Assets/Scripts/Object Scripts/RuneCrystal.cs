@@ -50,7 +50,34 @@ public class RuneCrystal : InteractableObject
             if (crystalParent != null)
                 crystalParent.SetActive(true);
 
-            Restore();
+            // BUGFIX (save-load): "boss defeated" is true for the WHOLE rest of
+            // the game, including the window where the mission is still
+            // "restore the crystal". The old code called Restore() unconditionally
+            // here, so loading a save taken in that window lit the RESTORED mesh
+            // and set isActivated without the player ever touching the crystal —
+            // the interact handler then saw "already restored" and silently
+            // skipped the guide's departure sequence (and the exit compass).
+            //
+            // Only auto-restore when the player ACTUALLY completed the restore
+            // (the {sanctumID}_restore_crystal quest is how the chain advances,
+            // so it is the authoritative "crystal was used" signal). Otherwise
+            // show the DEFAULT (destroyed) state — exactly what OnBossDefeated()
+            // does live — leaving the crystal interactable so the departure
+            // sequence still plays after a save load.
+            bool restoreQuestComplete =
+                StoryProgressionManager.Instance != null &&
+                StoryProgressionManager.Instance.IsQuestComplete($"{sanctumID}_restore_crystal");
+
+            if (restoreQuestComplete)
+            {
+                Restore();
+            }
+            else
+            {
+                if (StoryProgressionManager.Instance == null)
+                    Debug.LogWarning("[RuneCrystal] StoryProgressionManager unavailable; assuming the crystal was NOT restored yet (default state).");
+                Debug.Log($"[RuneCrystal] Boss defeated but '{sanctumID}_restore_crystal' is still open — showing DEFAULT state so the interact/departure sequence stays available.");
+            }
         }
         else
         {

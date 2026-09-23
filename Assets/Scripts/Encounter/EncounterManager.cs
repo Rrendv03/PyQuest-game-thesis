@@ -435,7 +435,7 @@ public class EncounterManager : MonoBehaviour
                     Effects.takeDamageTrigger, // (split) hit animation names live on EncounterEffectsManager
                     () =>
                     {
-                        playerDamage = 10;
+                        playerDamage = Mathf.Max(1, Mathf.RoundToInt(CalculatePlayerDamage() * 0.5f));
                         currentEnemyHP = Mathf.Max(0, currentEnemyHP - playerDamage);
                         UpdateCombatLog($"Wrong! But you still dealt {playerDamage} damage.");
                         UpdateHPDisplay();
@@ -894,3 +894,4 @@ public class EncounterManager : MonoBehaviour
     private void UpdateRoundInfo() { if (roundInfoText != null) roundInfoText.text = $"Round {currentRound}"; }
     private void UpdateCombatLog(string message) { if (combatLogText != null) combatLogText.text = message; }
 }
+ 
