@@ -164,7 +164,7 @@ public class LineScrambleUIController : MonoBehaviour
         orderedSlots = new List<LineScrambleSlot>();
 
         if (instructionText != null)
-            instructionText.text = "Drag the code to other code to reorder them, then press Execute.";
+            instructionText.text = "Drag the code line on top of the other code to reorder them, then press Execute.";
 
         foreach (var obj in slotObjects)
             obj.SetActive(false);

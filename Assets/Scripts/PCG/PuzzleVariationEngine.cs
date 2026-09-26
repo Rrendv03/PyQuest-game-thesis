@@ -1,55 +1,18 @@
-using System;
+// PyQuest PCG engine — all invariants/documented behavior live in PCG_MIGRATION_PLAN.md (do not re-document inline).
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using System;
 
-// Pin bare `Random` to UnityEngine.Random. Every call in this file is the
-// static Random.Range API. Without this alias, adding `using System;`
-// (e.g. via a Visual Studio quick-fix) makes `Random` ambiguous between
-// UnityEngine.Random and System.Random (CS0104). Do NOT remove this alias.
 using Random = UnityEngine.Random;
 
-/// <summary>
-/// Load-time and per-generation variety engine for PyQuest puzzles.
-///
-/// TWO responsibilities, both data-compatible with the existing pipeline:
-///
-/// 1. ExpandAll (called once after puzzle_templates.json is parsed):
-///    templates containing slot tokens ({name}, {num}, {msg}, ...) are
-///    expanded into VariantsPerSkeleton concrete instances with distinct
-///    fills, and simulatable assignment/print skeletons additionally yield
-///    Intermediate and Advanced variants (extra operand terms, harder value
-///    ranges). Everything downstream (candidate filtering, history,
-///    mutation, format handlers) sees ordinary PuzzleTemplates, so no UI,
-///    scene or format-handler changes are needed.
-///
-/// 2. ForgeDistractors (called at the end of PCGEngine.MutatePuzzlePublic):
-///    replaces stale, gibberish or nuance-gotcha distractors with
-///    evaluator-verified, familiarity-filtered wrong options synthesized
-///    from the ALREADY-RENAMED code lines, so wrong answers can never drift
-///    out of sync with the code the player sees.
-///
-/// The distractor contract (mirrored by tools/validate_pcg.py):
-///   - distinct from the correct answer and from each other
-///   - same statement family as the correct line (PairACode): shares the
-///     leading verb or one of its variables, so options can't be weeded by
-///     surface pattern alone
-///   - no nuance gotchas: quote-toggle, = vs ==, case-only and colon-only
-///     differences are rejected outright
-///   - no invented APIs: every identifier must be a known builtin or a
-///     variable defined in the snippet (kills the runic(25) class)
-///   - PredictTheOutput options must be near-misses of the real output:
-///     numeric adjacency, snippet literals, or sanctioned misconceptions
-///     (NameError, name-vs-value echoes, off-by-one loop listings)
-///
-/// Slots are drawn ONCE per instance and reused wherever the same token
-/// appears, so {name} in an assignment and in its print always agree.
-/// </summary>
 public static class PuzzleVariationEngine
 {
     public const int VariantsPerSkeleton = 10;
+
+    public static bool useStructuralMutations = true;
 
     public static readonly string[] NamePool =
     {
@@ -58,7 +21,11 @@ public static class PuzzleVariationEngine
         "armor", "quest", "rank", "coins", "lives", "points", "strength",
         "agility", "wisdom", "luck", "vigor", "guard", "focus", "morale",
         "essence", "charge", "rating", "tally", "streak", "combo", "supply",
-        "reserve", "endurance", "fortune", "resolve", "insight"
+        "reserve", "endurance", "fortune", "resolve", "insight",
+        "arcana", "valor", "spirit", "glyph", "ember", "thunder",
+        "cinder", "radiance", "zenith", "apex", "stride", "pulse",
+        "cadence", "lore", "sigil", "crest", "momentum", "gravity",
+        "harvest", "beacon", "quiver", "talent", "bounty", "tempo"
     };
 
     static readonly string[] StrPool =
@@ -66,17 +33,21 @@ public static class PuzzleVariationEngine
         "'Hero'", "'Wizard'", "'Archer'", "'Knight'", "'Mage'", "'Rogue'",
         "'Paladin'", "'Hunter'", "'Warrior'", "'Sage'", "'Scout'", "'Ranger'",
         "'Monk'", "'Druid'", "'Bard'", "'Cleric'", "'Nomad'", "'Guardian'",
-        "'Sentinel'", "'Wanderer'", "'Champion'", "'Seer'"
+        "'Sentinel'", "'Wanderer'", "'Champion'", "'Seer'", "'Dragon'",
+        "'Alchemist'", "'Oracle'", "'Voyager'", "'Crusader'", "'Mystic'",
+        "'Pilgrim'", "'Vanguard'", "'Warlord'", "'Enigma'", "'Templar'"
     };
 
     static readonly string[] MsgPool =
     {
         "'Level Up'", "'Quest Complete'", "'Victory'", "'Try Again'",
         "'Well Done'", "'Keep Going'", "'Almost There'", "'New Record'",
-        "'Boss Defeated'", "'Path Unlocked'", "'Sanctum Cleared'", "'Not Yet'"
+        "'Boss Defeated'", "'Path Unlocked'", "'Sanctum Cleared'", "'Not Yet'",
+        "'Game Over'", "'You Win'", "'Next Round'", "'Combo Broken'",
+        "'Skill Up'", "'Final Blow'", "'Rune Found'", "'Gate Open'",
+        "'Tower Cleared'", "'Slow Down'", "'One More'", "'Perfect Run'"
     };
 
-    // Numeric ranges per difficulty tier: Beginner / Intermediate / Advanced.
     static readonly int[][] NumRanges =
     {
         new[] { 2, 12 },
@@ -85,7 +56,7 @@ public static class PuzzleVariationEngine
     };
 
     static readonly Regex TokenRegex = new Regex(
-        @"\{(name|name2|name3|num|num2|num3|small|str|str2|msg|msg2)\}");
+        @"\{(name|name2|name3|name4|num|num2|num3|small|str|str2|msg|msg2)\}");
 
     static readonly string[] ControlFlowMarkers =
     {
@@ -101,14 +72,13 @@ public static class PuzzleVariationEngine
 
     static readonly Regex WordRegex = new Regex(@"[A-Za-z_]\w*");
 
-    // Recently-used distractor kinds per bucket, to prevent the same
-    // mutation family appearing two puzzles in a row (anti-stagnation).
+    static readonly string[] ShapeBindingCandidates =
+    {
+        "msg", "greeting", "result", "text", "info", "output", "line", "label"
+    };
+
     static readonly Dictionary<string, List<string>> recentKinds =
         new Dictionary<string, List<string>>();
-
-    // ------------------------------------------------------------------
-    // Expansion (load time)
-    // ------------------------------------------------------------------
 
     public static bool HasTokens(PuzzleTemplate t)
     {
@@ -121,12 +91,6 @@ public static class PuzzleVariationEngine
         return TokenRegex.IsMatch(blob);
     }
 
-    /// <summary>
-    /// Returns the playable template list: hand-authored templates pass
-    /// through untouched; token templates become VariantsPerSkeleton
-    /// concrete instances; evaluator-safe skeletons additionally spawn
-    /// Intermediate and Advanced difficulty variants.
-    /// </summary>
     public static List<PuzzleTemplate> ExpandAll(List<PuzzleTemplate> source)
     {
         var result = new List<PuzzleTemplate>();
@@ -180,8 +144,6 @@ public static class PuzzleVariationEngine
         variant.id = id;
         if (forcedTier.HasValue) variant.difficulty = forcedTier.Value;
 
-        // For PredictTheOutput the evaluator is ground truth for the answer
-        // whenever the snippet is simulatable (same policy as the mutator).
         if (variant.puzzleType == PuzzleType.PredictTheOutput)
         {
             string output;
@@ -205,7 +167,8 @@ public static class PuzzleVariationEngine
             if (!drawn.ContainsKey(kind))
             {
                 string v = DrawSlot(kind, tier, usedNames, usedNums, usedMsgs, usedStrs);
-                if (kind == "name" || kind == "name2" || kind == "name3")
+                if (kind == "name" || kind == "name2" || kind == "name3"
+                    || kind == "name4")
                     usedNames.Add(v);
                 else if (kind == "num" || kind == "num2" || kind == "num3"
                          || kind == "small")
@@ -221,6 +184,9 @@ public static class PuzzleVariationEngine
 
         System.Func<string, string> sub = text => TokenRegex.Replace(text ?? "", fill);
 
+        System.Func<string, string> subDist = text => TokenRegex.Replace(
+            text ?? "", match => StripWrappingQuotes(fill(match)));
+
         return new PuzzleTemplate
         {
             id = t.id,
@@ -231,7 +197,7 @@ public static class PuzzleVariationEngine
             correctAnswer = sub(t.correctAnswer ?? ""),
             bugLineIndex = t.bugLineIndex,
             correctOrder = new List<int>(t.correctOrder ?? new List<int>()),
-            distractors = (t.distractors ?? new List<string>()).Select(sub).ToList(),
+            distractors = (t.distractors ?? new List<string>()).Select(subDist).ToList(),
             variableName = sub(t.variableName ?? ""),
             variableValue = sub(t.variableValue ?? ""),
             goalText = sub(t.goalText ?? ""),
@@ -243,6 +209,14 @@ public static class PuzzleVariationEngine
         };
     }
 
+    static string StripWrappingQuotes(string v)
+    {
+        if (!string.IsNullOrEmpty(v) && v.Length >= 2
+            && v[0] == '\'' && v[v.Length - 1] == '\'')
+            return v.Substring(1, v.Length - 2);
+        return v;
+    }
+
     static string DrawSlot(string kind, int tier,
                            HashSet<string> usedNames, HashSet<int> usedNums,
                            HashSet<string> usedMsgs, HashSet<string> usedStrs)
@@ -251,15 +225,14 @@ public static class PuzzleVariationEngine
         {
             for (int i = 0; i < 40; i++)
             {
-                int v = Random.Range(1, 6); // 1..5 inclusive
+                int v = Random.Range(1, 6);
                 if (!usedNums.Contains(v)) return v.ToString();
             }
             return "1";
         }
         if (kind == "str" || kind == "str2")
         {
-            // str2 excludes str (same convention as name/num slots), so a
-            // template can never render two identical string slots.
+
             for (int i = 0; i < 40; i++)
             {
                 string v = StrPool[Random.Range(0, StrPool.Length)];
@@ -269,10 +242,7 @@ public static class PuzzleVariationEngine
         }
         if (kind == "msg" || kind == "msg2")
         {
-            // msg2 excludes msg: otherwise ~1 in 12 if/else PairACode
-            // instances render "show X ... otherwise show X" with the same
-            // message in both branches, and the {msg} distractor collapses
-            // into the correct answer.
+
             for (int i = 0; i < 40; i++)
             {
                 string m = MsgPool[Random.Range(0, MsgPool.Length)];
@@ -282,7 +252,7 @@ public static class PuzzleVariationEngine
         }
         if (kind == "num" || kind == "num2" || kind == "num3")
             return DrawNumber(tier, usedNums).ToString();
-        // name / name2 / name3: distinct identifiers
+
         return DrawName(usedNames);
     }
 
@@ -307,9 +277,354 @@ public static class PuzzleVariationEngine
         return NamePool[Random.Range(0, NamePool.Length)] + "2";
     }
 
-    // ------------------------------------------------------------------
-    // Difficulty scaling (only evaluator-safe, numeric-tail snippets)
-    // ------------------------------------------------------------------
+    public static PuzzleTemplate ExpandSkeleton(PuzzleTemplate skeleton, int serveTier)
+    {
+        if (skeleton == null) return null;
+        int authoredTier = (int)skeleton.difficulty;
+
+        if (!HasTokens(skeleton))
+        {
+
+            if (serveTier != authoredTier) return null;
+            PuzzleTemplate passthrough = CloneWithFill(skeleton, authoredTier);
+            passthrough.acceptedOrders = ComputeAcceptedOrders(passthrough);
+            return passthrough;
+        }
+
+        bool scaleUp = serveTier != authoredTier;
+        if (scaleUp)
+        {
+            if (serveTier < 1 || serveTier > 2) return null;
+
+            if (!CanScale(skeleton)) return null;
+        }
+
+        PuzzleTemplate fill = CloneWithFill(skeleton, scaleUp ? serveTier : authoredTier);
+
+        if (scaleUp)
+        {
+            List<string> scaled = ScaleCodeLines(fill.codeLines, serveTier);
+            if (scaled == null) return null;
+            fill.codeLines = scaled;
+        }
+        fill.difficulty = (DifficultyTier)serveTier;
+
+        if (useStructuralMutations)
+            ApplyStructuralMutation(fill);
+
+        if (fill.puzzleType == PuzzleType.PredictTheOutput)
+        {
+            string output = null;
+            if (MiniPythonEvaluator.TrySimulate(fill.codeLines, out output))
+                fill.correctAnswer = output;
+        }
+        fill.acceptedOrders = ComputeAcceptedOrders(fill);
+        return fill;
+    }
+
+    static void ApplyStructuralMutation(PuzzleTemplate t)
+    {
+        if (t == null || t.codeLines == null || t.codeLines.Count == 0) return;
+        int tier = (int)t.difficulty;
+        if (tier < 1) return;
+        if (t.puzzleType != PuzzleType.LineScramble
+            && t.puzzleType != PuzzleType.TrueOrFalse
+            && t.puzzleType != PuzzleType.PredictTheOutput
+            && t.puzzleType != PuzzleType.FillInTheBlank)
+            return;
+        if (ContainsControlFlow(t.codeLines)) return;
+
+        float roll = Random.value;
+        if (tier >= 2)
+        {
+            if (roll < 0.45f) { TrySplitPrintBinding(t); return; }
+            if (roll < 0.80f) TryPrintArgForm(t);
+        }
+        else if (roll < 0.5f)
+        {
+            TryPrintArgForm(t);
+        }
+    }
+
+    static int SolePrintIndex(List<string> lines)
+    {
+        int idx = -1;
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string s = (lines[i] ?? "").Trim();
+            if (s.StartsWith("print(") && s.EndsWith(")"))
+            {
+                if (idx >= 0) return -1;
+                idx = i;
+            }
+        }
+        return idx;
+    }
+
+    static bool HasTopLevelComma(string expr)
+    {
+        bool inSingle = false, inDouble = false;
+        for (int i = 0; i < expr.Length; i++)
+        {
+            char c = expr[i];
+            if (c == '\'' && !inDouble) inSingle = !inSingle;
+            else if (c == '"' && !inSingle) inDouble = !inDouble;
+            else if (c == ',' && !inSingle && !inDouble) return true;
+        }
+        return false;
+    }
+
+    static string InnerOfPrint(string line)
+    {
+
+        return line.Substring("print(".Length, line.Length - "print(".Length - 1).Trim();
+    }
+
+    static IEnumerable<string> WordsIn(string text)
+    {
+        foreach (Match m in WordRegex.Matches(text ?? ""))
+            yield return m.Value;
+    }
+
+    static string PickFreshShapeName(PuzzleTemplate t)
+    {
+        var used = new HashSet<string>();
+        foreach (string w in WordsIn(string.Join("\n", t.codeLines ?? new List<string>())
+                 + "\n" + string.Join("\n", t.distractors ?? new List<string>())
+                 + "\n" + (t.correctAnswer ?? "") + "\n" + (t.goalText ?? "")))
+            used.Add(w);
+        foreach (string c in KnownCallables) used.Add(c);
+        foreach (string cand in ShapeBindingCandidates)
+            if (!used.Contains(cand)) return cand;
+        return null;
+    }
+
+    static void TrySplitPrintBinding(PuzzleTemplate t)
+    {
+        int idx = SolePrintIndex(t.codeLines);
+        if (idx < 0) return;
+        string inner = InnerOfPrint(t.codeLines[idx].Trim());
+        if (inner.Length == 0 || HasTopLevelComma(inner)) return;
+        if (!inner.Contains("+")) return;
+
+        string name = PickFreshShapeName(t);
+        if (name == null) return;
+
+        var backupLines = new List<string>(t.codeLines);
+        int backupBug = t.bugLineIndex;
+        var backupOrder = t.correctOrder != null
+            ? new List<int>(t.correctOrder) : new List<int>();
+
+        t.codeLines[idx] = "print(" + name + ")";
+        t.codeLines.Insert(idx, name + " = " + inner);
+
+        if (t.bugLineIndex >= idx) t.bugLineIndex++;
+        if (backupOrder.Count > 0)
+        {
+
+            bool identity = true;
+            for (int k = 0; k < backupOrder.Count; k++)
+                if (backupOrder[k] != k) { identity = false; break; }
+            if (!identity)
+            {
+                t.codeLines = backupLines;
+                t.bugLineIndex = backupBug;
+                t.correctOrder = backupOrder;
+                return;
+            }
+            t.correctOrder = new List<int>();
+            for (int k = 0; k < t.codeLines.Count; k++) t.correctOrder.Add(k);
+        }
+
+        string before, after;
+        if (!MiniPythonEvaluator.TrySimulate(backupLines, out before)
+            || !MiniPythonEvaluator.TrySimulate(t.codeLines, out after)
+            || before != after)
+        {
+            t.codeLines = backupLines;
+            t.bugLineIndex = backupBug;
+            t.correctOrder = backupOrder;
+            return;
+        }
+        Debug.Log($"[PCG] Shape mutation: split-print (binding '{name}') on {t.id}");
+    }
+
+    static void TryPrintArgForm(PuzzleTemplate t)
+    {
+        int idx = SolePrintIndex(t.codeLines);
+        if (idx < 0) return;
+        string inner = InnerOfPrint(t.codeLines[idx].Trim());
+        if (inner.Length == 0 || HasTopLevelComma(inner)) return;
+
+        Match m = Regex.Match(inner, @"^(?<lhs>.+?)\s*\+\s*'\s*'\s*\+\s*(?<rhs>.+)$");
+        if (!m.Success) return;
+        string lhs = m.Groups["lhs"].Value.Trim();
+        string rhs = m.Groups["rhs"].Value.Trim();
+        if (lhs.Length == 0 || rhs.Length == 0) return;
+
+        var mutated = new List<string>(t.codeLines);
+        mutated[idx] = "print(" + lhs + ", " + rhs + ")";
+
+        string before, after;
+        if (!MiniPythonEvaluator.TrySimulate(t.codeLines, out before)
+            || !MiniPythonEvaluator.TrySimulate(mutated, out after)
+            || before != after)
+            return;
+
+        t.codeLines = mutated;
+        Debug.Log($"[PCG] Shape mutation: print-arg-form on {t.id}");
+    }
+
+    public static bool ValidateInstance(PuzzleTemplate t, PuzzleTemplate skeleton,
+                                        out string failureReason)
+    {
+        failureReason = "ok";
+        if (t == null || t.codeLines == null || t.codeLines.Count == 0)
+        { failureReason = "empty codeLines"; return false; }
+        if (t.codeLines.Any(l => string.IsNullOrWhiteSpace(l)))
+        { failureReason = "blank code line"; return false; }
+
+        string blob = string.Join("\n", t.codeLines)
+                    + "\n" + string.Join("\n", t.distractors ?? new List<string>())
+                    + "\n" + (t.correctAnswer ?? "")
+                    + "\n" + (t.variableName ?? "")
+                    + "\n" + (t.variableValue ?? "")
+                    + "\n" + (t.goalText ?? "");
+        if (TokenRegex.IsMatch(blob))
+        { failureReason = "unresolved slot token"; return false; }
+
+        if (Regex.IsMatch(blob, @"\w''|''\w"))
+        { failureReason = "doubled-quote artifact"; return false; }
+
+        bool simulated = false;
+        string simOutput = null;
+        if (t.puzzleType == PuzzleType.PredictTheOutput)
+        {
+            if (string.IsNullOrWhiteSpace(t.correctAnswer))
+            { failureReason = "PTO correctAnswer empty"; return false; }
+
+            simulated = MiniPythonEvaluator.TrySimulate(t.codeLines, out simOutput);
+            if (simulated)
+            {
+
+                if (simOutput != t.correctAnswer)
+                {
+                    failureReason = $"PTO key '{t.correctAnswer}' != simulated '{simOutput}'";
+                    return false;
+                }
+            }
+            else if (!ContainsControlFlow(t.codeLines))
+            {
+
+                bool skeletonSimulates = skeleton != null
+                    && MiniPythonEvaluator.TrySimulate(skeleton.codeLines,
+                           out string _);
+                if (skeletonSimulates)
+                {
+                    failureReason = "PTO snippet not simulatable and not control flow";
+                    return false;
+                }
+            }
+
+        }
+        else if (t.puzzleType == PuzzleType.TrueOrFalse)
+        {
+
+            if (MiniPythonEvaluator.TrySimulate(t.codeLines, out simOutput))
+                simulated = true;
+        }
+        else if (t.puzzleType == PuzzleType.PairACode)
+        {
+            if (string.IsNullOrWhiteSpace(t.codeLines[t.codeLines.Count - 1]))
+            { failureReason = "PAC tail line empty"; return false; }
+        }
+        else if (t.puzzleType == PuzzleType.LineScramble)
+        {
+
+            if (!IsValidOrder(t.correctOrder, t.codeLines.Count))
+            { failureReason = "correctOrder not a permutation of the lines"; return false; }
+            string ambReason;
+            if (!IsLineScrambleUnambiguous(t, out ambReason))
+            { failureReason = ambReason; return false; }
+            if (t.acceptedOrders != null && t.acceptedOrders.Count > 0
+                && !t.acceptedOrders.Contains(OrderKey(t.correctOrder)))
+            { failureReason = "acceptedOrders missing the canonical order"; return false; }
+        }
+
+        bool lineShapedOptions = t.puzzleType == PuzzleType.PairACode
+            || t.puzzleType == PuzzleType.SpotTheBug;
+        List<string> dist = t.distractors ?? new List<string>();
+        string effectiveCorrect = t.puzzleType == PuzzleType.PairACode
+            ? t.codeLines[t.codeLines.Count - 1].Trim()
+            : t.correctAnswer ?? "";
+        var seenKeys = new HashSet<string>();
+        foreach (string d in dist)
+        {
+            if (string.IsNullOrWhiteSpace(d))
+            { failureReason = "empty distractor"; return false; }
+            string key = Normalized(d);
+            if (!seenKeys.Add(key))
+            { failureReason = $"duplicate distractor '{d}'"; return false; }
+            if (effectiveCorrect.Length > 0 && key == Normalized(effectiveCorrect))
+            { failureReason = $"distractor equals correct answer '{d}'"; return false; }
+            if (lineShapedOptions && effectiveCorrect.Length > 0
+                && IsNuancePair(effectiveCorrect, d))
+            { failureReason = $"nuance distractor '{d}'"; return false; }
+            if (lineShapedOptions && IsGibberishLine(d, t.codeLines))
+            { failureReason = $"gibberish distractor '{d}'"; return false; }
+            if (lineShapedOptions && effectiveCorrect.Length > 0
+                && IsCommutativeSwapLine(effectiveCorrect, d))
+            { failureReason = $"commutatively equivalent distractor '{d}'"; return false; }
+            if (lineShapedOptions && IsSemanticallyEquivalentOption(t, d))
+            { failureReason = $"semantically equivalent distractor '{d}'"; return false; }
+        }
+
+        if (!string.IsNullOrEmpty(t.variableName)
+            && !t.codeLines.Any(l => l.Contains(t.variableName)))
+        {
+            failureReason = $"variableName '{t.variableName}' absent from code";
+            return false;
+        }
+        if (skeleton != null && !string.IsNullOrEmpty(skeleton.goalText)
+            && skeleton.goalText.Contains("{name}")
+            && !string.IsNullOrEmpty(t.variableName)
+            && !(t.goalText ?? "").Contains(t.variableName))
+        {
+            failureReason = "goalText lost the renamed variable (goal/code mismatch)";
+            return false;
+        }
+
+        int maxLines = t.difficulty == DifficultyTier.Beginner ? 6
+                     : t.difficulty == DifficultyTier.Intermediate ? 8 : 10;
+        int maxVars = t.difficulty == DifficultyTier.Beginner ? 4
+                    : t.difficulty == DifficultyTier.Intermediate ? 5 : 6;
+        int lineCount = t.codeLines.Count;
+        if (lineCount > maxLines)
+        {
+            failureReason = $"tier {(int)t.difficulty} budget: {lineCount} lines > {maxLines}";
+            return false;
+        }
+        int varCount = DefinedVariables(t.codeLines).Count;
+        if (varCount > maxVars)
+        {
+            failureReason = $"tier {(int)t.difficulty} budget: {varCount} variables > {maxVars}";
+            return false;
+        }
+
+        failureReason = simulated
+            ? "ok (validationDepth: full)"
+            : "ok (validationDepth: structural)";
+        return true;
+    }
+
+    static bool IsValidOrder(List<int> order, int lineCount)
+    {
+        if (order == null || order.Count != lineCount) return false;
+        var seen = new HashSet<int>();
+        foreach (int i in order)
+            if (i < 0 || i >= lineCount || !seen.Add(i)) return false;
+        return true;
+    }
 
     public static bool ContainsControlFlow(List<string> lines)
     {
@@ -346,16 +661,10 @@ public static class PuzzleVariationEngine
                               @"^(\w+)\s*=(?!=)\s*(.+)$");
         if (m.Success && envIsString.ContainsKey(m.Groups[1].Value)
             && envIsString[m.Groups[1].Value])
-            return false; // string tail (greetings, aliases): not extendable
+            return false;
         return true;
     }
 
-    /// <summary>
-    /// Extends the last assignment's expression to add cognitive load:
-    /// tier 1 adds one small term, tier 2 adds a *small factor plus a +/-,
-    /// term. The grammar stays flat (no parentheses) so MiniPythonEvaluator
-    /// remains authoritative for PredictTheOutput answers.
-    /// </summary>
     public static List<string> ScaleCodeLines(List<string> codeLines, int tier)
     {
         int lastAssign = -1;
@@ -376,21 +685,15 @@ public static class PuzzleVariationEngine
         return lines;
     }
 
-    // ------------------------------------------------------------------
-    // Distractor contract validators
-    // ------------------------------------------------------------------
-
     static string Normalized(string text)
     {
         return text == null ? "" : Regex.Replace(text, @"\s+", "");
     }
 
-    /// <summary>Quote-toggle, = vs ==, case-only and colon-only differences
-    /// are observation gotchas, not reasoning: reject them outright.</summary>
     public static bool IsNuancePair(string correct, string candidate)
     {
         string a = Normalized(correct), b = Normalized(candidate);
-        if (a == b) return false; // identical handled by distinctness checks
+        if (a == b) return false;
         if (a.Replace("'", "").Replace("\"", "")
              == b.Replace("'", "").Replace("\"", ""))
             return true;
@@ -398,6 +701,190 @@ public static class PuzzleVariationEngine
         if (a.ToLower() == b.ToLower()) return true;
         if (a.TrimEnd(':') == b.TrimEnd(':')) return true;
         return false;
+    }
+
+    static bool IsCommutativeSwapLine(string correct, string cand)
+    {
+        string a = Normalized(correct), b = Normalized(cand);
+        if (a == b || a.Contains("'") || b.Contains("'")
+            || a.Contains("\"") || b.Contains("\"")) return false;
+        string la = "", lb = "";
+        Match ma = Regex.Match(a, @"^(\w+=)?print\((.+)\)$");
+        string ra;
+        if (ma.Success) { la = ma.Groups[1].Value; ra = ma.Groups[2].Value; }
+        else
+        {
+            ma = Regex.Match(a, @"^(\w+=)?(.+)$");
+            la = ma.Groups[1].Value; ra = ma.Groups[2].Value;
+        }
+        Match mb = Regex.Match(b, @"^(\w+=)?print\((.+)\)$");
+        string rb;
+        if (mb.Success) { lb = mb.Groups[1].Value; rb = mb.Groups[2].Value; }
+        else
+        {
+            mb = Regex.Match(b, @"^(\w+=)?(.+)$");
+            lb = mb.Groups[1].Value; rb = mb.Groups[2].Value;
+        }
+        if (la != lb) return false;
+        Match m1 = Regex.Match(ra, @"^([^+*]+)([+*])([^+*]+)$");
+        Match m2 = Regex.Match(rb, @"^([^+*]+)([+*])([^+*]+)$");
+        if (!m1.Success || !m2.Success || m1.Groups[2].Value != m2.Groups[2].Value)
+            return false;
+        return m1.Groups[1].Value.Trim() == m2.Groups[3].Value.Trim()
+            && m1.Groups[3].Value.Trim() == m2.Groups[1].Value.Trim();
+    }
+
+    static readonly HashSet<string> LsPyBuiltins = new HashSet<string>
+    { "print", "input", "range", "str", "int", "float", "len", "round", "list",
+      "dict", "set", "tuple", "sum", "min", "max", "abs", "sorted",
+      "enumerate", "bool", "True", "False", "None", "in", "and", "or", "not" };
+
+    static void LsLineDefsUses(string line, out string lhs, out HashSet<string> uses)
+    {
+        lhs = null;
+        uses = new HashSet<string>();
+        string s = Regex.Replace(line ?? "", "'[^']*'", "''").Trim();
+        Match m = Regex.Match(s, @"^(\w+)\s*=(?!=)");
+        string rhs = s;
+        if (m.Success) { lhs = m.Groups[1].Value; rhs = s.Substring(m.Length); }
+        foreach (Match w in Regex.Matches(rhs, @"[A-Za-z_]\w*"))
+            if (!LsPyBuiltins.Contains(w.Value)) uses.Add(w.Value);
+    }
+
+    static IEnumerable<int[]> Permutations(int n)
+    {
+        var a = new int[n];
+        for (int i = 0; i < n; i++) a[i] = i;
+        yield return (int[])a.Clone();
+        var c = new int[n];
+        int i2 = 0;
+        while (i2 < n)
+        {
+            if (c[i2] < i2)
+            {
+                if (i2 % 2 == 0) { int t = a[0]; a[0] = a[i2]; a[i2] = t; }
+                else { int t = a[c[i2]]; a[c[i2]] = a[i2]; a[i2] = t; }
+                yield return (int[])a.Clone();
+                c[i2]++;
+                i2 = 0;
+            }
+            else { c[i2] = 0; i2++; }
+        }
+    }
+
+    static bool HasRepeatedAssignment(List<string> lines)
+    {
+        var seen = new HashSet<string>();
+        foreach (string l in lines)
+        {
+            string lhs;
+            LsLineDefsUses(l, out lhs, out _);
+            if (lhs != null && !seen.Add(lhs)) return true;
+        }
+        return false;
+    }
+
+    // E1: for LineScramble, every dependency-valid order that simulates to
+    // the SAME output as the canonical order is an acceptable answer. The
+    // F32 gate still rejects scrambles whose dependency-valid orders produce
+    // different outputs; this only widens acceptance within one output.
+    public static List<string> ComputeAcceptedOrders(PuzzleTemplate t)
+    {
+        if (t == null || t.codeLines == null
+            || t.puzzleType != PuzzleType.LineScramble) return null;
+        var lines = t.codeLines;
+        int n = lines.Count;
+        if (n < 2 || n > 6 || ContainsControlFlow(lines)) return null;
+        string refOutput;
+        if (!MiniPythonEvaluator.TrySimulate(lines, out refOutput)
+            || refOutput == null) return null;
+        var accepted = new List<string>();
+        foreach (int[] perm in Permutations(n))
+        {
+            var defined = new HashSet<string>();
+            bool ok = true;
+            foreach (int i in perm)
+            {
+                string lhs;
+                HashSet<string> uses;
+                LsLineDefsUses(lines[i], out lhs, out uses);
+                if (!uses.IsSubsetOf(defined)) { ok = false; break; }
+                if (lhs != null) defined.Add(lhs);
+            }
+            if (!ok) continue;
+            string o;
+            if (MiniPythonEvaluator.TrySimulate(
+                    perm.Select(i => lines[i]).ToList(), out o) && o == refOutput)
+                accepted.Add(string.Join(",", perm));
+        }
+        return accepted.Count > 1 ? accepted : null;
+    }
+
+    public static string OrderKey(List<int> order)
+    {
+        return order == null ? "" : string.Join(",", order);
+    }
+
+    static bool IsLineScrambleUnambiguous(PuzzleTemplate t, out string reason)
+    {
+        reason = "ok";
+        var lines = t.codeLines;
+        int n = lines.Count;
+        if (ContainsControlFlow(lines)) return true;
+        string refOutput;
+        bool sim = MiniPythonEvaluator.TrySimulate(lines, out refOutput);
+        if (!sim || n > 6)
+        {
+            if (HasRepeatedAssignment(lines))
+            {
+                reason = "ambiguous scramble (reassignment, not order-verifiable)";
+                return false;
+            }
+            return true;
+        }
+        var outs = new HashSet<string>();
+        int valid = 0;
+        foreach (int[] perm in Permutations(n))
+        {
+            var defined = new HashSet<string>();
+            bool ok = true;
+            foreach (int i in perm)
+            {
+                string lhs;
+                HashSet<string> uses;
+                LsLineDefsUses(lines[i], out lhs, out uses);
+                if (!uses.IsSubsetOf(defined)) { ok = false; break; }
+                if (lhs != null) defined.Add(lhs);
+            }
+            if (!ok) continue;
+            valid++;
+            string o;
+            if (MiniPythonEvaluator.TrySimulate(
+                    perm.Select(i => lines[i]).ToList(), out o) && o != null)
+                outs.Add(o);
+        }
+        if (valid > 1 && outs.Count > 1)
+        {
+            reason = $"ambiguous scramble: {valid} dependency-valid orders, "
+                   + $"{outs.Count} different outputs";
+            return false;
+        }
+        return true;
+    }
+
+    static bool IsSemanticallyEquivalentOption(PuzzleTemplate t, string candidate)
+    {
+        if (t == null || string.IsNullOrWhiteSpace(candidate)) return false;
+        int subIdx = t.puzzleType == PuzzleType.PairACode
+            ? t.codeLines.Count - 1 : t.bugLineIndex;
+        if (subIdx < 0 || subIdx >= t.codeLines.Count) return false;
+        string outC;
+        if (!MiniPythonEvaluator.TrySimulate(t.codeLines, out outC)) return false;
+        var test = new List<string>(t.codeLines);
+        test[subIdx] = candidate.Trim();
+        string outD;
+        if (!MiniPythonEvaluator.TrySimulate(test, out outD)) return false;
+        return outC == outD;
     }
 
     static HashSet<string> DefinedVariables(List<string> codeLines)
@@ -415,9 +902,6 @@ public static class PuzzleVariationEngine
         return defs;
     }
 
-    /// <summary>True when the line references an identifier that is neither
-    /// a known builtin nor defined in the snippet - the runic(25) class of
-    /// instantly-weedable junk options.</summary>
     public static bool IsGibberishLine(string candidate, List<string> codeLines)
     {
         string s = candidate.Trim();
@@ -430,7 +914,6 @@ public static class PuzzleVariationEngine
                    "pass", "break", "continue", "for", "while", "if", "elif", "def" })
             allowed.Add(kw);
 
-        // blank quoted literals, then every remaining word must be resolvable
         string stripped = Regex.Replace(s, "'[^']*'", "''");
         foreach (Match m in WordRegex.Matches(stripped))
             if (!allowed.Contains(m.Value)) return true;
@@ -455,10 +938,6 @@ public static class PuzzleVariationEngine
         return shared / Mathf.Max(1, charsA.Count);
     }
 
-    /// <summary>PredictTheOutput options must look like near-misses of the
-    /// real output: numerically adjacent, lexically overlapping, same shape,
-    /// snippet literals, or a sanctioned misconception (error names,
-    /// name-vs-value echoes, only-the-last-line listings).</summary>
     public static bool PtoDistractorFamiliar(string correct, string candidate,
                                              HashSet<string> snippetLiterals)
     {
@@ -472,7 +951,7 @@ public static class PuzzleVariationEngine
         bool cMulti = correct.Contains("\n"), dMulti = candidate.Contains("\n");
         if (cMulti && !dMulti && IsInt(candidate))
         {
-            // sanctioned: printing ONLY the last line of a multi-line output
+
             string[] rows = correct.TrimEnd().Split('\n');
             int last, cand;
             return int.TryParse(rows[rows.Length - 1], out last)
@@ -497,24 +976,20 @@ public static class PuzzleVariationEngine
 
         if (IsInt(correct) != IsInt(candidate))
         {
-            // sanctioned misconceptions: error names or variable-name echoes
+
             if (candidate == "NameError" || candidate == "TypeError"
                 || candidate == "SyntaxError")
                 return true;
             return Regex.IsMatch(candidate, @"^[a-z_]\w*$");
         }
 
-        if (Regex.IsMatch(candidate, @"^[a-z_]\w*$")) return true; // name echo
+        if (Regex.IsMatch(candidate, @"^[a-z_]\w*$")) return true;
 
         string normA = Normalized(candidate).Replace("'", "").Replace("\"", "");
         string normC = Normalized(correct).Replace("'", "").Replace("\"", "");
-        if (normA == normC) return true; // quoting toggle
+        if (normA == normC) return true;
         return CharOverlap(candidate, correct) >= 0.4f;
     }
-
-    // ------------------------------------------------------------------
-    // Distractor forging (per generation, AFTER variable renaming)
-    // ------------------------------------------------------------------
 
     static void NoteKind(string bucket, string kind)
     {
@@ -534,11 +1009,6 @@ public static class PuzzleVariationEngine
         return recentKinds.TryGetValue(bucket, out q) && q.Contains(kind);
     }
 
-    /// <summary>
-    /// Rebuilds the template's distractor list in place. Called at the end
-    /// of PCGEngine.MutatePuzzlePublic so every synthesized option
-    /// references the variables the player actually sees.
-    /// </summary>
     public static void ForgeDistractors(PuzzleTemplate t)
     {
         if (t == null) return;
@@ -552,7 +1022,7 @@ public static class PuzzleVariationEngine
                 t.distractors = forged;
                 return;
             }
-            // merge in authored distractors that pass the familiarity rule
+
             HashSet<string> lit = SnippetLiterals(t.codeLines);
             var merged = new List<string>();
             foreach (string x in forged) if (!merged.Contains(x)) merged.Add(x);
@@ -590,14 +1060,10 @@ public static class PuzzleVariationEngine
         return literals;
     }
 
-    // -- PTO ---------------------------------------------------------------
-
     static IEnumerable<Pair<string, List<string>>> PtoMutations(PuzzleTemplate t)
     {
         var lines = new List<string>(t.codeLines);
 
-        // F1: swap operands in the last print. Only two-operand shapes; a
-        // swapped + or * computes the same value and is filtered later.
         for (int i = lines.Count - 1; i >= 0; i--)
         {
             Match m = Regex.Match(lines[i].Trim(), @"^print\((.+)\)$");
@@ -630,7 +1096,6 @@ public static class PuzzleVariationEngine
             break;
         }
 
-        // F2: flip the first +/- operator outside string literals
         for (int i = 0; i < lines.Count; i++)
         {
             string[] parts = lines[i].Split('\'');
@@ -659,7 +1124,6 @@ public static class PuzzleVariationEngine
             }
         }
 
-        // F3: nudge one numeric literal
         for (int i = 0; i < lines.Count; i++)
         {
             if (lines[i].Trim().StartsWith("#")) continue;
@@ -679,7 +1143,6 @@ public static class PuzzleVariationEngine
             }
         }
 
-        // F4: drop the last assignment -> NameError family
         int assignIdx = -1;
         for (int i = 0; i < lines.Count; i++)
             if (Regex.IsMatch(lines[i].Trim(), @"^\w+\s*=(?!=)"))
@@ -730,16 +1193,13 @@ public static class PuzzleVariationEngine
             add(mutation.First, outVal);
         }
 
-        // Fallback families: classic misconceptions, all verdict-by-reasoning.
         Dictionary<string, bool> envIsString;
         string traceOut;
         bool traced = MiniPythonEvaluator.TrySimulateDetailed(t.codeLines,
             out traceOut, out envIsString);
         if (traced)
         {
-            // printing a DIFFERENT variable's value: wrong-variable mixup.
-            // Probe appends print(v) to the FULL snippet so reassigned
-            // variables report their FINAL values, matching the traced env.
+
             foreach (string vname in envIsString.Keys)
             {
                 string varOut;
@@ -771,8 +1231,7 @@ public static class PuzzleVariationEngine
         }
         else
         {
-            // multi-line outputs: numeric loops get the four classic
-            // misreadings; string rows get reordering mixups.
+
             string[] rows = correct.Split('\n');
             bool allInt = true;
             foreach (string r in rows) if (!IsInt(r)) { allInt = false; break; }
@@ -800,9 +1259,6 @@ public static class PuzzleVariationEngine
             }
         }
 
-        // tier 0: semantic mutations; tier 1: mixups; tier 2: near-misses.
-        // Shuffle inside each tier, deprioritize recently-used kinds, and
-        // never let the penalized fallback introduce duplicates.
         var tierMap = new Dictionary<string, int>
         {
             { "other-var", 1 }, { "quote-toggle", 1 }, { "name-echo", 1 },
@@ -842,8 +1298,6 @@ public static class PuzzleVariationEngine
         foreach (var c in chosen) NoteKind(bucket, c.First);
         return chosen.Select(c => c.Second).ToList();
     }
-
-    // -- PAC ----------------------------------------------------------------
 
     static List<string> ForgePac(PuzzleTemplate t, int want)
     {
@@ -911,6 +1365,12 @@ public static class PuzzleVariationEngine
                     string swapped = m3.Groups[3].Value + " " + m3.Groups[2].Value
                                    + " " + m3.Groups[1].Value;
                     fam.Add("print(" + rhs + ")");
+                    if (m3.Groups[2].Value == "+")
+                        fam.Add(m2.Groups[1].Value + " = " + m3.Groups[1].Value
+                              + " - " + m3.Groups[3].Value);
+                    else if (m3.Groups[2].Value == "*")
+                        fam.Add(m2.Groups[1].Value + " = " + m3.Groups[1].Value
+                              + " + " + m3.Groups[3].Value);
                     fam.Add(m2.Groups[1].Value + " = " + swapped);
                     fam.Add("print(" + MsgPool[Random.Range(0, MsgPool.Length)] + ")");
                 }
@@ -934,6 +1394,7 @@ public static class PuzzleVariationEngine
             string key = Normalized(cand);
             if (seenKeys.Contains(key)) return;
             if (IsNuancePair(correct, cand) || IsGibberishLine(cand, lines)) return;
+            if (IsCommutativeSwapLine(correct, cand)) return;
             if (!sharesFamily(cand)) return;
             seenKeys.Add(key);
             result.Add(cand);
@@ -946,39 +1407,6 @@ public static class PuzzleVariationEngine
 
         return result;
     }
-
-    // -- FITB ----------------------------------------------------------------
-    //
-    // Root cause of the old behavior: every fill-in-the-blank template ships
-    // correctAnswer == "" and bugLineIndex == -1, so the blank position was
-    // inferred by the format file, which always landed on the same token
-    // (print) -- and ForgeFitbTopup passed the authored static distractor
-    // lists (input/int/str, while/for/else, ...) straight through whenever
-    // there were three of them. Players could read the pattern in one session.
-    //
-    // The fix has two halves, both engine-side so the format file stays dumb:
-    //
-    //   1. RotateFitbBlank -- called per draw from MutatePuzzlePublic. Scans
-    //      the SERVED snippet (post rename, post slot substitution) for
-    //      unambiguous blankable tokens -- keywords, identifiers, numbers,
-    //      string literals, operators, booleans -- and picks one with a
-    //      per-skeleton rotating cursor, ordered round-robin across token
-    //      categories with tier-weighted priority. A session-level guard
-    //      additionally guarantees two consecutive FITB encounters never ask
-    //      for the same token, so "the correct answer is always different"
-    //      holds every time the format fires up.
-    //
-    //   2. ForgeFitbOptions -- rebuilds the option set for the NEW answer
-    //      every draw, category-matched: a keyword blank gets keyword
-    //      options, a math blank gets operators/numbers, an identifier blank
-    //      gets in-scope identifiers and game-pool names. Cross-category
-    //      authored junk is only ever a last-resort top-up, never the base.
-    //      For single tokens the pool IS the plausibility filter, so the
-    //      line-level gibberish validator is deliberately not applied here
-    //      (it would reject sanctioned NamePool identifiers for not being
-    //      defined in the snippet), and for operator blanks the = vs ==
-    //      confusion is the lesson, not a gotcha, so the nuance gate is
-    //      relaxed for pure-symbol answers only.
 
     enum FitbCategory { Keyword, Identifier, Number, StringLiteral, Operator, Boolean, Unknown }
 
@@ -995,10 +1423,6 @@ public static class PuzzleVariationEngine
         public FitbCategory Category;
     }
 
-    // Ordered alternation: strings first (atomic -- a word inside a prompt
-    // literal must never count as an occurrence of a bare identifier), then
-    // multi-char operators before their single-char prefixes, then words,
-    // numbers, and finally lone operator symbols.
     static readonly Regex FitbTokenRegex = new Regex(
         @"'[^']*'|\+=|-=|\*=|==|!=|<=|>=|[A-Za-z_]\w*|\d+|[+\-*/%<>=!]");
 
@@ -1025,22 +1449,16 @@ public static class PuzzleVariationEngine
     static readonly string[] FitbCompOps = { "==", "!=", "<", ">", "<=", ">=" };
     static readonly string[] FitbAssignOps = { "=", "+=", "-=", "*=" };
 
-    // Rotation state: one cursor per skeleton (variant/mutation suffixes
-    // stripped) plus the last FITB answer served this session.
     static readonly Dictionary<string, int> FitbCursor =
         new Dictionary<string, int>();
     static string LastFitbAnswer = "";
 
-    /// <summary>Picks which token is missing from a fill-in-the-blank
-    /// puzzle. Deterministic per skeleton (no RNG): consecutive draws walk
-    /// the candidate list, so the blank -- and therefore the correct
-    /// answer -- changes every encounter.</summary>
     public static void RotateFitbBlank(PuzzleTemplate t)
     {
         if (t == null || t.puzzleType != PuzzleType.FillInTheBlank) return;
 
         List<FitbCandidate> candidates = FitbBlankCandidates(t);
-        if (candidates.Count == 0) return; // legacy: format infers as before
+        if (candidates.Count == 0) return;
 
         string skeleton = FitbSkeletonKey(t.id);
         int cursor;
@@ -1048,9 +1466,6 @@ public static class PuzzleVariationEngine
 
         FitbCandidate pick = candidates[cursor % candidates.Count];
 
-        // Session promise: two fill-in-the-blank encounters in a row never
-        // ask for the same token, even when consecutive draws hit different
-        // skeletons that share a top candidate.
         for (int guard = 0;
              guard < candidates.Count && pick.Token == LastFitbAnswer;
              guard++)
@@ -1064,15 +1479,9 @@ public static class PuzzleVariationEngine
         t.correctAnswer = pick.Token;
         t.bugLineIndex = pick.LineIndex;
 
-        // The distractors were forged at expansion time for the ORIGINAL
-        // answer. Re-forge now, after the rotation, so the served option
-        // set always matches the token this draw actually blanks -- a
-        // keyword blank gets keyword options, never a stale family.
         t.distractors = ForgeFitbOptions(t, 3);
     }
 
-    /// <summary>Strips expansion and mutation suffixes so every variant of
-    /// one authored template shares a single rotation cursor.</summary>
     static string FitbSkeletonKey(string id)
     {
         if (string.IsNullOrEmpty(id)) return id ?? "";
@@ -1111,10 +1520,6 @@ public static class PuzzleVariationEngine
         return toks;
     }
 
-    /// <summary>Every token that occurs EXACTLY ONCE in the served snippet,
-    /// in scan order. Uniqueness matters twice over: the blank position is
-    /// unambiguous on screen, and the format file can locate the token to
-    /// blank with a simple first-occurrence replace.</summary>
     static List<FitbCandidate> FitbBlankCandidates(PuzzleTemplate t)
     {
         var candidates = new List<FitbCandidate>();
@@ -1135,8 +1540,8 @@ public static class PuzzleVariationEngine
             foreach (FitbTok tok in FitbTokenizeLine(t.codeLines[i]))
             {
                 if (tok.Category == FitbCategory.Unknown) continue;
-                if (counts[tok.Text] != 1) continue; // ambiguous: never blank
-                if (!added.Add(tok.Text)) continue;  // first line wins
+                if (counts[tok.Text] != 1) continue;
+                if (!added.Add(tok.Text)) continue;
                 candidates.Add(new FitbCandidate
                 {
                     Token = tok.Text,
@@ -1145,21 +1550,12 @@ public static class PuzzleVariationEngine
                 });
             }
 
-        // Only KEYWORD blanks are offered. A blanked number or string
-        // ("hero = [ ? ]") leaves every option plausible with no context
-        // to pick between them -- the player rightly calls that
-        // unanswerable. Keywords are dictated by the snippet's own
-        // syntax, so the missing token is always decidable on screen.
         candidates.RemoveAll(c => c.Category != FitbCategory.Keyword);
 
         return OrderFitbCandidates(candidates,
             Mathf.Clamp((int)t.difficulty, 0, 2));
     }
 
-    /// <summary>Round-robin interleave across token categories so the
-    /// rotation cycles through DIFFERENT KINDS of answers, not just
-    /// different occurrences of the same kind. Beginners start on keywords;
-    /// later tiers start on operators and identifiers.</summary>
     static List<FitbCandidate> OrderFitbCandidates(List<FitbCandidate> candidates,
                                                    int tier)
     {
@@ -1201,16 +1597,12 @@ public static class PuzzleVariationEngine
         return ordered;
     }
 
-    /// <summary>Rebuilds the option set for the CURRENT correct answer.
-    /// Category-matched, fresh per draw (seeded by the rotation cursor),
-    /// contract-gated. Authored distractors of the right category may top
-    /// up, but never lead.</summary>
     static List<string> ForgeFitbOptions(PuzzleTemplate t, int want)
     {
         string correct = t.correctAnswer ?? "";
         FitbCategory cat = ClassifyFitbToken(correct);
         if (cat == FitbCategory.Unknown)
-            return LegacyFitbTopup(t, want); // unrotated template: old path
+            return LegacyFitbTopup(t, want);
 
         string skeleton = FitbSkeletonKey(t.id);
         int cursor;
@@ -1219,9 +1611,7 @@ public static class PuzzleVariationEngine
 
         var result = new List<string>();
         var seen = new HashSet<string> { Normalized(correct) };
-        // For operator answers, = vs == and + vs += are the misconceptions
-        // the puzzle teaches -- the nuance gate would strip exactly those,
-        // so it only applies to answers with letters/digits in them.
+
         bool symbolOnly = FitbSymbolRegex.IsMatch(correct);
 
         foreach (string cand in FitbCandidatePool(t, correct, cat, seed))
@@ -1235,9 +1625,6 @@ public static class PuzzleVariationEngine
             result.Add(cand);
         }
 
-        // Same-category authored distractors may top up. This is what
-        // retires the stagnant sets: input/int/str can no longer ride along
-        // on a math-line template, and forged options always lead.
         foreach (string d in t.distractors ?? new List<string>())
         {
             if (result.Count >= want) break;
@@ -1271,8 +1658,7 @@ public static class PuzzleVariationEngine
                 }
             case FitbCategory.Identifier:
                 {
-                    // In-scope identifiers first (the snippet's own variables),
-                    // then game-pool names -- real words, never invented junk.
+
                     var scope = new List<string>();
                     var seenScope = new HashSet<string> { correct };
                     foreach (string line in t.codeLines ?? new List<string>())
@@ -1362,9 +1748,6 @@ public static class PuzzleVariationEngine
         return "";
     }
 
-    /// <summary>Deterministic Fisher-Yates driven by an LCG (not
-    /// UnityEngine.Random) so option sets are reproducible from the rotation
-    /// cursor yet differ every draw.</summary>
     static List<string> SeededShuffle(List<string> items, int seed)
     {
         var list = new List<string>(items ?? new List<string>());
@@ -1380,9 +1763,7 @@ public static class PuzzleVariationEngine
 
     static int FitbSeed(string skeleton, int cursor)
     {
-        // FNV-1a over the skeleton id, mixed with the rotation cursor -- all
-        // in explicit uint domain so the wrap is well-defined and matches the
-        // validation mirror (tools_check_fitb.py) bit for bit.
+
         unchecked
         {
             uint h = 2166136261u;
@@ -1391,8 +1772,6 @@ public static class PuzzleVariationEngine
         }
     }
 
-    /// <summary>Old behavior, kept only for templates the rotator could not
-    /// handle (no unique blankable token, correctAnswer still empty).</summary>
     static List<string> LegacyFitbTopup(PuzzleTemplate t, int want)
     {
         string correct = t.variableValue ?? "";
@@ -1431,8 +1810,6 @@ public static class PuzzleVariationEngine
         }
         return distractors;
     }
-
-    // -- helpers -------------------------------------------------------------
 
     static void Shuffle<T>(List<T> list)
     {

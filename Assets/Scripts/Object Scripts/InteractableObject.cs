@@ -40,7 +40,7 @@ public class InteractableObject : MonoBehaviour
     public string guideAfterRestoreSequenceID = "printessa_after_restore";
 
     [Header("Corruption Meshes")]
-    [Tooltip("Meshes to disable when the crystal is restored (e.g., corruption surrounding the sanctum).")]
+    [Tooltip("Meshes to disable when the crystal is restored (e.g., corruption surrounding the sanctum). These no longer vanish instantly on interact — RuneCrystal.RestoreAnimated scales them down with VFX + SFX alongside the crystal's own corrupted meshes, then hides them once every mesh has finished shrinking.")]
     public GameObject[] corruptionMeshes;
 
     [Header("Lesson Tablet (for Lesson Tablet type)")]
@@ -155,24 +155,21 @@ public class InteractableObject : MonoBehaviour
         RuneCrystal crystal = GetComponent<RuneCrystal>();
         if (crystal != null)
         {
-            crystal.Restore();
+            // LIVE restore: the corrupted meshes (children of the big
+            // visual-state parents) scale down while the restore VFX + SFX
+            // fire before they disappear completely, and only then does the
+            // restored state appear. The corruptionMeshes below join the same
+            // staged sequence inside RuneCrystal, so nothing pops off
+            // instantly anymore. (Load-time restores stay instant — see
+            // RuneCrystal.Restore.)
+            crystal.RestoreAnimated();
         }
         else
         {
             Debug.LogError("[InteractableObject] RuneCrystal component is missing from this GameObject!");
-        }
-        // =========================================================
-
-        // =========================================================
-        // Disable corruption meshes surrounding the sanctum
-        // =========================================================
-        if (corruptionMeshes != null)
-        {
-            foreach (var mesh in corruptionMeshes)
-            {
-                if (mesh != null) mesh.SetActive(false);
-            }
-            Debug.Log($"[InteractableObject] Disabled {corruptionMeshes.Length} corruption mesh(es) in {sanctumID}.");
+            // No RuneCrystal to orchestrate the staged effect — at least clear
+            // the surrounding corruption instantly like before.
+            DisableCorruptionMeshesNow();
         }
         // =========================================================
 
@@ -211,6 +208,21 @@ public class InteractableObject : MonoBehaviour
         gameObject.GetComponent<Collider>().enabled = false;
 
         Debug.Log($"[InteractableObject] Rune Crystal restored: {sanctumID}");
+    }
+
+    /// <summary>
+    /// Instant corruption-mesh clear, kept ONLY as the fallback for setups
+    /// without a RuneCrystal component. The normal path is the staged
+    /// scale-down inside RuneCrystal.RestoreSequence.
+    /// </summary>
+    protected void DisableCorruptionMeshesNow()
+    {
+        if (corruptionMeshes == null) return;
+        foreach (var mesh in corruptionMeshes)
+        {
+            if (mesh != null) mesh.SetActive(false);
+        }
+        Debug.Log($"[InteractableObject] Disabled {corruptionMeshes.Length} corruption mesh(es) in {sanctumID}.");
     }
 
     private void HandleLessonTablet()

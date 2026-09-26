@@ -75,6 +75,12 @@ public class PuzzleManager : MonoBehaviour
     /// </summary>
     private void ActivatePuzzleCanvas()
     {
+        // SINGLE-PUZZLE GUARANTEE: hide every format panel before activating
+        // the new one. A double-serve (e.g. a second encounter trigger racing
+        // the first) used to leave TWO format panels visible at once, because
+        // activation never deactivated the previous panel.
+        HideAllPuzzlePanels();
+
         switch (currentPuzzle.formatHandler.FormatType)
         {
             case PuzzleType.TrueOrFalse:
@@ -139,6 +145,18 @@ public class PuzzleManager : MonoBehaviour
         }
 
         currentPuzzleCanvasPanel.SetActive(true);
+    }
+
+    /// <summary>Deactivates all six format panels. Called before every
+    /// activation so exactly one puzzle format can ever be on screen.</summary>
+    private void HideAllPuzzlePanels()
+    {
+        if (trueOrFalseCanvasPanel != null) trueOrFalseCanvasPanel.SetActive(false);
+        if (pairACodeCanvasPanel != null) pairACodeCanvasPanel.SetActive(false);
+        if (fillInTheBlankCanvasPanel != null) fillInTheBlankCanvasPanel.SetActive(false);
+        if (predictTheOutputCanvasPanel != null) predictTheOutputCanvasPanel.SetActive(false);
+        if (spotTheBugCanvasPanel != null) spotTheBugCanvasPanel.SetActive(false);
+        if (lineScrambleCanvasPanel != null) lineScrambleCanvasPanel.SetActive(false);
     }
 
     /// <summary>

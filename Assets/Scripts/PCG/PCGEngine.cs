@@ -1,3 +1,4 @@
+// PyQuest PCG engine — all invariants/documented behavior live in PCG_MIGRATION_PLAN.md (do not re-document inline).
 using System.Collections;
 using System.IO;
 using System.Linq;
@@ -10,16 +11,17 @@ public class PCGEngine : MonoBehaviour
 {
     public static PCGEngine Instance;
 
-    /// <summary>
-    /// True once puzzle_templates.json has finished loading (success or
-    /// failure). Loading is now asynchronous on Android (UnityWebRequest
-    /// is the only API that can read StreamingAssets out of a compressed
-    /// APK), so any caller that needs allTemplates immediately after
-    /// scene load must wait on this first, same as BKTEngine.IsLoaded.
-    /// </summary>
     public bool IsLoaded { get; private set; } = false;
 
     private List<PuzzleTemplate> allTemplates = new List<PuzzleTemplate>();
+
+    private List<PuzzleTemplate> allSkeletons = new List<PuzzleTemplate>();
+
+    private const bool useRequestTimeExpansion = true;
+
+    private const int MaxGenerationDraws = 3;
+
+    private readonly Dictionary<string, int> skeletonDrawCounter = new Dictionary<string, int>();
 
     private Dictionary<string, Queue<string>> recentlyUsed = new Dictionary<string, Queue<string>>();
 
@@ -69,15 +71,12 @@ public class PCGEngine : MonoBehaviour
         {
             PuzzleTemplateLibrary lib = JsonUtility.FromJson<PuzzleTemplateLibrary>(json);
             var authored = lib != null && lib.templates != null ? lib.templates : new List<PuzzleTemplate>();
-            // Slot expansion: every template carrying {name}/{num}/{msg}/...
-            // tokens becomes VariantsPerSkeleton concrete instances, and
-            // evaluator-safe skeletons also derive Intermediate/Advanced
-            // variants. Hand-authored templates pass through untouched, so
-            // the shipped JSON stays small while each (KC, format, tier)
-            // bucket gets a deep, non-repeating pool.
+
             allTemplates = PuzzleVariationEngine.ExpandAll(authored);
+            allSkeletons = authored;
             Debug.Log($"[PCG] Loaded {authored.Count} authored templates -> " +
-                      $"{allTemplates.Count} playable instances");
+                      $"{allTemplates.Count} playable instances (fallback pool), " +
+                      $"{allSkeletons.Count} skeletons for request-time generation");
         }
 
         IsLoaded = true;
@@ -90,6 +89,125 @@ public class PCGEngine : MonoBehaviour
         return GeneratePuzzle(componentName, puzzleType, targetTier);
     }
 
+    private static bool SkeletonServesTier(PuzzleTemplate s, int tier)
+    {
+        return (int)s.difficulty == tier
+            || ((tier == 1 || tier == 2) && PuzzleVariationEngine.CanScale(s));
+    }
+
+    private string StableVariantId(string skeletonId)
+    {
+        int k;
+        skeletonDrawCounter.TryGetValue(skeletonId, out k);
+        skeletonDrawCounter[skeletonId] = k + 1;
+        return skeletonId + "_v" + (k % PuzzleVariationEngine.VariantsPerSkeleton);
+    }
+
+    private PuzzleTemplate DrawFromSkeletons(List<PuzzleTemplate> skeletons,
+                                             string bucketKey, int serveTier)
+    {
+        // Cover the whole bucket, not just 3 random draws: one bad skeleton
+        // must not exhaust the budget when siblings are healthy.
+        int draws = Mathf.Max(MaxGenerationDraws, skeletons.Count);
+        for (int draw = 0; draw < draws; draw++)
+        {
+            PuzzleTemplate skeleton = SelectWithHistory(skeletons, bucketKey);
+            if (skeleton == null) return null;
+
+            int targetTier = serveTier >= 0 ? serveTier : (int)skeleton.difficulty;
+            PuzzleTemplate instance = PuzzleVariationEngine.ExpandSkeleton(skeleton, targetTier);
+            if (instance != null)
+                instance.id = StableVariantId(skeleton.id);
+
+            string failure = null;
+            if (instance == null
+                || !PuzzleVariationEngine.ValidateInstance(instance, skeleton, out failure))
+            {
+                Debug.LogWarning($"[PCG] Request-time draw {draw + 1}/{draws} rejected " +
+                                 $"(skeleton: {(skeleton != null ? skeleton.id : "null")}): {failure}");
+                continue;
+            }
+
+            Debug.Log($"[PCG] Request-time generation | skeleton: {skeleton.id} | " +
+                      $"draw: {draw + 1}/{draws} | validation: {failure}");
+            return ServeMutated(instance, skeleton);
+        }
+
+        Debug.LogWarning($"[PCG] Request-time generation exhausted {draws} draws for " +
+                         $"'{bucketKey}'; serving from the load-time pool instead.");
+        return null;
+    }
+
+    // Post-mutation gate: MutatePuzzlePublic runs AFTER validation and can
+    // invalidate its invariants (e.g. an op-flip making a distractor
+    // semantically equal to the answer). Re-validate; on failure serve the
+    // already-validated pre-mutation instance - mutations are cosmetic.
+    private PuzzleTemplate ServeMutated(PuzzleTemplate validated,
+                                        PuzzleTemplate skeleton)
+    {
+        PuzzleTemplate mutated = MutatePuzzlePublic(validated);
+        string failure;
+        if (PuzzleVariationEngine.ValidateInstance(mutated, skeleton, out failure))
+            return mutated;
+        Debug.LogWarning($"[PCG] Post-mutation gate rejected ({failure}); " +
+                         $"serving pre-mutation instance.");
+        return validated;
+    }
+
+    private PuzzleTemplate SelectValidatedFromPool(List<PuzzleTemplate> poolInstances,
+                                                   string bucketKey)
+    {
+        for (int attempt = 0; attempt < poolInstances.Count; attempt++)
+        {
+            PuzzleTemplate selected = SelectWithHistory(poolInstances, bucketKey);
+            if (selected == null) break;
+            string failure;
+            if (PuzzleVariationEngine.ValidateInstance(selected, FindAuthoredSkeleton(selected.id), out failure))
+                return selected;
+            Debug.LogWarning($"[PCG] Pool candidate rejected ({failure}): {selected.id}");
+        }
+        Debug.LogWarning($"[PCG] Pool validation exhausted for '{bucketKey}'; widening (validated instances only).");
+        foreach (List<PuzzleTemplate> widened in WidenedPools(poolInstances))
+        {
+            for (int attempt = 0; attempt < Mathf.Min(widened.Count, 12); attempt++)
+            {
+                PuzzleTemplate selected = SelectWithHistory(widened, bucketKey + "|widen");
+                if (selected == null) break;
+                string failure;
+                if (PuzzleVariationEngine.ValidateInstance(selected, FindAuthoredSkeleton(selected.id), out failure))
+                {
+                    Debug.LogWarning($"[PCG] Widened pool serving validated instance: {selected.id}");
+                    return selected;
+                }
+            }
+        }
+        PuzzleTemplate emergency = poolInstances[0];
+        Debug.LogError($"[PCG] No validated instance in the entire pool; serving {emergency.id}. Corpus bug - do not ship.");
+        return emergency;
+    }
+
+    private IEnumerable<List<PuzzleTemplate>> WidenedPools(List<PuzzleTemplate> bucket)
+    {
+        if (bucket == null || bucket.Count == 0) yield break;
+        // Widening stays INSIDE the knowledge component: a sanctum teaches its
+        // own KCs, so a variables bucket must never leak conditional templates.
+        string kc = bucket[0].knowledgeComponent;
+        PuzzleType ptype = bucket[0].puzzleType;
+        yield return allTemplates.Where(t => t.knowledgeComponent == kc
+                                          && t.puzzleType == ptype).ToList();
+        yield return allTemplates.Where(t => t.knowledgeComponent == kc).ToList();
+    }
+
+    private PuzzleTemplate FindAuthoredSkeleton(string instanceId)
+    {
+        if (allSkeletons == null) return null;
+        foreach (PuzzleTemplate s in allSkeletons)
+            if (instanceId == s.id || instanceId.StartsWith(s.id + "_v")
+                || instanceId.StartsWith(s.id + "_s"))
+                return s;
+        return null;
+    }
+
     public PuzzleData GeneratePuzzle(string componentName, PuzzleType puzzleType,
                                       DifficultyTier forcedTier)
     {
@@ -99,18 +217,45 @@ public class PCGEngine : MonoBehaviour
                               "return null. Wait on PCGEngine.Instance.IsLoaded before entering " +
                               "gameplay.");
 
-        // Cross-format widening was removed entirely. It solved thin
-        // buckets by borrowing a template tagged for a different
-        // puzzleType, but when a (KC, difficulty) combination only had
-        // ONE template total across every format, borrowing just forced
-        // that one template into every request at that combination
-        // instead of adding real variety, and its fields (correctAnswer,
-        // distractors, bugLineIndex) don't necessarily mean the same
-        // thing across formats, which produced the "predict the output
-        // shows a blank" / "spot the bug shows no bug and no correct
-        // option" class of bugs. Straight fallback chain now: exact
-        // match, then same format at any difficulty, then same KC at any
-        // format/difficulty as a last resort.
+        if (useRequestTimeExpansion)
+        {
+            List<PuzzleTemplate> skeletons = allSkeletons
+                .Where(s => s.knowledgeComponent == componentName
+                         && s.puzzleType == puzzleType
+                         && SkeletonServesTier(s, (int)forcedTier))
+                .ToList();
+            bool exactTier = true;
+            if (skeletons.Count == 0)
+            {
+                exactTier = false;
+                skeletons = allSkeletons
+                    .Where(s => s.knowledgeComponent == componentName
+                             && s.puzzleType == puzzleType)
+                    .ToList();
+            }
+            if (skeletons.Count == 0)
+                skeletons = allSkeletons
+                    .Where(s => s.knowledgeComponent == componentName)
+                    .ToList();
+
+            if (skeletons.Count > 0)
+            {
+                PuzzleTemplate generated = DrawFromSkeletons(skeletons,
+                    $"rt|{componentName}|{puzzleType}|{forcedTier}",
+                    exactTier ? (int)forcedTier : -1);
+                if (generated != null)
+                {
+                    IPuzzleFormat rtFormatHandler = PuzzleFormatFactory.CreatePuzzleFormat(generated);
+                    if (rtFormatHandler == null)
+                    {
+                        Debug.LogError($"[PCG] Failed to create format handler for: {generated.puzzleType}");
+                        return null;
+                    }
+                    return new PuzzleData(generated, rtFormatHandler);
+                }
+            }
+        }
+
         List<PuzzleTemplate> candidates = allTemplates
             .Where(t => t.knowledgeComponent == componentName
                      && t.difficulty == forcedTier
@@ -135,8 +280,8 @@ public class PCGEngine : MonoBehaviour
         }
 
         string bucketKey = $"{componentName}|{puzzleType}|{forcedTier}";
-        PuzzleTemplate selected = SelectWithHistory(candidates, bucketKey);
-        PuzzleTemplate mutated = MutatePuzzlePublic(selected);
+        PuzzleTemplate selected = SelectValidatedFromPool(candidates, bucketKey);
+        PuzzleTemplate mutated = ServeMutated(selected, FindAuthoredSkeleton(selected.id));
 
         IPuzzleFormat formatHandler = PuzzleFormatFactory.CreatePuzzleFormat(mutated);
         if (formatHandler == null)
@@ -163,9 +308,32 @@ public class PCGEngine : MonoBehaviour
 
         if (candidates.Count == 0) { Debug.LogWarning($"[PCG] No templates for {componentName}"); return null; }
 
+        if (useRequestTimeExpansion)
+        {
+            List<PuzzleTemplate> skeletons = allSkeletons
+                .Where(s => s.knowledgeComponent == componentName
+                         && SkeletonServesTier(s, (int)targetTier))
+                .ToList();
+            bool exactTier = true;
+            if (skeletons.Count == 0)
+            {
+                exactTier = false;
+                skeletons = allSkeletons
+                    .Where(s => s.knowledgeComponent == componentName)
+                    .ToList();
+            }
+            if (skeletons.Count > 0)
+            {
+                PuzzleTemplate generated = DrawFromSkeletons(skeletons,
+                    $"rt|{componentName}|legacy|{targetTier}",
+                    exactTier ? (int)targetTier : -1);
+                if (generated != null) return generated;
+            }
+        }
+
         string bucketKey = $"{componentName}|legacy|{targetTier}";
-        PuzzleTemplate selected = SelectWithHistory(candidates, bucketKey);
-        return MutatePuzzlePublic(selected);
+        PuzzleTemplate selected = SelectValidatedFromPool(candidates, bucketKey);
+        return ServeMutated(selected, FindAuthoredSkeleton(selected.id));
     }
 
     public TrueFalseData GenerateTrueFalsePuzzle(string componentName)
@@ -186,10 +354,40 @@ public class PCGEngine : MonoBehaviour
             return null;
         }
 
-        string bucketKey = $"{componentName}|truefalse|{targetTier}";
-        PuzzleTemplate baseTemplate = SelectWithHistory(candidates, bucketKey);
-        PuzzleTemplate mutatedTemplate = MutatePuzzlePublic(baseTemplate);
+        if (useRequestTimeExpansion)
+        {
+            List<PuzzleTemplate> skeletons = allSkeletons
+                .Where(s => s.knowledgeComponent == componentName
+                         && SkeletonServesTier(s, (int)targetTier))
+                .ToList();
+            bool exactTier = true;
+            if (skeletons.Count == 0)
+            {
+                exactTier = false;
+                skeletons = allSkeletons
+                    .Where(s => s.knowledgeComponent == componentName)
+                    .ToList();
+            }
+            if (skeletons.Count > 0)
+            {
+                PuzzleTemplate generated = DrawFromSkeletons(skeletons,
+                    $"rt|{componentName}|truefalse|{targetTier}",
+                    exactTier ? (int)targetTier : -1);
+                if (generated != null)
+                    return BuildTrueFalseData(generated);
+            }
+        }
 
+        string bucketKey = $"{componentName}|truefalse|{targetTier}";
+        PuzzleTemplate baseTemplate = SelectValidatedFromPool(candidates, bucketKey);
+        PuzzleTemplate mutatedTemplate = ServeMutated(baseTemplate,
+            FindAuthoredSkeleton(baseTemplate.id));
+
+        return BuildTrueFalseData(mutatedTemplate);
+    }
+
+    private TrueFalseData BuildTrueFalseData(PuzzleTemplate mutatedTemplate)
+    {
         bool outputShouldBeTrue = Random.Range(0, 2) == 0;
         string finalCodeDisplay = string.Join("\n", mutatedTemplate.codeLines);
 
@@ -203,6 +401,20 @@ public class PCGEngine : MonoBehaviour
                 finalCodeDisplay = ReplaceFirst(finalCodeDisplay, " < ", " > ");
             else
                 finalCodeDisplay += "\n# Bug injected: logic trace mismatch";
+        }
+
+        if (!outputShouldBeTrue && !finalCodeDisplay.Contains("# Bug injected"))
+        {
+            string baseOutput = null;
+            string postOutput = null;
+            List<string> postLines = finalCodeDisplay.Split('\n').ToList();
+            if (MiniPythonEvaluator.TrySimulate(mutatedTemplate.codeLines, out baseOutput)
+                && MiniPythonEvaluator.TrySimulate(postLines, out postOutput)
+                && baseOutput == postOutput)
+            {
+                finalCodeDisplay = string.Join("\n", mutatedTemplate.codeLines)
+                                 + "\n# Bug injected: logic trace mismatch";
+            }
         }
 
         TrueFalseData puzzlePackage = new TrueFalseData();
@@ -267,22 +479,6 @@ public class PCGEngine : MonoBehaviour
         return genericFallbacks[Random.Range(0, genericFallbacks.Length)];
     }
 
-    /// <summary>
-    /// CONFIRMED ROOT CAUSE of the "every word gets mutated" bug in later
-    /// sanctums: naive string.Replace(variableName, newName) treats the
-    /// variable name as a raw substring, not a whole word. Elif
-    /// Labyrinth/Input Mists content frequently uses single-letter
-    /// variable names (variableName="i" is used in 4 of your real loop
-    /// templates), and "i" is a substring of "in", "if", "print",
-    /// "input", and "while" -- every one of those keywords got partially
-    /// overwritten on every mutation. "for i in range(5):" naive-replaced
-    /// "i"->"mana" becomes "for mana manan range(5):", a guaranteed syntax
-    /// error, every single time that template mutates. \b keeps
-    /// replacement scoped to whole tokens only; the same "i" that starts
-    /// "in" no longer matches because it isn't followed by a word
-    /// boundary. Also fixes the equivalent numeric case (replacing "10"
-    /// must not also corrupt "100").
-    /// </summary>
     private static string ReplaceWholeWord(string text, string oldWord, string newWord)
     {
         if (string.IsNullOrEmpty(oldWord)) return text;
@@ -301,15 +497,13 @@ public class PCGEngine : MonoBehaviour
             correctAnswer = original.correctAnswer,
             bugLineIndex = original.bugLineIndex,
             correctOrder = new List<int>(original.correctOrder),
+            acceptedOrders = original.acceptedOrders != null
+                ? new List<string>(original.acceptedOrders) : null,
             distractors = new List<string>(original.distractors),
             variableName = original.variableName,
             variableValue = original.variableValue,
             goalText = original.goalText,
-            // Dormant unless a template actually populates it (none do
-            // right now by design, per the decision to hold multi-variable
-            // content back until the single-variable path is confirmed
-            // stable). Safe to leave wired in: an empty list here is a
-            // complete no-op in the loop below.
+
             additionalVariables = original.additionalVariables != null
                 ? original.additionalVariables.Select(v => new VariablePair { name = v.name, value = v.value }).ToList()
                 : new List<VariablePair>()
@@ -323,7 +517,11 @@ public class PCGEngine : MonoBehaviour
             "lives", "points", "strength", "agility", "wisdom", "luck",
             "vigor", "guard", "focus", "morale", "essence", "charge",
             "rating", "tally", "streak", "combo", "supply", "reserve",
-            "endurance", "fortune", "resolve", "insight"
+            "endurance", "fortune", "resolve", "insight",
+            "arcana", "valor", "spirit", "glyph", "ember", "thunder",
+            "cinder", "radiance", "zenith", "apex", "stride", "pulse",
+            "cadence", "lore", "sigil", "crest", "momentum", "gravity",
+            "harvest", "beacon", "quiver", "talent", "bounty", "tempo"
         };
 
         string[] intValuePool = new string[]
@@ -331,7 +529,9 @@ public class PCGEngine : MonoBehaviour
             "5", "10", "15", "20", "25", "30", "50", "75",
             "100", "150", "200", "250", "500", "7", "13", "99",
             "3", "8", "12", "17", "22", "40", "60", "80",
-            "120", "175", "300", "400", "9", "11", "45", "65"
+            "120", "175", "300", "400", "9", "11", "45", "65",
+            "4", "6", "14", "18", "28", "35", "55", "70",
+            "85", "95", "110", "130"
         };
 
         string[] stringValuePool = new string[]
@@ -340,14 +540,18 @@ public class PCGEngine : MonoBehaviour
             "'Dragon'", "'Quest'", "'Rogue'", "'Paladin'", "'Hunter'",
             "'Warrior'", "'Sage'", "'Scout'", "'Ranger'", "'Monk'",
             "'Druid'", "'Bard'", "'Cleric'", "'Alchemist'", "'Nomad'",
-            "'Guardian'", "'Sentinel'", "'Wanderer'", "'Champion'", "'Seer'"
+            "'Guardian'", "'Sentinel'", "'Wanderer'", "'Champion'", "'Seer'",
+            "'Oracle'", "'Voyager'", "'Crusader'", "'Mystic'", "'Pilgrim'",
+            "'Vanguard'", "'Warlord'", "'Enigma'"
         };
 
         string[] greetingPool = new string[]
         {
             "'Hello'", "'Greetings'", "'Welcome'", "'Salutations'",
             "'Howdy'", "'Hey there'", "'Hi'", "'Good day'",
-            "'Well met'", "'Ahoy'", "'Cheers'", "'Hail'"
+            "'Well met'", "'Ahoy'", "'Cheers'", "'Hail'",
+            "'Good morning'", "'Good evening'", "'Blessings'",
+            "'Onward'", "'Salute'", "'Hello there'"
         };
 
         string[] messagePool = new string[]
@@ -356,14 +560,25 @@ public class PCGEngine : MonoBehaviour
             "'Quest Complete'", "'Victory'", "'Defeat'", "'Well Done'",
             "'Keep Going'", "'Almost There'",
             "'New Record'", "'Boss Defeated'", "'Path Unlocked'",
-            "'Sanctum Cleared'", "'Not Yet'"
+            "'Sanctum Cleared'", "'Not Yet'",
+            "'Final Blow'", "'Rune Found'", "'Gate Open'",
+            "'Tower Cleared'", "'Perfect Run'", "'Slow Down'",
+            "'Next Round'", "'Combo Broken'", "'Skill Up'"
         };
 
         string[] operatorPairs = new string[] { "+", "-", "*" };
 
         if (!string.IsNullOrEmpty(original.variableName))
         {
+            var reserved = new HashSet<string>();
+            foreach (string blob in m.codeLines.Concat(m.distractors)
+                         .Append(m.correctAnswer ?? "").Append(m.goalText ?? ""))
+                foreach (Match w in Regex.Matches(blob ?? "", @"[A-Za-z_]\w*"))
+                    reserved.Add(w.Value);
+            reserved.Remove(original.variableName);
             string newName = nameVariantPool[Random.Range(0, nameVariantPool.Length)];
+            for (int attempt = 0; attempt < 40 && reserved.Contains(newName); attempt++)
+                newName = nameVariantPool[Random.Range(0, nameVariantPool.Length)];
             string newValue;
             int parsedInt;
             bool isNumeric = int.TryParse(original.variableValue, out parsedInt);
@@ -372,11 +587,6 @@ public class PCGEngine : MonoBehaviour
             else
                 newValue = stringValuePool[Random.Range(0, stringValuePool.Length)].Replace("'", "");
 
-            // MUTATION SAFETY GATE: control-flow snippets (for/while/if and
-            // input()) have answers authored for their LITERAL loop bounds
-            // and branch values. Re-shuffling numbers in them produced the
-            // "range(3) became range(500) while correctAnswer stayed 0\n1\n2"
-            // class of wrong answers, so they only ever get NAME mutations.
             bool controlFlow = PuzzleVariationEngine.ContainsControlFlow(m.codeLines);
 
             for (int i = 0; i < m.codeLines.Count; i++)
@@ -385,26 +595,8 @@ public class PCGEngine : MonoBehaviour
             for (int i = 0; i < m.distractors.Count; i++)
                 m.distractors[i] = ReplaceWholeWord(m.distractors[i], original.variableName, newName);
 
-            // goalText is the player-facing contract ("Add the two amounts
-            // together and store the result in mana"), so it must undergo the
-            // SAME rename as the code it describes. It used to be copied over
-            // verbatim, which produced the playtested bug where the goal
-            // named one variable ("store the result in mana") while the code
-            // and every option used the renamed one ("lives = defense +
-            // shield") -- an undecidable puzzle. Mirrors the code rename
-            // below, including the control-flow carve-out for values.
             m.goalText = ReplaceWholeWord(m.goalText ?? "", original.variableName, newName);
 
-            // correctAnswer must undergo the SAME rename as the code it
-            // belongs to. SpotTheBug templates that author their bug
-            // directly in codeLines (bugLineIndex >= 0) store the clean
-            // line in correctAnswer; renaming only codeLines would leave
-            // the "correct fix" pointing at the old variable while the
-            // served snippet uses the new one -- the same undecidable
-            // mismatch class as the goalText bug fixed above. No-op for
-            // every other format: PredictTheOutput/FillInTheBlank
-            // overwrite correctAnswer after this point, PairACode ignores
-            // it, and TrueOrFalse's true/false contains no identifiers.
             m.correctAnswer = ReplaceWholeWord(m.correctAnswer ?? "", original.variableName, newName);
 
             if (!controlFlow)
@@ -415,26 +607,14 @@ public class PCGEngine : MonoBehaviour
                 for (int i = 0; i < m.distractors.Count; i++)
                     m.distractors[i] = ReplaceWholeWord(m.distractors[i], original.variableValue, newValue);
 
-                // Keep the goal's numbers in lockstep with the code's (the
-                // same contract argument as the rename above): bo_pac_002's
-                // goal quotes the discount as a bare number, and that number
-                // IS variableValue, so leaving it behind after a value
-                // mutation re-creates the goal/code mismatch class.
                 m.goalText = ReplaceWholeWord(m.goalText ?? "", original.variableValue, newValue);
 
-                // Same contract for values quoted inside an authored
-                // SpotTheBug fix line (e.g. cond_stb_001's "if x > N:").
                 m.correctAnswer = ReplaceWholeWord(m.correctAnswer ?? "", original.variableValue, newValue);
             }
 
             m.variableName = newName;
             m.variableValue = controlFlow ? original.variableValue : newValue;
 
-            // Multi-variable renaming: dormant for existing content since
-            // additionalVariables is empty unless a template sets it, but
-            // wired in now so it's ready when you decide to author
-            // multi-variable templates later, without another PCGEngine
-            // change at that point.
             HashSet<string> usedNewNames = new HashSet<string> { newName };
             foreach (VariablePair extra in m.additionalVariables)
             {
@@ -462,14 +642,10 @@ public class PCGEngine : MonoBehaviour
                         ReplaceWholeWord(m.distractors[i], oldExtraName, extraNewName),
                         oldExtraValue, extraNewValue);
 
-                // Same contract as the primary rename: any prose reference to
-                // a renamed secondary variable/value moves with the code.
                 m.goalText = ReplaceWholeWord(
                     ReplaceWholeWord(m.goalText ?? "", oldExtraName, extraNewName),
                     oldExtraValue, extraNewValue);
 
-                // Same contract for secondary variables inside an authored
-                // SpotTheBug fix line.
                 m.correctAnswer = ReplaceWholeWord(
                     ReplaceWholeWord(m.correctAnswer ?? "", oldExtraName, extraNewName),
                     oldExtraValue, extraNewValue);
@@ -484,20 +660,7 @@ public class PCGEngine : MonoBehaviour
 
             if (baselineSimulated)
             {
-                // FIX: previously only trusted the evaluator if its output
-                // happened to already match original.correctAnswer, which
-                // meant a template with a WRONG authored correctAnswer
-                // (content typo, not a code bug) would permanently keep
-                // that wrong value forever, since the mismatch itself was
-                // what blocked the evaluator-based path from ever running.
-                // The evaluator is the one actually executing the logic,
-                // so its output is ground truth; if it disagrees with what
-                // was authored, that's a content mistake worth surfacing,
-                // not a reason to keep serving the wrong answer.
-                // ANSWER-AUTHORITY GATE: only PredictTheOutput's correct
-                // answer IS the computed output. Clobbering other formats'
-                // answers (e.g. TrueOrFalse's "true") with the printed text
-                // corrupted them at generation time.
+
                 if (original.puzzleType == PuzzleType.PredictTheOutput)
                 {
                     if (baselineOutput != original.correctAnswer)
@@ -511,15 +674,6 @@ public class PCGEngine : MonoBehaviour
 
                 List<string> candidateLines = new List<string>(m.codeLines);
 
-                // FIX: this used line.Contains(num)/line.Replace(num, ...),
-                // plain substring matching. "5" matches inside "25", "10"
-                // matches inside "100"/"150"/etc, so an UNTRACKED second
-                // variable's value (anything PCGEngine doesn't know about
-                // via variableName/variableValue) could get silently
-                // corrupted here even after Strategy 1's word-boundary fix,
-                // since digits aren't word-bounded the same way identifiers
-                // are unless checked explicitly. Now uses the same \b
-                // word-boundary approach as ReplaceWholeWord.
                 for (int i = 0; i < candidateLines.Count; i++)
                 {
                     string line = candidateLines[i];
@@ -546,16 +700,6 @@ public class PCGEngine : MonoBehaviour
                     }
                 }
 
-                // ANSWER-AUTHORITY GATE: this reshuffle exists to recompute
-                // PredictTheOutput's answer after the number/operator
-                // shuffle above. Serving the shuffled snippet to OTHER
-                // formats (a) silently flipped basic operators (+ -> * or
-                // -) inside SpotTheBug and TrueOrFalse snippets -- exactly
-                // the nuance-gotcha mutation the design notes prohibit --
-                // and (b) clobbered their authored correctAnswer with the
-                // printed output, the same corruption class the PTO gate
-                // above fixed. Non-PTO formats keep the renamed snippet
-                // verbatim now.
                 if (original.puzzleType == PuzzleType.PredictTheOutput
                     && MiniPythonEvaluator.TrySimulate(candidateLines, out string newOutput))
                 {
@@ -570,10 +714,7 @@ public class PCGEngine : MonoBehaviour
         }
         else
         {
-            // MUTATION SAFETY GATE (no primary variable): string literal and
-            // numeric shuffles only run for control-flow-FREE snippets, for
-            // the same reason as the primary-variable path -- loop bounds
-            // and branch values are load-bearing for authored answers.
+
             bool controlFlow = PuzzleVariationEngine.ContainsControlFlow(m.codeLines);
             bool mutated = false;
             for (int i = 0; i < m.codeLines.Count && !controlFlow; i++)
@@ -606,15 +747,11 @@ public class PCGEngine : MonoBehaviour
                 }
             }
 
-            // Same fix applied here: if the (possibly just-mutated) code is
-            // simulatable, let the evaluator's output be the ground truth
-            // for correctAnswer -- but only for PredictTheOutput, whose
-            // correct answer IS the printed output (answer-authority gate).
             if (!controlFlow && MiniPythonEvaluator.TrySimulate(m.codeLines, out string noVarOutput)
                 && original.puzzleType == PuzzleType.PredictTheOutput)
                 m.correctAnswer = noVarOutput;
 
-            if (!mutated && !controlFlow)
+            if (!mutated && !controlFlow && m.correctOrder.Count == 0)
             {
                 string[] injections = new string[]
                 {
@@ -625,7 +762,6 @@ public class PCGEngine : MonoBehaviour
                 };
 
                 string injection = injections[Random.Range(0, injections.Length)];
-
 
                 for (int i = 0; i < m.codeLines.Count; i++)
                 {
@@ -641,22 +777,13 @@ public class PCGEngine : MonoBehaviour
             }
         }
 
-        // FITB blank rotation: choose WHICH token is missing. The cursor
-        // rotates per skeleton so consecutive encounters never blank the
-        // same token -- the old behavior blanked print every single time
-        // because the authored templates ship correctAnswer == "" and the
-        // format file inferred one fixed blank. Runs AFTER renaming so the
-        // candidates are scanned from the served snippet; ForgeDistractors
-        // below then rebuilds category-matched options for the new answer.
         if (m.puzzleType == PuzzleType.FillInTheBlank)
             PuzzleVariationEngine.RotateFitbBlank(m);
 
-        // Distractor forge: guarantee three options that are distinct from
-        // the correct answer, same-statement-family, free of nuance gotchas
-        // (==/quotes/case) and free of invented identifiers, and for
-        // PredictTheOutput verifiably different from the real output. Runs
-        // AFTER renaming so synthesized options use the served variables.
         PuzzleVariationEngine.ForgeDistractors(m);
+
+        if (m.puzzleType == PuzzleType.LineScramble)
+            m.acceptedOrders = PuzzleVariationEngine.ComputeAcceptedOrders(m);
 
         Debug.Log($"[PCG] Mutated: {m.id} | Type: {m.puzzleType} | Tier: {m.difficulty}");
         return m;

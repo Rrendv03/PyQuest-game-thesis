@@ -60,6 +60,10 @@ public class DropSlot : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPoin
 
         Debug.Log($"[DropSlot] Received: {currentAnswer}");
 
+        // The answer is in: stop the looping hold sound immediately.
+        // Auto-submit below can deactivate the puzzle UI the same frame,
+        // which prevents OnEndDrag from ever firing on the card — so this
+        // is the reliable place to end the loop on a successful drop.
         if (dropped.parentController != null)
             dropped.parentController.StopOptionHoldSound();
 
@@ -78,6 +82,6 @@ public class DropSlot : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPoin
         if (slotImage != null)
             slotImage.color = defaultColor;
         if (slotLabel != null)
-            slotLabel.text = "[ ? ]";
+            slotLabel.text = "[ DRAG HERE ]";
     }
 }

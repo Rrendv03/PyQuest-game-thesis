@@ -11,7 +11,12 @@ using UnityEngine;
 ///      the camera pans to it BEFORE dialogue starts.
 ///   3. Dialogue plays.
 ///   4. On completion, if showcasePoints are assigned, the camera continues
-///      panning through them.
+///      panning through them. Each time it ARRIVES at a showcase point it
+///      fires OnEpilogueCameraArrivedAtPoint, which lets WorldRestorationController
+///      detonate any corrupted crystal located at that point (shake, shrink,
+///      explosion VFX/SFX, restored swap) while the camera is still looking at
+///      it. The per-point hold is automatically extended past showcaseHoldTime
+///      when a crystal needs to finish its destruction sequence there.
 ///   5. Camera is restored to its true pre-cutscene position/rotation and
 ///      ThirdPersonCamera re-enabled.
 ///
@@ -83,6 +88,16 @@ public class EpilogueSequenceController : MonoBehaviour
     /// to this, not OnEpilogueCompleted.
     /// </summary>
     public static event System.Action OnEpilogueSequenceFullyComplete;
+
+    /// <summary>
+    /// Fires each time the showcase camera finishes panning to a showcase
+    /// point. WorldRestorationController listens for this to detonate any
+    /// pending corrupted crystal at that point. Deliberately NOT fired for
+    /// the pre-dialogue focus point: the epilogue quest (and therefore any
+    /// pending crystals) only exists after the dialogue ends, so nothing
+    /// could ever detonate there anyway.
+    /// </summary>
+    public static event System.Action<Transform> OnEpilogueCameraArrivedAtPoint;
 
     private ThirdPersonCamera thirdPersonCamera;
     private PlayerMovement playerMovement;
@@ -249,7 +264,22 @@ public class EpilogueSequenceController : MonoBehaviour
         {
             if (point == null) continue;
             yield return StartCoroutine(PanCameraTo(point));
-            yield return new WaitForSeconds(showcaseHoldTime);
+
+            // Query the destruction duration BEFORE firing the arrival event:
+            // arriving starts the detonation coroutines and clears the pending
+            // list, so querying afterwards would always read zero.
+            float destructionWait = WorldRestorationController.Instance != null
+                ? WorldRestorationController.Instance.GetPendingDestructionDurationForPoint(point)
+                : 0f;
+
+            // Camera is now aimed at this point — let WorldRestorationController
+            // detonate any corrupted crystal located here.
+            OnEpilogueCameraArrivedAtPoint?.Invoke(point);
+
+            // Hold at least as long as the crystal's shake -> shrink -> explosion
+            // sequence needs, so the explosion plays while the camera is still
+            // pointed at it. Points with no pending crystal keep showcaseHoldTime.
+            yield return new WaitForSeconds(Mathf.Max(showcaseHoldTime, destructionWait));
         }
     }
 

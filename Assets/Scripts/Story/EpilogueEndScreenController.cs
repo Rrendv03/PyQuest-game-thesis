@@ -41,6 +41,8 @@ public class EpilogueEndScreenController : MonoBehaviour
     public string windowsButtonLabel = "Show Me The File";
     [Tooltip("Message shown in Status Text the moment the screen appears.")]
     public string defaultStatusMessage = "Thanks for playing PyQuest!";
+    [Tooltip("Full path to the results CSV to reveal in the file manager. Leave empty to auto-find the newest .csv in the app's persistent data folder.")]
+    public string csvFilePath = "";
 
     private PlayerMovement playerMovement;
 
@@ -96,6 +98,10 @@ public class EpilogueEndScreenController : MonoBehaviour
 
     private void OnContinueClicked()
     {
+        // The restored world is now the player's home: swap the epilogue
+        // tracks out for the restored scene music (see WorldRestorationController).
+        WorldRestorationController.Instance?.RequestRestoredMusic();
+
         if (endScreenPanel != null) endScreenPanel.SetActive(false);
 
         if (playerMovement != null) playerMovement.enabled = true;
@@ -107,7 +113,11 @@ public class EpilogueEndScreenController : MonoBehaviour
 
     private void OnSendResultsClicked()
     {
-        ResultsExportHelper.ExportAndShare(this, androidShareTitle, SetStatus);
+        // Exports the canonical CSV, then opens the platform file manager at
+        // its location (Explorer-select on Windows, Finder reveal on macOS,
+        // MediaStore + file manager on Android, etc). csvFilePath, when set,
+        // points the reveal at a specific file instead of the canonical one.
+        ResultsExportHelper.ExportAndShare(this, androidShareTitle, SetStatus, csvFilePath);
     }
 
     private void SetStatus(string message)

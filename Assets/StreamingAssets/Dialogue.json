@@ -2,6 +2,7 @@
   "sequences": [
     {
       "sequenceID": "intro_prologue",
+      "skipSummary": "Glyph is pulled through a rift into Aethelscript, the world beneath the language of all things. Pythariel, the last codewarden, explains that Null Wraith has un-written the four Sanctums, hands Glyph the Spellbook, and sends him to restore the four Rune Crystals guarded by Printessa, Variel, Evalyn, and Whilow.",
       "endBehavior": "none",
       "nextSequenceIfStay": "",
       "questIDToComplete": "intro_complete",
@@ -130,6 +131,7 @@
     },
     {
       "sequenceID": "printessa_first_meeting",
+      "skipSummary": "Printessa, guide of the Print Console, explains that Null Wraith erased every printed statement, teaches how print() works and why quotes must match start to finish, then sends Glyph to the three missions on his tablet.",
       "endBehavior": "stay",
       "nextSequenceIfStay": "printessa_mission_reminder",
       "questIDToComplete": "print_console_speak_printessa",
@@ -193,6 +195,7 @@
     },
     {
       "sequenceID": "printessa_mission_reminder",
+      "skipSummary": "Printessa reminds Glyph to check his tablet for the remaining Print Console missions.",
       "endBehavior": "stay",
       "nextSequenceIfStay": "printessa_mission_reminder",
       "questIDToComplete": "",
@@ -206,6 +209,7 @@
     },
     {
       "sequenceID": "printessa_after_restore",
+      "skipSummary": "With the Print Crystal restored, Printessa praises Glyph's work and points him toward the Vars Vault before departing through the far gate.",
       "endBehavior": "depart",
       "nextSequenceIfStay": "",
       "questIDToComplete": "print_console_restore_crystal",
@@ -244,6 +248,7 @@
     },
     {
       "sequenceID": "variel_first_meeting",
+      "skipSummary": "Variel, keeper of the Vars Vault, teaches the rules of naming: assign values with a single =, names are case-sensitive, and = only assigns — it never compares.",
       "endBehavior": "stay",
       "nextSequenceIfStay": "variel_mission_reminder",
       "questIDToComplete": "vars_vault_speak_variel",
@@ -307,6 +312,7 @@
     },
     {
       "sequenceID": "variel_mission_reminder",
+      "skipSummary": "Variel reminds Glyph that one Crystal binding is still dark, and his tablet knows which.",
       "endBehavior": "stay",
       "nextSequenceIfStay": "variel_mission_reminder",
       "questIDToComplete": "",
@@ -320,6 +326,7 @@
     },
     {
       "sequenceID": "variel_after_restore",
+      "skipSummary": "With the Vault's names and values settled, Variel compliments Glyph's assignments and warns that the Input Mists are worse than they sound.",
       "endBehavior": "depart",
       "nextSequenceIfStay": "",
       "questIDToComplete": "vars_vault_restore_crystal",
@@ -348,6 +355,7 @@
     },
     {
       "sequenceID": "evalyn_first_meeting",
+      "skipSummary": "Evalyn, guide of the Input Mists, teaches that input() always answers in words, so numbers must be asked for explicitly with int(input(...)) — the Mists never assume what you meant.",
       "endBehavior": "stay",
       "nextSequenceIfStay": "evalyn_mission_reminder",
       "questIDToComplete": "input_mists_speak_evalyn",
@@ -396,6 +404,7 @@
     },
     {
       "sequenceID": "evalyn_mission_reminder",
+      "skipSummary": "Evalyn reminds Glyph that the Mists will not fill in his tablet for him — he has to ask again.",
       "endBehavior": "stay",
       "nextSequenceIfStay": "evalyn_mission_reminder",
       "questIDToComplete": "",
@@ -409,6 +418,7 @@
     },
     {
       "sequenceID": "evalyn_after_restore",
+      "skipSummary": "With the Mists' Crystal answered, Evalyn notes that Glyph asked well and warns that the Elif Labyrinth is the last of them and will not forgive carelessness.",
       "endBehavior": "depart",
       "nextSequenceIfStay": "",
       "questIDToComplete": "input_mists_restore_crystal",
@@ -437,6 +447,7 @@
     },
     {
       "sequenceID": "whilow_first_meeting",
+      "skipSummary": "Whilow, guide of the Elif Labyrinth, lays out the maze's rules: if and else branch, indentation is the only wall, elif is only asked after a no, and a loop that never changes what it checks never ends.",
       "endBehavior": "stay",
       "nextSequenceIfStay": "whilow_mission_reminder",
       "questIDToComplete": "elif_labyrinth_speak_whilow",
@@ -490,6 +501,7 @@
     },
     {
       "sequenceID": "whilow_mission_reminder",
+      "skipSummary": "Whilow tells Glyph that one line remains on his tablet — read it before moving on.",
       "endBehavior": "stay",
       "nextSequenceIfStay": "whilow_mission_reminder",
       "questIDToComplete": "",
@@ -503,6 +515,7 @@
     },
     {
       "sequenceID": "whilow_after_restore",
+      "skipSummary": "The Main Loop closes and the last Crystal answers. Glyph asks what comes next; Whilow says only that it is uncharted, and he goes anyway.",
       "endBehavior": "depart",
       "nextSequenceIfStay": "",
       "questIDToComplete": "elif_labyrinth_restore_crystal",
@@ -541,6 +554,7 @@
     },
     {
       "sequenceID": "epilogue",
+      "skipSummary": "Glyph faces Null Wraith and un-writes it with a working Python snippet of his own. The prophecy holds — but Null Wraith warns that what was corrupted once can be corrupted again.",
       "endBehavior": "none",
       "nextSequenceIfStay": "",
       "questIDToComplete": "",

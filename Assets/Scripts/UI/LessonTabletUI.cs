@@ -5,8 +5,11 @@ using TMPro;
 
 /// <summary>
 /// Read-only static lesson reference tablet. Separate GameObject from
-/// TabletMissionObject and RuneCrystal; shows a hardcoded definition,
-/// uses, do's, and don'ts block for a given knowledge component.
+/// TabletMissionObject and RuneCrystal; shows a compact one-screen cheat
+/// sheet for a knowledge component: one-line definition, SYNTAX, WHAT IT
+/// DOES, COMMON MISTAKES, CORRECT FORM, REMEMBER, and a "Next" pointer to
+/// the next lesson. Deliberately teaches the concept itself — it never
+/// spells out which puzzle formats or errors the player is about to face.
 /// No puzzle, no XP, no progression side effects. Purely informational.
 /// </summary>
 public class LessonTabletUI : MonoBehaviour
@@ -28,9 +31,12 @@ public class LessonTabletUI : MonoBehaviour
     {
         public string title;
         public string definition;
-        public string uses;
-        public string dos;
-        public string donts;
+        public string syntax;
+        public string whatItDoes;
+        public string mistakes;
+        public string correctForm;
+        public string remember;
+        public string nextUp;   // optional "? Next:" pointer line
     }
 
     private static readonly Dictionary<string, LessonContent> Content = new Dictionary<string, LessonContent>
@@ -38,50 +44,119 @@ public class LessonTabletUI : MonoBehaviour
         ["print_statements"] = new LessonContent
         {
             title = "Print Statements",
-            definition = "A print statement is a command that displays text or values on the screen. In Python, it is written as print(\"your message\") or print(value).",
-            uses = "Showing output to the user, checking what a variable currently holds, and confirming a program is running as expected.",
-            dos = "Do use quotation marks around plain text. Do use a comma or a plus sign to combine multiple items inside one print statement.",
-            donts = "Do not forget the closing parenthesis. Do not mix text and numbers with a plus sign without converting the number to text first."
+            definition = "Displays output to the screen using print().",
+            syntax =
+                "  print(\"Hello\")\n" +
+                "  print(variable)\n" +
+                "  print(\"Label:\", value)",
+            whatItDoes = "  Sends text or a value to the console; runs once per call.",
+            mistakes =
+                "  ? print \"Hello\"     ? missing parentheses (Python 2 style)\n" +
+                "  ? print(name + age) ? cannot add string and int directly",
+            correctForm = "  ? print(\"Age:\", age)",
+            remember =
+                "  If nothing appears, check that print() is not inside an\n" +
+                "  unexecuted block (wrong indentation or failed condition).",
+            nextUp = "? Next: Variables let you store values to print later."
         },
         ["variables"] = new LessonContent
         {
             title = "Variables",
-            definition = "A variable is a named container that stores a value in memory so it can be reused later. In Python, a variable is created the moment a value is assigned to it, for example score = 10.",
-            uses = "Storing player input, keeping track of a running total, and holding a value that changes as a program runs.",
-            dos = "Do give variables clear, descriptive names. Do assign a value before using the variable anywhere else in the program.",
-            donts = "Do not start a variable name with a number. Do not use spaces inside a variable name."
+            definition = "A named container that stores a value for later use.",
+            syntax =
+                "  score = 100\n" +
+                "  name = \"Hero\"\n" +
+                "  is_ready = True",
+            whatItDoes = "  Reserves memory and labels it; the value can change.",
+            mistakes =
+                "  ? 1score = 100   ? cannot start with a number\n" +
+                "  ? my score = 100 ? spaces are not allowed in names",
+            correctForm = "  ? my_score = 100",
+            remember =
+                "  Use the variable before you try to print or calculate with\n" +
+                "  it, or you will get a NameError.",
+            nextUp = "? Next: Input lets the user set the variable's value."
         },
         ["input_handling"] = new LessonContent
         {
             title = "Input Handling",
-            definition = "Input handling is how a program receives information typed by the user while it is running. In Python, this is done with the input() function, for example name = input(\"Enter your name: \").",
-            uses = "Asking the player for their name, collecting a number for a calculation, and pausing a program until the user responds.",
-            dos = "Do store the result of input() in a variable so it can be used later. Do convert the input to a number with int() or float() before doing math with it.",
-            donts = "Do not assume input() always returns a number. It always returns text, even if the user types digits."
+            definition = "Reads text typed by the user while the program runs.",
+            syntax =
+                "  name = input(\"Enter your name: \")\n" +
+                "  age  = int(input(\"Enter your age: \"))",
+            whatItDoes = "  Pauses execution, waits for the user, returns a string.",
+            mistakes =
+                "  ? age = input()        ? result is text, not a number\n" +
+                "  ? total = age + 5      ? TypeError: str + int",
+            correctForm = "  ? age = int(input(\"Age: \"))",
+            remember =
+                "  input() always returns a string. Convert with int() or\n" +
+                "  float() before doing any arithmetic.",
+            nextUp = "? Next: Conditionals let you branch based on that input."
         },
         ["conditionals"] = new LessonContent
         {
             title = "Conditionals",
-            definition = "A conditional is a structure that runs different code depending on whether a condition is true or false, using if, elif, and else.",
-            uses = "Checking whether a player's answer is correct, deciding which path a story takes, and validating input before using it.",
-            dos = "Do use two equals signs (==) to compare values. Do indent the code inside each if, elif, or else block.",
-            donts = "Do not use a single equals sign (=) when checking equality; that is assignment, not comparison. Do not forget the colon at the end of an if line."
+            definition = "Runs different code depending on whether a condition is true.",
+            syntax =
+                "  if score > 80:\n" +
+                "      print(\"Pass\")\n" +
+                "  elif score > 50:\n" +
+                "      print(\"Close\")\n" +
+                "  else:\n" +
+                "      print(\"Fail\")",
+            whatItDoes = "  Evaluates the condition; executes only the matching block.",
+            mistakes =
+                "  ? if score = 80:   ? assignment, not comparison\n" +
+                "  ? if score > 80    ? missing colon",
+            correctForm = "  ? if score == 80:",
+            remember =
+                "  Every if, elif, and else line ends with a colon. The body\n" +
+                "  must be indented by exactly 4 spaces.",
+            nextUp = "? Next: Loops let you repeat that check automatically."
         },
         ["loops"] = new LessonContent
         {
             title = "Loops",
-            definition = "A loop repeats a block of code multiple times. Python has two main kinds: a for loop, which repeats a set number of times or over a collection, and a while loop, which repeats as long as a condition stays true.",
-            uses = "Repeating an action for every item in a list, retrying a puzzle until it is solved correctly, and counting down or up automatically.",
-            dos = "Do make sure a while loop's condition will eventually become false. Do use range() for a for loop that just needs to repeat a fixed number of times.",
-            donts = "Do not forget to update the variable a while loop depends on, or the loop will never end. Do not confuse for and while when a fixed count is already known."
+            definition = "Repeats a block of code multiple times automatically.",
+            syntax =
+                "  for i in range(5):   # repeats 5 times (0 to 4)\n" +
+                "      print(i)\n" +
+                "\n" +
+                "  count = 0\n" +
+                "  while count < 5:\n" +
+                "      count += 1",
+            whatItDoes =
+                "  for: iterates a fixed number of times or over a sequence.\n" +
+                "  while: repeats as long as a condition stays True.",
+            mistakes =
+                "  ? while True:   ? infinite loop if nothing changes inside\n" +
+                "  ? for i in 5:  ? must use range(5), not a bare number",
+            correctForm = "  ? for i in range(5):",
+            remember =
+                "  A while loop must change the variable it checks, or it\n" +
+                "  never stops. Use for when the count is already known.",
+            nextUp = "? Next: Basic operations compute the values you count and branch on."
         },
         ["basic_operations"] = new LessonContent
         {
             title = "Basic Operations",
-            definition = "Basic operations are the arithmetic symbols Python uses to calculate values: + for addition, - for subtraction, * for multiplication, / for division, and % for the remainder after division.",
-            uses = "Calculating a score, computing a total from multiple values, and checking whether a number is even or odd using %.",
-            dos = "Do use parentheses to control the order operations happen in. Do remember that / always returns a decimal value in Python.",
-            donts = "Do not confuse = (assignment) with == (comparison). Do not divide by a variable without checking it cannot be zero."
+            definition = "Arithmetic symbols Python uses to compute values.",
+            syntax =
+                "  result = 10 + 3   # 13  addition\n" +
+                "  result = 10 - 3   # 7   subtraction\n" +
+                "  result = 10 * 3   # 30  multiplication\n" +
+                "  result = 10 / 3   # 3.33 division (always float)\n" +
+                "  result = 10 % 3   # 1   remainder",
+            whatItDoes = "  Calculates a new value; follow standard math precedence.",
+            mistakes =
+                "  ? \"5\" + 2         ? TypeError: str and int\n" +
+                "  ? score/0         ? ZeroDivisionError",
+            correctForm = "  ? int(\"5\") + 2    ? 7",
+            remember =
+                "  Use parentheses to force order. Check for zero before\n" +
+                "  dividing if the divisor comes from a variable.",
+            nextUp = ""
         }
     };
 
@@ -115,11 +190,17 @@ public class LessonTabletUI : MonoBehaviour
         if (titleText != null) titleText.text = lesson.title;
         if (bodyText != null)
         {
+            // <noparse> keeps TMP from eating '<' in code lines like "while count < 5:".
             bodyText.text =
-                $"<b>Definition</b>\n{lesson.definition}\n\n" +
-                $"<b>Uses</b>\n{lesson.uses}\n\n" +
-                $"<b>Do's</b>\n{lesson.dos}\n\n" +
-                $"<b>Don'ts</b>\n{lesson.donts}";
+                lesson.definition + "\n\n" +
+                "<b>SYNTAX</b>\n<noparse>" + lesson.syntax + "</noparse>\n\n" +
+                "<b>WHAT IT DOES</b>\n" + lesson.whatItDoes + "\n\n" +
+                "<b>COMMON MISTAKES</b>\n<noparse>" + lesson.mistakes + "</noparse>\n\n" +
+                "<b>CORRECT FORM</b>\n<noparse>" + lesson.correctForm + "</noparse>\n\n" +
+                "<b>REMEMBER</b>\n" + lesson.remember;
+
+            if (!string.IsNullOrEmpty(lesson.nextUp))
+                bodyText.text += "\n\n" + lesson.nextUp;
         }
 
         if (panelRoot != null) panelRoot.SetActive(true);

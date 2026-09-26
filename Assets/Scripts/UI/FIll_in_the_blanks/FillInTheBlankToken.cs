@@ -12,7 +12,6 @@ public class FillInTheBlankToken : MonoBehaviour, IPointerClickHandler, IPointer
 
     // Animation-ready state flags
     private bool isSelected = false;
-    private bool isHovered = false;
 
     // Color states — replace with animations later
     //private Color defaultColor = new Color(0.2f, 0.2f, 0.2f, 1f);
@@ -50,22 +49,10 @@ public class FillInTheBlankToken : MonoBehaviour, IPointerClickHandler, IPointer
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (!isSelected)
-        {
-            isHovered = true;
-            SetState_Hover();
-            // Hook: play hover animation here in future
-        }
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (!isSelected)
-        {
-            isHovered = false;
-            SetState_Default();
-            // Hook: play exit animation here in future
-        }
     }
 
     // --- State setters (animation hooks) ---
@@ -75,12 +62,6 @@ public class FillInTheBlankToken : MonoBehaviour, IPointerClickHandler, IPointer
         isSelected = false;
         //if (tokenImage != null) tokenImage.color = defaultColor;
         // Hook: play idle animation here in future
-    }
-
-    public void SetState_Hover()
-    {
-        //if (tokenImage != null) tokenImage.color = hoverColor;
-        // Hook: play hover animation here in future
     }
 
     public void SetState_Selected()

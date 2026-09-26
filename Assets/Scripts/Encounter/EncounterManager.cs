@@ -39,6 +39,16 @@ public class EncounterManager : MonoBehaviour
     // (split) hitPauseAfterImpact, per-prefab walk durations, facing settings
     // and model facing axes live on EncounterEffectsManager; the shared
     // lunge/lungeReturn durations stay as the 0-value fallback (rule unchanged).
+    [Header("Combo Crit (NEW)")]
+    [Tooltip("Consecutive correct answers required to charge a crit. 3 = every 3rd correct answer in a row crits (streak 6 crits again). Wrong answers reset the streak.")]
+    [Min(1)] public int critStreakRequired = 3;
+    [Tooltip("Damage multiplier applied when a crit fires (2 = double damage).")]
+    [Min(1f)] public float critDamageMultiplier = 2f;
+    [Tooltip("Master toggle for the combo crit system.")]
+    public bool comboCritsEnabled = true;
+    [Header("Combat Position Hold (NEW - player positioning bug fix)")]
+    [Tooltip("Max seconds the encounter waits for the player to SETTLE (finish dropping to the floor) at the combat spot while pinning their horizontal position. Once settled - or when this expires - the player is locked fully in place (position + rotation + velocity) for the rest of the encounter, and nothing can move them until movement is re-enabled.")]
+    [Min(0f)] public float combatPositionHoldTime = 0.75f;
     [Header("3D Enemy Prefab Registry")]
     public GameObject beginnerEnemyPrefab;
     public GameObject intermediateEnemyPrefab;
@@ -69,7 +79,13 @@ public class EncounterManager : MonoBehaviour
     private List<string> roundPuzzleIDs = new List<string>();
     private List<bool> roundResults = new List<bool>();
     private List<float> roundPGuessValues = new List<float>();
+    private int comboStreak = 0; // consecutive correct answers this encounter (crit charge)
     private bool encounterActive = false;
+    // DOUBLE-ENCOUNTER GUARD: true from the synchronous StartEncounter call
+    // until the encounter outro finishes. Covers the ~1.3s spiral window
+    // BEFORE encounterActive flips true (two triggers in that window used to
+    // run two full encounter sequences at once - two puzzle formats on screen).
+    private bool encounterStarting = false;
     private bool standardVictoryOutcome = false;
     private bool isBossEncounter = false;
     private GameObject spawnedEnemyInstance;
@@ -137,6 +153,15 @@ public class EncounterManager : MonoBehaviour
     {
         return encounterActive;
     }
+    /// <summary>True while an encounter owns the player: from the synchronous
+    /// StartEncounter call (spiral, teleport, spawn) through the victory/defeat
+    /// outro, until CleanUpEncounterAssets releases control. ZoneTrigger uses
+    /// this to ignore exit/re-enter physics events caused by the encounter's
+    /// own combat-position teleport.</summary>
+    public bool IsEncounterLocked()
+    {
+        return encounterActive || encounterStarting;
+    }
     public void StartEncounter(
         EnemyDifficultyCategory category,
         string knowledgeComponent,
@@ -148,6 +173,17 @@ public class EncounterManager : MonoBehaviour
         Quaternion playerCombatRot,
         ZoneTrigger sourceZone)
     {
+        // DOUBLE-ENCOUNTER GUARD: ignore any second trigger while an encounter
+        // is already running or still in its starting spiral (encounterActive
+        // only flips true ~1.3s into the sequence, so without this a zone
+        // re-enter / overlapping zone started a SECOND full encounter on top
+        // of the first - two puzzle formats showing at the same time).
+        if (encounterActive || encounterStarting)
+        {
+            Debug.LogWarning("[EncounterManager] StartEncounter ignored - an encounter is already active or starting.");
+            return;
+        }
+        encounterStarting = true;
         StartCoroutine(EncounterSequence(category, knowledgeComponent, isBossZone, enemyPos, enemyRot, playerMove, playerCombatPos, playerCombatRot, sourceZone));
     }
     private void BringOverlayToAbsoluteFront()
@@ -222,8 +258,14 @@ public class EncounterManager : MonoBehaviour
         }
         if (activePlayerMovement != null)
         {
-            activePlayerMovement.transform.position = playerCombatPos;
-            activePlayerMovement.transform.rotation = playerCombatRot;
+            // POSITION FIX: the player locomotes via rb.MovePosition with
+            // interpolation on, so a transform-only write leaves the simulation
+            // pose stale and the body snapped back / drifted off the assigned
+            // combat spot. Teleport through the Rigidbody (same lesson as the
+            // end-of-fight restore and EpilogueSequenceController), then hold
+            // the spot briefly so late spawn positioning can't overwrite it.
+            TeleportPlayerToCombatPosition(playerCombatPos, playerCombatRot);
+            StartCoroutine(HoldCombatPosition(playerCombatPos, playerCombatRot));
         }
         // --- CAMERA SWITCH ---
         if (mainGameplayCamera != null)
@@ -246,6 +288,7 @@ public class EncounterManager : MonoBehaviour
         encounterActive = true;
         puzzlesCorrectThisEncounter = 0;
         playerStats.Initialize();
+        comboStreak = 0; // crit charge resets at the start of every encounter
         if (spawnedEnemyInstance != null)
             Destroy(spawnedEnemyInstance);
 
@@ -349,6 +392,13 @@ public class EncounterManager : MonoBehaviour
         roundPGuessValues.Add(pGuessOverride);
         roundPuzzleIDs.Add(currentPuzzleID);
         if (playerAnsweredCorrectly) puzzlesCorrectThisEncounter++;
+        // --- COMBO CRIT bookkeeping (runs BEFORE the hit sequence, so the
+        // impact uses it). Research logging / BKT inputs are untouched: the
+        // crit only multiplies DAMAGE after correctness is already decided.
+        if (playerAnsweredCorrectly) comboStreak++;
+        else comboStreak = 0;
+        bool isCrit = comboCritsEnabled && playerAnsweredCorrectly &&
+            comboStreak % Mathf.Max(1, critStreakRequired) == 0;
         StudentLogManager.Instance?.LogPuzzleComplete(
             currentPuzzleID,
             currentRoundFormat.ToString(),
@@ -384,12 +434,16 @@ public class EncounterManager : MonoBehaviour
                 () =>
                 {
                     damage = CalculatePlayerDamage();
+                    if (isCrit) damage = Mathf.RoundToInt(damage * critDamageMultiplier);
                     currentEnemyHP = Mathf.Max(0, currentEnemyHP - damage);
-                    UpdateCombatLog($"Correct! You dealt {damage} damage to the enemy.");
+                    UpdateCombatLog(isCrit
+                        ? $"CRITICAL HIT! You dealt {damage} damage to the enemy!"
+                        : $"Correct! You dealt {damage} damage to the enemy.");
                     // (split) moved from inside ThrowIceBall: the HP bar
                     // refresh stays with the manager. Same frame as before.
                     UpdateHPDisplay();
-                }));
+                },
+                isCrit)); // crit VFX + SFX fire exactly when the projectile lands
         }
         else
         {
@@ -610,6 +664,108 @@ public class EncounterManager : MonoBehaviour
     {
         return activePlayerMovement != null
             ? activePlayerMovement.transform.position : Vector3.zero;
+    }
+    /// <summary>Teleports the player through the Rigidbody (not just the transform) -
+    /// the player locomotes via rb.MovePosition with interpolation on, so a
+    /// transform-only write leaves the simulation pose stale and the body
+    /// snaps back / drifts off the assigned position on the next physics step.
+    /// Same recipe as the end-of-fight restore and EpilogueSequenceController.</summary>
+    private void TeleportPlayerToCombatPosition(Vector3 pos, Quaternion rot)
+    {
+        if (activePlayerMovement == null) return;
+        activePlayerMovement.transform.SetPositionAndRotation(pos, rot);
+        Rigidbody playerBody = activePlayerMovement.GetComponent<Rigidbody>();
+        if (playerBody != null)
+        {
+            playerBody.position = pos;
+            playerBody.rotation = rot;
+#if UNITY_6000_0_OR_NEWER
+            playerBody.linearVelocity = Vector3.zero;
+#else
+            playerBody.velocity = Vector3.zero;
+#endif
+            playerBody.angularVelocity = Vector3.zero;
+        }
+    }
+    /// <summary>Keeps the player at their assigned combat position for the WHOLE
+    /// encounter, in two phases. PHASE 1 (settle): pin the horizontal position +
+    /// facing while gravity finishes the drop - the teleport spot can sit a hair
+    /// above the floor, and snapping Y here too would fight the fall (the player
+    /// would hover/jitter instead of landing). PHASE 2 (full pin): once the body
+    /// has settled - or the settle window expires - lock the SETTLED pose and
+    /// re-assert position + rotation + zero velocity every frame, so frictionless
+    /// contacts (PlayerMovement zeroes all collider friction), slopes and stray
+    /// scripts can never slide the player off the spot again. Both phases abort
+    /// the instant movement is re-enabled or the encounter releases the player;
+    /// the end-of-fight restore writes the home position and re-enables movement
+    /// synchronously in the same frame, so the pin can never fight it.</summary>
+    private IEnumerator HoldCombatPosition(Vector3 pos, Quaternion rot)
+    {
+        // --- PHASE 1: settle (pin XZ, let gravity finish the drop) ---
+        // NOTE: also runs while the encounter is still STARTING - this coroutine
+        // begins before encounterActive flips true (it is started during the
+        // spiral), so a pure encounterActive check exited the loop on its first
+        // evaluation and the hold silently never ran.
+        float deadline = Time.time + Mathf.Max(0.1f, combatPositionHoldTime);
+        float lastY = float.PositiveInfinity;
+        int stableFrames = 0;
+        while ((encounterActive || encounterStarting) && Time.time < deadline)
+        {
+            if (activePlayerMovement == null || activePlayerMovement.enabled) yield break;
+            Transform t = activePlayerMovement.transform;
+            PinPlayerHorizontal(pos, rot);
+            // Settled = Y barely moved for several consecutive frames.
+            stableFrames = Mathf.Abs(t.position.y - lastY) < 0.0005f ? stableFrames + 1 : 0;
+            lastY = t.position.y;
+            if (stableFrames >= 5) break;
+            yield return null;
+        }
+        // --- PHASE 2: full pin on the SETTLED pose (not the raw teleport pose -
+        // the body legitimately rests a few cm below it after the drop, and pinning
+        // the teleport Y would bounce the player up and down forever) ---
+        Vector3 pinnedPos = activePlayerMovement != null
+            ? activePlayerMovement.transform.position
+            : pos;
+        pinnedPos = new Vector3(pos.x, pinnedPos.y, pos.z); // XZ stay exactly on the assigned spot
+        while (encounterActive || encounterStarting)
+        {
+            if (activePlayerMovement == null || activePlayerMovement.enabled) yield break;
+            Transform t = activePlayerMovement.transform;
+            if ((t.position - pinnedPos).sqrMagnitude > 0.000001f ||
+                Quaternion.Angle(t.rotation, rot) > 0.5f)
+            {
+                TeleportPlayerToCombatPosition(pinnedPos, rot);
+            }
+            yield return null;
+        }
+    }
+    /// <summary>Horizontal-only counterpart of TeleportPlayerToCombatPosition for
+    /// the settle phase: pins X/Z + rotation through the Rigidbody (interpolation
+    /// stays consistent) and kills slide momentum, but leaves vertical velocity
+    /// untouched so gravity can finish the drop naturally.</summary>
+    private void PinPlayerHorizontal(Vector3 pos, Quaternion rot)
+    {
+        if (activePlayerMovement == null) return;
+        Transform t = activePlayerMovement.transform;
+        t.SetPositionAndRotation(new Vector3(pos.x, t.position.y, pos.z), rot);
+        Rigidbody playerBody = activePlayerMovement.GetComponent<Rigidbody>();
+        if (playerBody != null)
+        {
+            playerBody.position = new Vector3(pos.x, playerBody.position.y, pos.z);
+            playerBody.rotation = rot;
+#if UNITY_6000_0_OR_NEWER
+            Vector3 v = playerBody.linearVelocity;
+#else
+            Vector3 v = playerBody.velocity;
+#endif
+            v.x = 0f;
+            v.z = 0f;
+#if UNITY_6000_0_OR_NEWER
+            playerBody.linearVelocity = v;
+#else
+            playerBody.velocity = v;
+#endif
+        }
     }
     private int CalculatePlayerDamage()
     {
@@ -833,6 +989,11 @@ public class EncounterManager : MonoBehaviour
             cinematicEncounterCamera.gameObject.SetActive(false);
         if (mainGameplayCamera != null)
             mainGameplayCamera.gameObject.SetActive(true);
+        // DOUBLE-ENCOUNTER GUARD release: the encounter lifecycle - including
+        // the victory/defeat outro and zone hand-off - is fully done here; only
+        // the cosmetic overlay fade remains. From this point a NEW encounter
+        // may legitimately start.
+        encounterStarting = false;
         if (spiralTransitionOverlay != null)
         {
             float fadeDuration = 0.3f;
@@ -894,4 +1055,3 @@ public class EncounterManager : MonoBehaviour
     private void UpdateRoundInfo() { if (roundInfoText != null) roundInfoText.text = $"Round {currentRound}"; }
     private void UpdateCombatLog(string message) { if (combatLogText != null) combatLogText.text = message; }
 }
- 

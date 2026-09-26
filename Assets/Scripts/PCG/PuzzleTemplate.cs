@@ -50,6 +50,13 @@ public class PuzzleTemplate
     // the legacy "Complete the missing line" header exactly as before.
     // Slot tokens like {name} are filled by PuzzleVariationEngine.
     public string goalText;
+
+    // LineScramble only: every dependency-valid permutation of codeLines
+    // that simulates to the SAME output as the canonical order, computed by
+    // PuzzleVariationEngine.ComputeAcceptedOrders. Keys are comma-joined row
+    // indices (e.g. "0,1,2"). Null/empty for legacy or control-flow templates
+    // -> LineScramblePuzzleFormat falls back to its dependency validator.
+    public List<string> acceptedOrders;
 }
 
 [Serializable]

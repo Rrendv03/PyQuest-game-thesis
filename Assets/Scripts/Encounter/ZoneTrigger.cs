@@ -151,6 +151,16 @@ public class ZoneTrigger : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
+            // DOUBLE-ENCOUNTER GUARD: an exit fired while an encounter is
+            // running/starting is just the encounter's own combat-position
+            // teleport (or a physics interpolation sweep) moving the player
+            // out of the zone volume mid-fight. Re-arming here would let the
+            // follow-up re-enter fire OnTriggerEnter again and start a SECOND
+            // encounter on top of the running one. Keep the zone consumed;
+            // the encounter completion path owns the zone lifecycle
+            // (destroy on win, DisarmUntilPlayerExits on loss).
+            if (EncounterManager.Instance != null && EncounterManager.Instance.IsEncounterLocked())
+                return;
             triggered = false;
             disarmedUntilExit = false;  // player left the zone: re-arm for the next deliberate entry
         }

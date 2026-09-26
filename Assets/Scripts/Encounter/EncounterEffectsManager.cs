@@ -52,7 +52,7 @@ public class EncounterEffectsManager : MonoBehaviour
     private bool switchedToFightMusic = false;
 
     [Header("Ice Ball Attack (moved from EncounterManager)")]
-    [Tooltip("The player's ranged attack visual: a small sphere with a ParticleSystem.\nSETUP: create the sphere+particles, parent it under the EncounterManager GameObject,\nand LEAVE IT INACTIVE (it is only a template). At throw time an active copy is\ninstantiated at the player's model, flies point A to B into the enemy, then is\ndestroyed. Leave empty to fall back to a hit with no visual (combat never stalls).")]
+    [Tooltip("The player's ranged attack visual: a small sphere with a ParticleSystem.\nSETUP: create the sphere+particles anywhere in the scene and assign it here\n(preferably INACTIVE - it is only a template). At throw time an active copy is\ninstantiated at the player's model, flies point A to B into the enemy, then is\ndestroyed. The manager keeps a protected hidden copy of this template under\nitself, so the encounter flow (camera/HUD/zone switching) can never delete it.\nLeave empty to fall back to a hit with no visual (combat never stalls).")]
     public GameObject iceBallEffect;
     [Tooltip("Ice ball travel speed in units per second.")]
     [Min(1f)] public float iceBallSpeed = 10f;
@@ -60,6 +60,76 @@ public class EncounterEffectsManager : MonoBehaviour
     public Vector3 iceBallSpawnOffset = new Vector3(0f, 1f, 0.3f);
     [Tooltip("Vertical aim offset added to the enemy's position so the ball flies at torso height instead of the floor pivot.")]
     public float iceBallAimHeight = 0.8f;
+    [Header("Projectile Impact VFX (NEW)")]
+    [Tooltip("VFX spawned AT THE ENEMY the exact moment the ice ball lands (normal hits). Create the burst/particles anywhere in the scene and assign it here (preferably INACTIVE - it is only a template; the manager keeps a protected hidden copy under itself, so the encounter flow can never delete it). Leave empty to skip.")]
+    public GameObject iceBallImpactEffect;
+    [Tooltip("Bigger VFX spawned at the enemy when a CRIT lands. Leave empty to reuse iceBallImpactEffect.")]
+    public GameObject critImpactEffect;
+    [Tooltip("Vertical offset for the impact VFX spawn point, measured from the enemy's ground pivot (the enemy transform's Y). 0 = burst at ground level at the enemy's feet; nudge in the Inspector if a specific enemy model's pivot sits above/below the ground. The projectile still flies to torso height (iceBallAimHeight) - only the burst position moves.")]
+    public float impactVfxYOffset = -0.1f;
+    [Header("Combo Crit Audio (NEW)")]
+    [Tooltip("Heavier hit sound played INSTEAD of playerHitSound when a crit lands. Leave empty to reuse playerHitSound.")]
+    public AudioClip critHitSound;
+    [Tooltip("Crit narration / announcer clip played with the crit hit sound. Leave empty to skip.")]
+    public AudioClip critNarrationSound;
+    [Range(0f, 1f)] public float critVolume = 1f;
+
+    // --- PROTECTED VFX SOURCES (impact-VFX disappearance fix) ---
+    // The Inspector template GameObjects can live ANYWHERE in the hierarchy, but
+    // the encounter flow deactivates/destroys large parts of the scene (gameplay
+    // camera off, HUD hidden, zone teardown) and one-shot burst prefabs often
+    // carry ParticleSystem 'Stop Action = Destroy'. Any of those used to delete
+    // the template itself - the reference went null and SpawnImpactVfx silently
+    // spawned nothing for the rest of the session ('the VFX disappears when the
+    // encounter initializes'). Fix: at Awake the manager keeps its own dormant
+    // copy of every template parented under ITSELF, and all runtime spawning uses
+    // those protected sources. The originals are never touched afterwards.
+    private GameObject iceBallSource;
+    private GameObject normalImpactSource;
+    private GameObject critImpactSource;
+
+    /// <summary>Prepares the protected VFX sources. Cheap and idempotent (each
+    /// line no-ops once its source exists), so it is safe to call in Awake and
+    /// again at every throw/spawn to catch templates assigned late.</summary>
+    private void PrepareVfxSources()
+    {
+        iceBallSource = MakeInternalSource(iceBallEffect, iceBallSource, "EncounterIceBallSource");
+        normalImpactSource = MakeInternalSource(iceBallImpactEffect, normalImpactSource, "EncounterImpactVfxSource");
+        critImpactSource = MakeInternalSource(critImpactEffect, critImpactSource, "EncounterCritImpactVfxSource");
+    }
+    /// <summary>Returns a dormant template source that is guaranteed to survive the
+    /// whole session: the template itself when it is already parked under this
+    /// manager, otherwise a private hidden clone created under it. Once a source
+    /// exists it is always preferred - even if the original template is later
+    /// destroyed by the encounter flow or by its own Stop Action.</summary>
+    private GameObject MakeInternalSource(GameObject template, GameObject existingSource, string sourceName)
+    {
+        if (template == null) return existingSource; // unassigned (or destroyed since last prepare): keep what we have
+        if (template.transform.IsChildOf(transform))
+        {
+            // Already under this manager - it survives the encounter flow here.
+            // Just make sure it is dormant (a one-shot burst left active would
+            // play at scene load and can self-destruct via Stop Action).
+            NeutralizeTemplatePlayback(template);
+            template.SetActive(false);
+            return template;
+        }
+        if (existingSource != null) return existingSource; // protected copy already exists
+        GameObject src = Instantiate(template, transform);
+        src.name = sourceName;
+        NeutralizeTemplatePlayback(src);
+        src.SetActive(false);
+        return src;
+    }
+    /// <summary>Stops and clears every ParticleSystem under a template copy, so a
+    /// Play-On-Awake burst triggered by Instantiate's Awake can neither emit here
+    /// nor destroy the template via 'Stop Action = Destroy'.</summary>
+    private static void NeutralizeTemplatePlayback(GameObject src)
+    {
+        if (src == null) return;
+        foreach (ParticleSystem ps in src.GetComponentsInChildren<ParticleSystem>(true))
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
 
     // ENEMY WALK DURATIONS (moved) - per-prefab walk-out/walk-back seconds, because a skeleton and a goblin don't move at
     // the same speed. 0 = use EncounterManager's shared lungeDuration / lungeReturnDuration (the manager owns the
@@ -230,6 +300,9 @@ public class EncounterEffectsManager : MonoBehaviour
         // swallowed by (or collide with) one-shots on the main SFX source.
         secondarySource = gameObject.AddComponent<AudioSource>();
         secondarySource.playOnAwake = false;
+        // Protect the VFX templates right at load, BEFORE anything in the scene
+        // can deactivate/destroy them (camera switch, HUD hide, Stop Action).
+        PrepareVfxSources();
     }
     public void PlaySfx(AudioClip clip)
     {
@@ -397,14 +470,46 @@ public class EncounterEffectsManager : MonoBehaviour
         Debug.LogError($"[EncounterEffectsManager] Controller '{animator.runtimeAnimatorController.name}' has no state or parameter named '{stateName}'. Check the Clip assignment report from Tools > PyQuest > Create Player Animator Controller, or the walk/attack name fields on EncounterEffectsManager.", animator);
     }
 
+    /// <summary>Spawns an active copy of an impact template (like the ice-ball copy) at the impact point and
+    /// auto-destroys it after its longest ParticleSystem finishes, so impact copies never linger in the scene.
+    /// Degrades safely: null/empty template = no-op.</summary>
+    private void SpawnImpactVfx(GameObject source, Vector3 position)
+    {
+        if (source == null) return;
+        GameObject vfx = Instantiate(source, position, Quaternion.identity);
+        vfx.SetActive(true);
+        float lifetime = 1.5f;
+        foreach (ParticleSystem ps in vfx.GetComponentsInChildren<ParticleSystem>(true))
+            lifetime = Mathf.Max(lifetime, ps.main.duration + ps.main.startLifetime.constantMax);
+        Destroy(vfx, lifetime);
+    }
+    /// <summary>One-shot SFX with an explicit volume (crit audio can punch above the shared sfxVolume).
+    /// Falls back to the normal sfxVolume path when the clip or source is missing.</summary>
+    private void PlaySfxAtVolume(AudioClip clip, float volume)
+    {
+        if (clip == null || sfxSource == null) { PlaySfx(clip); return; }
+        sfxSource.PlayOneShot(clip, Mathf.Clamp01(volume));
+    }
+
     /// <summary>The player's ranged attack: spawns an active copy of the iceBallEffect template at the player, flies it point-A-to-B
     /// into the enemy's live position (aim re-read every frame; the player's Attack state fires as the throw wind-up), then on
     /// arrival plays the hit sound + target trigger + onImpact damage. DEGRADES SAFELY (no template/player/enemy still fires the
     /// impact after a short delay); only instantiated copies fly, never the template. The HP-bar refresh stayed with the manager -
     /// pass it via onImpact (same frame as before the split).</summary>
     public IEnumerator ThrowIceBall(Transform origin, Transform enemyTransform,
-        AudioClip hitSound, Animator targetAnimator, string targetTrigger, System.Action onImpact)
+        AudioClip hitSound, Animator targetAnimator, string targetTrigger, System.Action onImpact,
+        bool isCrit = false)
     {
+        // Re-run is a no-op unless a template was assigned late; guarantees the
+        // protected sources exist even if Awake ran before the fields were set.
+        PrepareVfxSources();
+        // Impact point for the hit VFX: torso height on the enemy (re-captured
+        // from the ball's final position after flight, so the burst lands
+        // exactly where the projectile hit).
+        Vector3 impactPoint = enemyTransform != null
+            ? enemyTransform.position + Vector3.up * iceBallAimHeight
+            : Vector3.zero;
+
         // --- Throw wind-up: the player's ATTACK animation, if present ---
         // Two fixes for "Attack never played": FindPlayableAnimator instead of GetComponent<Animator> (the bare wrapper
         // Animator swallowed SetTrigger), and PlayPlayerState = CrossFadeInFixedTime into the Attack state (bypasses
@@ -416,11 +521,11 @@ public class EncounterEffectsManager : MonoBehaviour
         }
 
         GameObject ball = null;
-        if (iceBallEffect != null && origin != null && enemyTransform != null)
+        if (iceBallSource != null && origin != null && enemyTransform != null)
         {
             Vector3 startPos = origin.position
                 + origin.TransformDirection(iceBallSpawnOffset);
-            ball = Instantiate(iceBallEffect, startPos, Quaternion.identity);
+            ball = Instantiate(iceBallSource, startPos, Quaternion.identity);
             ball.SetActive(true);
         }
 
@@ -452,6 +557,7 @@ public class EncounterEffectsManager : MonoBehaviour
                 t += Time.deltaTime;
                 yield return null;
             }
+            impactPoint = ball.transform.position; // VFX lands exactly where the ball hit
             Destroy(ball); // the flying copy; the inactive template stays
         }
         else
@@ -460,10 +566,22 @@ public class EncounterEffectsManager : MonoBehaviour
             yield return new WaitForSeconds(0.15f);
         }
 
-        // --- IMPACT: sound + enemy reaction + damage, all in one instant ---
+        // --- IMPACT: VFX + sound + enemy reaction + damage, all in one instant ---
         // NOTE: the target here is ALWAYS the enemy - the player's hurt
         // animation goes through the manager's walk-attack sequence instead.
-        PlaySfx(hitSound);
+        // Projectile-hit VFX fires exactly when the ball reaches the enemy
+        // (a crit gets its own bigger burst). The burst sits at GROUND level:
+        // the ball's landing X/Z is kept (so it still reads as the same hit)
+        // but the height comes from the enemy's ground pivot plus the
+        // Inspector-tunable impactVfxYOffset, instead of the torso-height
+        // aim point the projectile flies to.
+        Vector3 burstPoint = impactPoint;
+        burstPoint.y = (enemyTransform != null ? enemyTransform.position.y : impactPoint.y)
+            + impactVfxYOffset;
+        SpawnImpactVfx(isCrit ? critImpactSource : normalImpactSource, burstPoint);
+        // Crit audio: heavier hit sound + narration layered on top.
+        PlaySfxAtVolume(isCrit && critHitSound != null ? critHitSound : hitSound, isCrit ? critVolume : sfxVolume);
+        if (isCrit && critNarrationSound != null) PlaySfxAtVolume(critNarrationSound, critVolume);
         if (targetAnimator != null) targetAnimator.SetTrigger(targetTrigger);
         if (onImpact != null) onImpact();
 

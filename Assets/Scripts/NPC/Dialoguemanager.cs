@@ -14,6 +14,13 @@ using UnityEngine.UI;
 /// and subscribe to OnSequenceComplete to layer their own behavior
 /// (camera pans, fades, scene loads, quest hooks) on top.
 ///
+/// SKIP DIALOGUE: every sequence can be skipped through a Skip Dialogue
+/// button and a per-sequence confirm panel. The panel shows THAT sequence's
+/// summary (its skipSummary from dialogue.json, or an auto-built excerpt of
+/// its lines when the field is empty). Confirming ends the sequence through
+/// EndCurrentSequence() — the exact same completion path as reading it — so
+/// OnSequenceComplete still fires and quest/scene flow stays intact.
+///
 /// Scene-local, not a cross-scene singleton. Each scene that needs dialogue
 /// (IntroScene, MainMap) places its own DialogueManager with its own UI
 /// wiring and its own Instance. dialogue.json is reloaded fresh each time
@@ -55,6 +62,20 @@ public class DialogueManager : MonoBehaviour
     public Button advanceButton;
     public Text advanceButtonLabel;
 
+    [Header("Skip Dialogue")]
+    [Tooltip("Optional: your own Skip Dialogue button. Left empty, one is auto-built on the dialogue panel.")]
+    public Button skipDialogueButton;
+    [Tooltip("Optional: your own confirm panel. Left empty, one is auto-built (dim backdrop, summary text, Keep Talking / Skip buttons).")]
+    public GameObject skipConfirmPanel;
+    [Tooltip("Required when skipConfirmPanel is assigned: the Text that shows the sequence's summary.")]
+    public Text skipConfirmSummaryText;
+    [Tooltip("Required when skipConfirmPanel is assigned: the button that confirms the skip.")]
+    public Button skipConfirmYesButton;
+    [Tooltip("Required when skipConfirmPanel is assigned: the button that cancels and keeps talking.")]
+    public Button skipConfirmNoButton;
+    [Tooltip("When a sequence has no skipSummary in dialogue.json, build a short excerpt from its own lines instead.")]
+    public bool autoSummarizeSkippedDialogue = true;
+
     [Header("Typewriter")]
     public float typewriterSpeed = 0.03f;
 
@@ -73,7 +94,7 @@ public class DialogueManager : MonoBehaviour
     [Tooltip("Undertale-style voice blip played repeatedly while the typewriter reveals text.")]
     public AudioClip dialogueBlip;
     [Tooltip("Play the blip at most once every N revealed characters (1 = every character).")]
-    public int blipEveryNChars = 2;
+    public int blipEveryNChars = 4;
     [Range(0f, 1f)] public float encounterVolume = 1f;
     [Range(0f, 1f)] public float blipVolume = 1f;
 
@@ -93,6 +114,9 @@ public class DialogueManager : MonoBehaviour
     private bool isTyping;
     private bool isInCinematicMode;
     private Coroutine typewriterCoroutine;
+    private Coroutine modeSwitchCoroutine;      // SwitchModeThenShowLine wrapper
+    private Coroutine modeTransitionCoroutine;  // the inner TransitionMode fade
+    private bool isSkipConfirmOpen;
     void Awake()
     {
         Instance = this;
@@ -114,6 +138,22 @@ public class DialogueManager : MonoBehaviour
 
         if (advanceButton != null)
             advanceButton.onClick.AddListener(OnAdvancePressed);
+
+        // Skip Dialogue UI: auto-build whatever was left unassigned, then wire
+        // the listeners exactly once (the builders never subscribe themselves).
+        EnsureSkipDialogueUi();
+
+        if (skipDialogueButton != null)
+        {
+            skipDialogueButton.onClick.AddListener(OnSkipDialoguePressed);
+            skipDialogueButton.gameObject.SetActive(false);
+        }
+        if (skipConfirmYesButton != null)
+            skipConfirmYesButton.onClick.AddListener(OnSkipDialogueConfirmed);
+        if (skipConfirmNoButton != null)
+            skipConfirmNoButton.onClick.AddListener(OnSkipDialogueCancelled);
+        if (skipConfirmPanel != null)
+            skipConfirmPanel.SetActive(false);
 
         if (fadeOverlay != null)
         {
@@ -380,6 +420,12 @@ public class DialogueManager : MonoBehaviour
         currentSequence = sequence;
         currentLineIndex = 0;
 
+        // A fresh sequence always starts with the confirm panel closed and the
+        // skip button available again.
+        isSkipConfirmOpen = false;
+        if (skipConfirmPanel != null) skipConfirmPanel.SetActive(false);
+        if (skipDialogueButton != null) skipDialogueButton.gameObject.SetActive(true);
+
         // Block autosave and hide HUD while dialogue is active
         SaveLoadManager.IsSafeToSave = false;
         SaveRestrictionEnforcer.Instance?.AddBlocker("dialogue");
@@ -444,7 +490,9 @@ public class DialogueManager : MonoBehaviour
 
         if (line.isCinematic != isInCinematicMode)
         {
-            StartCoroutine(SwitchModeThenShowLine(line));
+            // Tracked so a skip during a cinematic fade can stop the whole
+            // chain, not just the text reveal.
+            modeSwitchCoroutine = StartCoroutine(SwitchModeThenShowLine(line));
             return;
         }
 
@@ -453,7 +501,10 @@ public class DialogueManager : MonoBehaviour
 
     private IEnumerator SwitchModeThenShowLine(DialogueLine line)
     {
-        yield return StartCoroutine(TransitionMode(line.isCinematic));
+        // Tracked separately: stopping the outer coroutine does NOT stop a
+        // nested one, so the fade keeps its own handle for skip/end cleanup.
+        modeTransitionCoroutine = StartCoroutine(TransitionMode(line.isCinematic));
+        yield return modeTransitionCoroutine;
         ShowLineText(line);
     }
 
@@ -491,6 +542,11 @@ public class DialogueManager : MonoBehaviour
 
         for (int i = 0; i <= fullText.Length; i++)
         {
+            // The skip confirm panel is modal: hold the typewriter (and its
+            // blips) exactly where it is until the player answers it.
+            while (isSkipConfirmOpen)
+                yield return null;
+
             if (target != null) target.text = fullText.Substring(0, i);
 
             // Undertale-style voice blip: fire on each newly revealed letter.
@@ -508,6 +564,7 @@ public class DialogueManager : MonoBehaviour
     private void OnAdvancePressed()
     {
         if (currentSequence == null) return;
+        if (isSkipConfirmOpen) return; // modal is up; ignore taps that leak through
 
         if (isTyping)
         {
@@ -527,7 +584,252 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    // === Mode Transition ======================================================================
+    // === Skip Dialogue =========================================================================
+    // Every sequence can be skipped. The Skip Dialogue button opens a small
+    // confirm panel that shows a summary of the sequence being skipped (its
+    // "skipSummary" from dialogue.json, or an auto-built excerpt from its
+    // lines when that field is empty). Confirming ends the sequence through
+    // EndCurrentSequence() — the same completion path as reading to the last
+    // line — so OnSequenceComplete still fires and callers (NPCController,
+    // IntroSequenceController) run their normal post-dialogue behavior:
+    // quest completion, endBehavior, camera/scene hooks, HUD + autosave
+    // restore. Nothing downstream can tell a skipped dialogue from a read one.
+
+    private void OnSkipDialoguePressed()
+    {
+        if (currentSequence == null || isSkipConfirmOpen) return;
+        OpenSkipConfirmPanel();
+    }
+
+    private void OpenSkipConfirmPanel()
+    {
+        isSkipConfirmOpen = true;
+
+        if (skipConfirmSummaryText != null)
+            skipConfirmSummaryText.text = ResolveSkipSummary(currentSequence);
+
+        if (skipConfirmPanel != null)
+            skipConfirmPanel.SetActive(true);
+        else
+            Debug.LogWarning("[DialogueManager] Skip confirm panel is missing — a skip needs confirmation, so nothing was skipped.");
+    }
+
+    private void OnSkipDialogueConfirmed()
+    {
+        if (!isSkipConfirmOpen) return;
+        CloseSkipConfirmPanel();
+        SkipCurrentSequence();
+    }
+
+    private void OnSkipDialogueCancelled()
+    {
+        CloseSkipConfirmPanel();
+    }
+
+    private void CloseSkipConfirmPanel()
+    {
+        isSkipConfirmOpen = false;
+        if (skipConfirmPanel != null)
+            skipConfirmPanel.SetActive(false);
+    }
+
+    // Ends the running sequence immediately, through the normal completion
+    // path. The typewriter (paused behind the confirm panel) and any running
+    // cinematic fade are stopped first.
+    private void SkipCurrentSequence()
+    {
+        if (currentSequence == null) return;
+
+        if (typewriterCoroutine != null)
+        {
+            StopCoroutine(typewriterCoroutine);
+            typewriterCoroutine = null;
+        }
+        if (modeSwitchCoroutine != null)
+        {
+            StopCoroutine(modeSwitchCoroutine);
+            modeSwitchCoroutine = null;
+        }
+        if (modeTransitionCoroutine != null)
+        {
+            StopCoroutine(modeTransitionCoroutine);
+            modeTransitionCoroutine = null;
+        }
+
+        isTyping = false;
+        EndCurrentSequence();
+    }
+
+    // The summary shown in the confirm panel: the sequence's curated
+    // skipSummary when dialogue.json provides one, otherwise a short excerpt
+    // built from the sequence's own lines.
+    private string ResolveSkipSummary(DialogueSequence sequence)
+    {
+        if (sequence == null) return "";
+        if (!string.IsNullOrWhiteSpace(sequence.skipSummary))
+            return sequence.skipSummary;
+
+        if (!autoSummarizeSkippedDialogue) return "";
+
+        // Who leads the scene, how long it runs, and how it opens.
+        string speaker = "";
+        for (int i = 0; i < sequence.lines.Count && speaker.Length == 0; i++)
+            speaker = (sequence.lines[i].speakerName ?? "").Trim();
+        if (speaker.Length == 0) speaker = "the story";
+
+        string opening = "";
+        for (int i = 0; i < sequence.lines.Count && opening.Length == 0; i++)
+        {
+            string candidate = (sequence.lines[i].dialogueText ?? "")
+                .Replace("\r", " ").Replace("\n", " ").Trim();
+            if (candidate.Length > 0) opening = candidate;
+        }
+        if (opening.Length > 160)
+            opening = opening.Substring(0, 157) + "...";
+
+        string lineWord = sequence.lines.Count == 1 ? "line" : "lines";
+        return $"{sequence.lines.Count} {lineWord} with {speaker}.\n\n\"{opening}\"";
+    }
+
+    // --- Auto-built skip UI --------------------------------------------------------------------
+    // Left unassigned in the Inspector, the button and the confirm panel are
+    // built once at runtime, so every scene's DialogueManager gets the feature
+    // with no scene edits. Assign your own references to restyle or localize
+    // instead — the auto-build then never runs.
+    private void EnsureSkipDialogueUi()
+    {
+        if (skipConfirmPanel == null)
+            BuildSkipConfirmPanel();
+        else if (skipConfirmSummaryText == null || skipConfirmYesButton == null || skipConfirmNoButton == null)
+            Debug.LogError("[DialogueManager] skipConfirmPanel is assigned but its summary text / yes / no button references are not. Assign them, or leave skipConfirmPanel empty to use the auto-built panel.");
+
+        if (skipDialogueButton == null)
+            BuildSkipButton();
+    }
+
+    private void BuildSkipButton()
+    {
+        if (dialoguePanel == null)
+        {
+            Debug.LogError("[DialogueManager] Cannot auto-build the Skip Dialogue button: dialoguePanel is not assigned.");
+            return;
+        }
+
+        GameObject buttonGo = new GameObject("SkipDialogueButton (auto)", typeof(RectTransform), typeof(Image), typeof(Button));
+        RectTransform rt = buttonGo.GetComponent<RectTransform>();
+        rt.SetParent(dialoguePanel.transform, false);
+        rt.anchorMin = new Vector2(1f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-16f, -16f);
+        rt.sizeDelta = new Vector2(210f, 48f);
+
+        Image background = buttonGo.GetComponent<Image>();
+        background.color = new Color(0.09f, 0.09f, 0.12f, 0.85f);
+
+        Text label = CreateUiText("Label", rt, "Skip Dialogue", 20, TextAnchor.MiddleCenter, Color.white);
+        StretchRect(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(10f, 6f), new Vector2(-10f, -6f));
+
+        skipDialogueButton = buttonGo.GetComponent<Button>();
+        Debug.Log("[DialogueManager] No Skip Dialogue button was assigned — auto-built one on the dialogue panel.");
+    }
+
+    private void BuildSkipConfirmPanel()
+    {
+        if (dialoguePanel == null)
+        {
+            Debug.LogError("[DialogueManager] Cannot auto-build the skip confirm panel: dialoguePanel is not assigned.");
+            return;
+        }
+
+        // Full-panel dim backdrop; it also blocks clicks from reaching the
+        // advance button while the confirm is up.
+        GameObject panelGo = new GameObject("SkipConfirmPanel (auto)", typeof(RectTransform), typeof(Image));
+        RectTransform panelRt = panelGo.GetComponent<RectTransform>();
+        panelRt.SetParent(dialoguePanel.transform, false);
+        StretchRect(panelRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        panelGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.65f);
+
+        GameObject cardGo = new GameObject("Card", typeof(RectTransform), typeof(Image));
+        RectTransform cardRt = cardGo.GetComponent<RectTransform>();
+        cardRt.SetParent(panelRt, false);
+        cardRt.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRt.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRt.sizeDelta = new Vector2(680f, 400f);
+        cardGo.GetComponent<Image>().color = new Color(0.12f, 0.12f, 0.16f, 0.98f);
+
+        Text title = CreateUiText("Title", cardRt, "Skip this dialogue?", 30, TextAnchor.MiddleCenter, Color.white);
+        StretchRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(28f, -84f), new Vector2(-28f, -30f));
+
+        Text summary = CreateUiText("Summary", cardRt, "", 22, TextAnchor.UpperCenter, new Color(0.88f, 0.88f, 0.9f));
+        StretchRect(summary.rectTransform, Vector2.zero, Vector2.one, new Vector2(32f, 118f), new Vector2(-32f, -96f));
+
+        skipConfirmNoButton = CreatePanelButton("KeepTalkingButton", cardRt, "Keep Talking",
+            new Vector2(0f, 0f), new Vector2(28f, 28f), new Vector2(288f, 62f), new Color(0.30f, 0.55f, 0.85f));
+        skipConfirmYesButton = CreatePanelButton("SkipButton", cardRt, "Skip",
+            new Vector2(1f, 0f), new Vector2(-28f, 28f), new Vector2(288f, 62f), new Color(0.82f, 0.36f, 0.32f));
+
+        skipConfirmSummaryText = summary;
+        skipConfirmPanel = panelGo;
+        panelGo.SetActive(false);
+
+        Debug.Log("[DialogueManager] No skip confirm panel was assigned — auto-built one on the dialogue panel.");
+    }
+
+    private static Button CreatePanelButton(string buttonName, Transform parent, string label,
+        Vector2 cornerAnchor, Vector2 anchoredPosition, Vector2 size, Color background)
+    {
+        GameObject buttonGo = new GameObject(buttonName, typeof(RectTransform), typeof(Image), typeof(Button));
+        RectTransform rt = buttonGo.GetComponent<RectTransform>();
+        rt.SetParent(parent, false);
+        rt.anchorMin = cornerAnchor;
+        rt.anchorMax = cornerAnchor;
+        rt.pivot = cornerAnchor;
+        rt.anchoredPosition = anchoredPosition;
+        rt.sizeDelta = size;
+        buttonGo.GetComponent<Image>().color = background;
+
+        Text text = CreateUiText("Label", rt, label, 24, TextAnchor.MiddleCenter, Color.white);
+        StretchRect(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(8f, 4f), new Vector2(-8f, -4f));
+
+        return buttonGo.GetComponent<Button>();
+    }
+
+    private static Text CreateUiText(string textName, Transform parent, string content, int fontSize, TextAnchor alignment, Color color)
+    {
+        GameObject textGo = new GameObject(textName, typeof(RectTransform), typeof(Text));
+        textGo.transform.SetParent(parent, false);
+
+        Text text = textGo.GetComponent<Text>();
+        text.font = DefaultUiFont();
+        text.text = content;
+        text.fontSize = fontSize;
+        text.alignment = alignment;
+        text.color = color;
+        text.horizontalOverflow = HorizontalWrapMode.Wrap;
+        text.verticalOverflow = VerticalWrapMode.Truncate;
+        text.raycastTarget = false;
+        return text;
+    }
+
+    private static void StretchRect(RectTransform rt, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+    {
+        rt.anchorMin = anchorMin;
+        rt.anchorMax = anchorMax;
+        rt.offsetMin = offsetMin;
+        rt.offsetMax = offsetMax;
+    }
+
+    private static Font DefaultUiFont()
+    {
+        // The built-in font changed name in Unity 2022.2 (Arial.ttf ->
+        // LegacyRuntime.ttf); try both so either version renders.
+        try { Font legacy = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); if (legacy != null) return legacy; } catch { }
+        try { Font arial = Resources.GetBuiltinResource<Font>("Arial.ttf"); if (arial != null) return arial; } catch { }
+        return null;
+    }
+
+    // === Mode Transition =======================================================================
     private IEnumerator TransitionMode(bool toCinematic)
     {
         yield return StartCoroutine(FadeOverlayTo(1f, cinematicTransitionDuration));
@@ -572,6 +874,38 @@ public class DialogueManager : MonoBehaviour
     // === End Sequence =========================================================================
     private void EndCurrentSequence()
     {
+        if (currentSequence == null) return; // already ended (a skip racing the last line, or a double end)
+
+        if (typewriterCoroutine != null)
+        {
+            StopCoroutine(typewriterCoroutine);
+            typewriterCoroutine = null;
+        }
+        if (modeSwitchCoroutine != null)
+        {
+            StopCoroutine(modeSwitchCoroutine);
+            modeSwitchCoroutine = null;
+        }
+        if (modeTransitionCoroutine != null)
+        {
+            StopCoroutine(modeTransitionCoroutine);
+            modeTransitionCoroutine = null;
+        }
+
+        // If we ended in the middle of a cinematic fade, park the overlay back
+        // at fully clear so callers' own end-fades start from a clean state.
+        if (fadeOverlay != null)
+        {
+            Color clear = fadeOverlay.color;
+            clear.a = 0f;
+            fadeOverlay.color = clear;
+        }
+
+        isTyping = false;
+        isSkipConfirmOpen = false;
+        if (skipConfirmPanel != null) skipConfirmPanel.SetActive(false);
+        if (skipDialogueButton != null) skipDialogueButton.gameObject.SetActive(false);
+
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
 
         // Restore autosave and HUD now that dialogue is no longer active
@@ -602,6 +936,11 @@ public class DialogueSequence
 {
     public string sequenceID;
     public List<DialogueLine> lines = new List<DialogueLine>();
+
+    // Optional one-paragraph summary shown in the "skip dialogue" confirm
+    // panel. When empty, DialogueManager builds a short excerpt from the
+    // sequence's own lines instead (see ResolveSkipSummary).
+    public string skipSummary = "";
 
     // "none" | "stay" | "depart"
     // Parsed by the caller (NPCController, IntroSequenceController), not by

@@ -1779,6 +1779,7 @@ GameObject:
   m_Component:
   - component: {fileID: 146174080}
   - component: {fileID: 146174079}
+  - component: {fileID: 146174081}
   m_Layer: 0
   m_Name: Directional_Light_Sun
   m_TagString: Untagged
@@ -1863,6 +1864,29 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: 1.53, z: 0}
+--- !u!114 &146174081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 146174078}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_LightLayerMask: 1
+  m_RenderingLayers: 1
+  m_CustomShadowLayers: 0
+  m_ShadowLayerMask: 1
+  m_ShadowRenderingLayers: 1
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
 --- !u!1 &151650670
 GameObject:
   m_ObjectHideFlags: 0
@@ -3537,6 +3561,8 @@ MonoBehaviour:
   hudCanvas: {fileID: 108778668}
   darkOverlay: {fileID: 664717074}
   fadeDuration: 0.6
+  successToastDuration: 3.5
+  failureToastDuration: 2.5
 --- !u!65 &260632684
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -12615,6 +12641,12 @@ MonoBehaviour:
   - {fileID: 286355526}
   instructionText: {fileID: 1837855003}
   checkButton: {fileID: 77956159}
+  slotPressSound: {fileID: 0}
+  slotDragSound: {fileID: 0}
+  slotSwapSound: {fileID: 0}
+  slotReturnSound: {fileID: 0}
+  executeButtonSound: {fileID: 0}
+  debugSoundEvents: 0
 --- !u!114 &574782859
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12731,8 +12763,19 @@ MonoBehaviour:
   cinematicTransitionDuration: 0.5
   advanceButton: {fileID: 190525501}
   advanceButtonLabel: {fileID: 2141688595}
+  skipDialogueButton: {fileID: 0}
+  skipConfirmPanel: {fileID: 0}
+  skipConfirmSummaryText: {fileID: 0}
+  skipConfirmYesButton: {fileID: 0}
+  skipConfirmNoButton: {fileID: 0}
+  autoSummarizeSkippedDialogue: 1
   typewriterSpeed: 0.03
   fadeOverlay: {fileID: 22860269}
+  encounterClips: []
+  dialogueBlip: {fileID: 0}
+  blipEveryNChars: 4
+  encounterVolume: 1
+  blipVolume: 1
 --- !u!1 &590063494
 GameObject:
   m_ObjectHideFlags: 0
@@ -12787,6 +12830,31 @@ MonoBehaviour:
   optionText: 
   originalParent: {fileID: 0}
   originalPosition: {x: 0, y: 0, z: 0}
+  pullbackDuration: 0.25
+  pullbackEase:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &590063497
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14305,7 +14373,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fadeImage: {fileID: 22860269}
   notificationRoot: {fileID: 1112926939}
-  notificationText: {fileID: 650010868}
+  notificationText: {fileID: 0}
 --- !u!114 &730366502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14321,6 +14389,7 @@ MonoBehaviour:
   studentID: unknown_student
   enableDebugLogging: 1
   summaryHotkey: 290
+  fullLogHotkey: 289
   csvExportHotkey: 291
 --- !u!114 &730366503
 MonoBehaviour:
@@ -14379,6 +14448,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   quests: []
+  debugUnlockBossOnPlay: 0
 --- !u!114 &730366507
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14660,8 +14730,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 1231285436}
-  offset: {x: 0.5, y: 1, z: -2}
-  smoothSpeed: 5
+  distance: 2
+  height: 1.5
+  followSpeed: 10
+  lookAheadDistance: 2.5
+  lookHeight: 1
+  aimAheadSpeed: 0.1
+  flattenLookAhead: 1
+  lookAtStrength: 0.3
 --- !u!81 &768503823
 AudioListener:
   m_ObjectHideFlags: 0
@@ -14739,6 +14815,31 @@ MonoBehaviour:
   optionText: 
   originalParent: {fileID: 0}
   originalPosition: {x: 0, y: 0, z: 0}
+  pullbackDuration: 0.25
+  pullbackEase:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &769243537
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14888,6 +14989,31 @@ MonoBehaviour:
   optionText: 
   originalParent: {fileID: 0}
   originalPosition: {x: 0, y: 0, z: 0}
+  pullbackDuration: 0.25
+  pullbackEase:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &797740858
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15893,6 +16019,9 @@ MonoBehaviour:
   - {fileID: 1145531225}
   instructionText: {fileID: 520484735}
   backButton: {fileID: 1171677119}
+  optionClickSound: {fileID: 0}
+  backButtonClickSound: {fileID: 0}
+  debugSoundEvents: 0
 --- !u!114 &879600899
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16129,7 +16258,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   questNameText: {fileID: 1033242542}
+  questObjectiveText: {fileID: 0}
   questPanel: {fileID: 889341719}
+  bossTargetOverride: {fileID: 0}
+  bossCompassLabel: Boss
+  sanctumTitles:
+  - sanctumID: print_console
+    title: The Print Console
+  - sanctumID: vars_vault
+    title: The Vars Vault
+  - sanctumID: input_mists
+    title: The Input Mists
+  - sanctumID: elif_labyrinth
+    title: The Elif Labyrinth
 --- !u!114 &889341722
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16402,6 +16543,31 @@ MonoBehaviour:
   optionText: 
   originalParent: {fileID: 0}
   originalPosition: {x: 0, y: 0, z: 0}
+  pullbackDuration: 0.25
+  pullbackEase:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &904203252
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17000,6 +17166,31 @@ MonoBehaviour:
   optionText: 
   originalParent: {fileID: 0}
   originalPosition: {x: 0, y: 0, z: 0}
+  pullbackDuration: 0.25
+  pullbackEase:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &932883142
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17368,6 +17559,7 @@ MonoBehaviour:
   - {fileID: 396918551}
   - {fileID: 493224031}
   - {fileID: 1218916080}
+  clickSound: {fileID: 0}
 --- !u!114 &962469350
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17851,14 +18043,18 @@ MonoBehaviour:
     bonusHP: 0
     bonusAttack: 0
   encounterPanel: {fileID: 365342017}
-  playerHPBar: {fileID: 1415029252}
-  enemyHPBar: {fileID: 2098610626}
+  playerHPFill: {fileID: 0}
+  enemyHPFill: {fileID: 0}
   playerHPText: {fileID: 943633785}
   enemyHPText: {fileID: 282724773}
   enemyNameText: {fileID: 1422278911}
   roundInfoText: {fileID: 1186787188}
   combatLogText: {fileID: 108986601}
   spiralTransitionOverlay: {fileID: 1053926638}
+  puzzleUIRoot: {fileID: 0}
+  lungeDuration: 0.18
+  lungeReturnDuration: 0.25
+  lungeReach: 0.8
   beginnerEnemyPrefab: {fileID: 919132149155446097, guid: 4295b705d64800249b7696811a73164f, type: 3}
   intermediateEnemyPrefab: {fileID: 919132149155446097, guid: c04acd3c0f5ed174eb1dbfc6857978ed, type: 3}
   advancedEnemyPrefab: {fileID: 380839050}
@@ -18001,6 +18197,31 @@ MonoBehaviour:
   optionText: 
   originalParent: {fileID: 0}
   originalPosition: {x: 0, y: 0, z: 0}
+  pullbackDuration: 0.25
+  pullbackEase:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &1031237184
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19395,7 +19616,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1147478853
 RectTransform:
   m_ObjectHideFlags: 0
@@ -21043,7 +21264,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 5
-  turnSpeed: 120
+  rotationSmoothTime: 0.12
+  walkSpeed: 5
+  runSpeed: 9
+  runThreshold: 0.7
+  walkSound: {fileID: 0}
+  runSound: {fileID: 0}
+  walkSoundSpeed: 1
+  runSoundSpeed: 1
+  walkSoundVolume: 0.8
+  runSoundVolume: 0.8
+  footstepFadeTime: 0.1
 --- !u!136 &1231285439
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -21351,6 +21582,31 @@ MonoBehaviour:
   optionText: 
   originalParent: {fileID: 0}
   originalPosition: {x: 0, y: 0, z: 0}
+  pullbackDuration: 0.25
+  pullbackEase:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &1254054699
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23037,6 +23293,8 @@ MonoBehaviour:
   hudCanvas: {fileID: 108778668}
   darkOverlay: {fileID: 664717074}
   fadeDuration: 0.6
+  successToastDuration: 3.5
+  failureToastDuration: 2.5
 --- !u!65 &1386335123
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -23867,6 +24125,8 @@ MonoBehaviour:
   hudCanvas: {fileID: 108778668}
   darkOverlay: {fileID: 664717074}
   fadeDuration: 0.6
+  successToastDuration: 3.5
+  failureToastDuration: 2.5
 --- !u!65 &1473040222
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -26119,6 +26379,10 @@ MonoBehaviour:
   - {fileID: 904203249}
   - {fileID: 769243534}
   dropSlot: {fileID: 1205843203}
+  optionClickSound: {fileID: 0}
+  optionHoldSound: {fileID: 0}
+  optionReturnSound: {fileID: 0}
+  debugSoundEvents: 0
 --- !u!114 &1633800285
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -31142,6 +31406,10 @@ MonoBehaviour:
   - {fileID: 797740855}
   - {fileID: 1031237181}
   - {fileID: 1254054696}
+  optionClickSound: {fileID: 0}
+  optionHoldSound: {fileID: 0}
+  optionReturnSound: {fileID: 0}
+  debugSoundEvents: 0
 --- !u!114 &2050778778
 MonoBehaviour:
   m_ObjectHideFlags: 0

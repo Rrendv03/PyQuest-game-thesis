@@ -2370,7 +2370,7 @@
       "correctOrder": [],
       "distractors": [
         "{str} {msg}",
-        "{msg}{str}",
+        "{msg2}",
         "{msg}"
       ],
       "variableName": "name",
@@ -3021,6 +3021,193 @@
       "variableName": "{name}",
       "variableValue": "{num}",
       "goalText": "Subtract the damage from the starting total and store what is left in {name}."
+    },
+    {
+      "id": "print_ls_004",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 2,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "level = {num}",
+        "print(hero)",
+        "print(level)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_tof_003",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "level = {num}",
+        "print(hero, level)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_tof_004",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 3,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "title = {msg}",
+        "print(hero)",
+        "print(title)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_fitb_004",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 0,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "level = {num}",
+        "print(hero, level)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "input",
+        "int",
+        "str"
+      ],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_stb_004",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 1,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "level = {num}",
+        "print('hero', level)"
+      ],
+      "correctAnswer": "print(hero, level)",
+      "bugLineIndex": 2,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": ""
+    },
+    {
+      "id": "print_pac_003",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "greeting = {msg}",
+        "name = {str}",
+        "print(greeting + ' ' + name)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [
+        "print(name + ' ' + greeting)",
+        "print(greeting + name)",
+        "print(greeting)"
+      ],
+      "variableName": "",
+      "variableValue": "",
+      "goalText": "Greet the player: show the message, a space, then their name."
+    },
+    {
+      "id": "print_pac_004",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "level = {num}",
+        "points = {num2}",
+        "print(hero, level, points)"
+      ],
+      "distractors": [
+        "print(level, hero, points)",
+        "print(hero, points, level)",
+        "print(hero, level + points)"
+      ],
+      "goalText": "Show the hero's name, then their level, then their points on one line, in that order.",
+      "bugLineIndex": -1,
+      "correctAnswer": "",
+      "correctOrder": [],
+      "variableName": "",
+      "variableValue": ""
+    },
+    {
+      "id": "print_pac_005",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 5,
+      "difficulty": 2,
+      "codeLines": [
+        "title = {msg}",
+        "hero = {str}",
+        "print(title + ': ' + hero)"
+      ],
+      "distractors": [
+        "print(hero + ': ' + title)",
+        "print(title + hero)",
+        "print(title, hero)"
+      ],
+      "goalText": "Show the quest title, a colon and a space, then the hero's name.",
+      "bugLineIndex": -1,
+      "correctAnswer": "",
+      "correctOrder": [],
+      "variableName": "",
+      "variableValue": ""
+    },
+    {
+      "id": "print_pto_005",
+      "knowledgeComponent": "print_statements",
+      "puzzleType": 4,
+      "difficulty": 2,
+      "codeLines": [
+        "hero = {str}",
+        "level = {num}",
+        "print(hero)",
+        "print(level)"
+      ],
+      "correctAnswer": "",
+      "bugLineIndex": -1,
+      "correctOrder": [],
+      "distractors": [],
+      "variableName": "hero",
+      "variableValue": "Hero",
+      "goalText": ""
     }
   ]
 }

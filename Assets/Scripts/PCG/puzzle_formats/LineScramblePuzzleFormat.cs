@@ -66,7 +66,14 @@ public class LineScramblePuzzleFormat : IPuzzleFormat
     {
         if (playerAnswer is List<int> proposedOrder)
         {
-            bool valid = IsValidDependencyOrder(proposedOrder);
+            // acceptedOrders is authoritative when present: it is the
+            // engine-verified set of permutations with output identical to
+            // the canonical order, so equivalence is graded by simulation,
+            // not heuristics. Null/empty -> legacy dependency validation.
+            bool valid =
+                (template.acceptedOrders != null && template.acceptedOrders.Count > 0)
+                    ? template.acceptedOrders.Contains(string.Join(",", proposedOrder))
+                    : IsValidDependencyOrder(proposedOrder);
             Debug.Log($"[LineScramblePuzzleFormat] Proposed order: " +
                       $"{string.Join(",", proposedOrder)} | Valid: {valid}");
             return valid;

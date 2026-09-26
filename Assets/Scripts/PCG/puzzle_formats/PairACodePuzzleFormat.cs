@@ -123,7 +123,7 @@ public class PairACodePuzzleFormat : IPuzzleFormat
         if (template.codeLines.Count == 1)
         {
             correctAnswer = template.codeLines[0];
-            codeSnippetWithBlank = header + "\n[ ? ]";
+            codeSnippetWithBlank = header + "\n[ DRAG HERE ]";
         }
         else
         {
