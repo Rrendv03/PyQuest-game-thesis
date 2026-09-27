@@ -7,6 +7,23 @@ using UnityEngine.InputSystem;
 public class PlayerMovement : MonoBehaviour
 {
     public float speed = 5f;
+
+    // STAIRS-ON-DESCENT FIX: rb.MovePosition teleports the body each physics
+    // step, which discards gravity's integrated downward motion - running off
+    // a downward stair edge left the player hovering (weight/drag tuning
+    // cannot fix that). Movement is now velocity-based so gravity always
+    // works, plus a short downward raycast snaps the feet to the ground.
+    [Header("Ground Stick (stairs / ledges)")]
+    [Tooltip("Layers the raycast accepts as ground. Leave empty for everything.")]
+    public LayerMask groundLayers;
+    [Tooltip("Max drop below the feet that still snaps DOWN to the ground stick (metres). ~0.5 clears stair gaps without yanking the player down ledges.")]
+    [Min(0f)] public float groundStickDistance = 0.5f;
+    [Tooltip("Extra downward speed while grounded, empirically keeps feet glued to descending stair steps.")]
+    [Min(0f)] public float groundStickSpeed = 3f;
+
+    // Collider cached in Awake for feet-offset math; -1 = not yet computed.
+    private CapsuleCollider capsuleCollider;
+    private float feetOffset = -1f;
     // Camera-relative movement (Genshin/Zelda style): stick is read in CAMERA
     // space, body faces where it moves. rotationSmoothTime = turn response (s).
     [Min(0.01f)] public float rotationSmoothTime = 0.12f;
@@ -59,6 +76,7 @@ public class PlayerMovement : MonoBehaviour
         // Rigidbody init must never be skipped (a throw above it once left rb
         // null and froze the player), so it goes first.
         rb = GetComponent<Rigidbody>();
+        capsuleCollider = GetComponent<CapsuleCollider>();
         if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
         rb.freezeRotation = true;
 
@@ -203,11 +221,14 @@ public class PlayerMovement : MonoBehaviour
 
                 // WALK/RUN off the stick position: partial deflect walks (slower,
                 // walk clips), full push to the edge runs (runSpeed, run clips).
-                rb.MovePosition(rb.position + moveDir * SpeedForInput(inputMag) * Time.fixedDeltaTime);
+                ApplyHorizontalVelocity(moveDir, SpeedForInput(inputMag));
             }
             else
             {
                 yawVelocity = 0f; // released the stick: damping starts from rest next push
+                // Release: kill horizontal motion only - gravity (Y) is kept,
+                // so the player can still fall off ledges/stairs.
+                rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
             }
 
             UpdateLocomotionAnimator(h, v, inputMag);
@@ -219,8 +240,7 @@ public class PlayerMovement : MonoBehaviour
             // fall back to the original tank controls so movement never breaks.
             float turnDelta = h * 120f * Time.fixedDeltaTime;
             rb.MoveRotation(rb.rotation * Quaternion.Euler(0f, turnDelta, 0f));
-            Vector3 move = transform.forward * v * speed * Time.fixedDeltaTime;
-            rb.MovePosition(rb.position + move);
+            ApplyHorizontalVelocity(transform.forward * v, Mathf.Abs(v) * speed);
             UpdateLocomotionAnimator(0f, v, Mathf.Clamp01(Mathf.Abs(v)));
             UpdateFootstepAudio(0f, v, Mathf.Clamp01(Mathf.Abs(v)));
         }
@@ -231,6 +251,39 @@ public class PlayerMovement : MonoBehaviour
     private static readonly int IsRunningHash = Animator.StringToHash("IsRunning");
     private static readonly int MoveXHash = Animator.StringToHash("MoveX");
     private static readonly int MoveYHash = Animator.StringToHash("MoveY");
+
+    /// <summary>Velocity-based locomotion: X/Z from input, Y left entirely to
+    /// physics (gravity + collisions) so ledges/stairs fall properly. While
+    /// moving, ground a little below the feet pulls the player down at
+    /// groundStickSpeed, gluing the run to descending stair steps.</summary>
+    private void ApplyHorizontalVelocity(Vector3 dir, float targetSpeed)
+    {
+        float y = rb.velocity.y;
+        if (targetSpeed > 0f)
+        {
+            float max = FeetOffset() + groundStickDistance + 0.05f;
+            int mask = groundLayers.value == 0 ? ~0 : groundLayers.value;
+            if (Physics.Raycast(rb.position, Vector3.down, out RaycastHit hit, max, mask,
+                                QueryTriggerInteraction.Ignore))
+            {
+                float feetDrop = hit.distance - FeetOffset();
+                if (feetDrop > 0.02f && feetDrop <= groundStickDistance)
+                    y = Mathf.Min(y, -groundStickSpeed); // snap down the stair gap
+            }
+        }
+        rb.velocity = new Vector3(dir.x * targetSpeed, y, dir.z * targetSpeed);
+    }
+
+    /// <summary>Vertical distance from the rigidbody origin down to the
+    /// capsule's feet (used to place the ground-stick raycast origin).</summary>
+    private float FeetOffset()
+    {
+        if (feetOffset < 0f)
+            feetOffset = capsuleCollider != null
+                ? capsuleCollider.height * 0.5f * transform.lossyScale.y
+                : 0.9f; // sane default if the player uses a non-capsule collider
+        return feetOffset;
+    }
 
     /// <summary>Stick magnitude -> speed: ramps 0..walkSpeed (WALK) up to
     /// runThreshold, then walkSpeed..runSpeed (RUN); IsRunning flips at the

@@ -261,7 +261,8 @@ public class LineScramblePuzzleFormat : IPuzzleFormat
             return result;
         }
 
-        Match assignMatch = Regex.Match(trimmed, @"^(\w+)\s*=(?!=)");
+        Match assignMatch = Regex.Match(trimmed,
+            @"^(\w+)\s*(?:[-+*/%]|//|\*\*)?=(?!=)");
         if (assignMatch.Success)
             result.Add(assignMatch.Groups[1].Value);
 

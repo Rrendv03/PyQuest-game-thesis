@@ -287,6 +287,9 @@ public static class PuzzleVariationEngine
 
             if (serveTier != authoredTier) return null;
             PuzzleTemplate passthrough = CloneWithFill(skeleton, authoredTier);
+            if (passthrough.puzzleType == PuzzleType.PredictTheOutput)
+                SanitizePtoOptions(passthrough);
+            StripPtoKeyQuotes(passthrough);
             passthrough.acceptedOrders = ComputeAcceptedOrders(passthrough);
             return passthrough;
         }
@@ -317,6 +320,8 @@ public static class PuzzleVariationEngine
             string output = null;
             if (MiniPythonEvaluator.TrySimulate(fill.codeLines, out output))
                 fill.correctAnswer = output;
+            SanitizePtoOptions(fill);
+            StripPtoKeyQuotes(fill);
         }
         fill.acceptedOrders = ComputeAcceptedOrders(fill);
         return fill;
@@ -332,7 +337,13 @@ public static class PuzzleVariationEngine
             && t.puzzleType != PuzzleType.PredictTheOutput
             && t.puzzleType != PuzzleType.FillInTheBlank)
             return;
-        if (ContainsControlFlow(t.codeLines)) return;
+        if (ContainsControlFlow(t.codeLines))
+        {
+            if (t.puzzleType == PuzzleType.LineScramble && tier >= 1
+                && Random.value < 0.5f)
+                TrySplitPrintBindingCF(t);
+            return;
+        }
 
         float roll = Random.value;
         if (tier >= 2)
@@ -475,6 +486,189 @@ public static class PuzzleVariationEngine
         Debug.Log($"[PCG] Shape mutation: print-arg-form on {t.id}");
     }
 
+    static List<string> SanitizePtoOptions(PuzzleTemplate t)
+    {
+        if (t.distractors == null) return null;
+        t.distractors = t.distractors
+            .Where(d => d != null && !d.Contains("\n")).ToList();
+        return t.distractors;
+    }
+
+    static void StripPtoKeyQuotes(PuzzleTemplate t)
+    {
+        string ca = t.correctAnswer;
+        if (string.IsNullOrEmpty(ca) || ca.Length < 2) return;
+        char a = ca[0], b = ca[ca.Length - 1];
+        if ((a != '\'' || b != '\'') && (a != '"' || b != '"')) return;
+        string inner = ca.Substring(1, ca.Length - 2);
+        foreach (string l in t.codeLines)
+        {
+            string s = (l ?? "").Trim();
+            if (s == "print('" + inner + "')")
+            {
+                t.correctAnswer = inner;
+                return;
+            }
+        }
+    }
+
+    static void TrySplitPrintBindingCF(PuzzleTemplate t)
+    {
+        int idx = SolePrintIndex(t.codeLines);
+        if (idx < 0) return;
+        string line = (t.codeLines[idx] ?? "").Trim();
+        if (!line.StartsWith("print(") || !line.EndsWith(")")) return;
+        string inner = InnerOfPrint(line);
+        if (inner.Length == 0 || HasTopLevelComma(inner)) return;
+        if (!Regex.IsMatch(inner, @"^[A-Za-z_]\w*$|^'[^']*'$")) return;
+
+        string name = PickFreshShapeName(t);
+        if (name == null) return;
+        string indent = new string(' ', LsIndentOf(t.codeLines[idx]));
+
+        var backupLines = new List<string>(t.codeLines);
+        int backupBug = t.bugLineIndex;
+        var backupOrder = t.correctOrder != null
+            ? new List<int>(t.correctOrder) : new List<int>();
+
+        t.codeLines[idx] = indent + "print(" + name + ")";
+        t.codeLines.Insert(idx, indent + name + " = " + inner);
+
+        if (t.bugLineIndex >= idx) t.bugLineIndex++;
+        if (backupOrder.Count > 0)
+        {
+            bool identity = true;
+            for (int k = 0; k < backupOrder.Count; k++)
+                if (backupOrder[k] != k) { identity = false; break; }
+            if (!identity)
+            {
+                t.codeLines = backupLines;
+                t.bugLineIndex = backupBug;
+                t.correctOrder = backupOrder;
+                return;
+            }
+            t.correctOrder = new List<int>();
+            for (int k = 0; k < t.codeLines.Count; k++) t.correctOrder.Add(k);
+        }
+        Debug.Log($"[PCG] Shape mutation: split-print (binding '{name}') on {t.id}");
+    }
+
+    static int LsIndentOf(string line)
+    {
+        int count = 0;
+        while (count < line.Length && line[count] == ' ') count++;
+        return count;
+    }
+
+    static List<List<int>> LsBuildChunks(List<string> lines)
+    {
+        var result = new List<List<int>>();
+        int n = lines.Count;
+        int i = 0;
+        while (i < n)
+        {
+            var chunk = new List<int> { i };
+            int baseIndent = LsIndentOf(lines[i]);
+            int j = i + 1;
+            while (j < n)
+            {
+                string trimmed = (lines[j] ?? "").TrimStart();
+                bool moreIndented = LsIndentOf(lines[j]) > baseIndent;
+                bool isContinuation = trimmed.StartsWith("elif")
+                                      || trimmed.StartsWith("else");
+                if (moreIndented || isContinuation) { chunk.Add(j); j++; }
+                else break;
+            }
+            result.Add(chunk);
+            i = j;
+        }
+        return result;
+    }
+
+    static void LsLineDefsUses(string line, out HashSet<string> defs,
+                               out HashSet<string> uses)
+    {
+        defs = new HashSet<string>();
+        uses = new HashSet<string>();
+        string trimmed = (line ?? "").Trim();
+        Match fm = Regex.Match(trimmed, @"^for\s+(\w+)\s+in\s+");
+        if (fm.Success) defs.Add(fm.Groups[1].Value);
+        Match am = Regex.Match(trimmed,
+            @"^(\w+)\s*(?:[-+*/%]|//|\*\*)?=(?!=)");
+        if (am.Success) defs.Add(am.Groups[1].Value);
+
+        string scope = trimmed;
+        Match asm = Regex.Match(trimmed, @"^\w+\s*=(?!=)(.+)$");
+        if (asm.Success) scope = asm.Groups[1].Value;
+        Match frm = Regex.Match(trimmed, @"^for\s+\w+\s+in\s+(.+):$");
+        if (frm.Success) scope = frm.Groups[1].Value;
+        Match ifm = Regex.Match(trimmed, @"^(?:if|elif|while)\s+(.+):$");
+        if (ifm.Success) scope = ifm.Groups[1].Value;
+        scope = Regex.Replace(scope, "'[^\']*'|\"[^\"]*\"", "");
+        foreach (Match m in Regex.Matches(scope, @"\b[a-zA-Z_]\w*\b"))
+            if (!LsKeywords.Contains(m.Value)) uses.Add(m.Value);
+    }
+
+    static int LsChunkTopoOrderCount(List<string> lines)
+    {
+        var chunks = LsBuildChunks(lines);
+        int m = chunks.Count;
+        var defs = new List<HashSet<string>>();
+        var uses = new List<HashSet<string>>();
+        foreach (var chunk in chunks)
+        {
+            var cd = new HashSet<string>();
+            var cu = new HashSet<string>();
+            foreach (int row in chunk)
+            {
+                HashSet<string> d, u;
+                LsLineDefsUses(lines[row], out d, out u);
+                cd.UnionWith(d);
+                cu.UnionWith(u);
+            }
+            defs.Add(cd);
+            uses.Add(cu);
+        }
+        var pred = new List<HashSet<int>>();
+        for (int i = 0; i < m; i++) pred.Add(new HashSet<int>());
+        for (int i = 0; i < m; i++)
+            for (int j = i + 1; j < m; j++)
+            {
+                bool rawOrWaw = defs[i].Overlaps(uses[j])
+                                || defs[i].Overlaps(defs[j]);
+                bool war = uses[i].Overlaps(defs[j]);
+                if (rawOrWaw || war) pred[j].Add(i);
+            }
+        int count = 0;
+        CountTopo(pred, new bool[m], 0, ref count);
+        return count;
+    }
+
+    static void CountTopo(List<HashSet<int>> pred, bool[] chosen, int placed,
+                          ref int count)
+    {
+        if (count >= 2) return;
+        if (placed == chosen.Length) { count++; return; }
+        for (int c = 0; c < chosen.Length; c++)
+        {
+            if (chosen[c]) continue;
+            bool ready = true;
+            foreach (int p in pred[c])
+                if (!chosen[p]) { ready = false; break; }
+            if (!ready) continue;
+            chosen[c] = true;
+            CountTopo(pred, chosen, placed + 1, ref count);
+            chosen[c] = false;
+            if (count >= 2) return;
+        }
+    }
+
+    static readonly HashSet<string> LsKeywords = new HashSet<string>
+    {
+        "print", "input", "int", "str", "len", "range", "True", "False", "None",
+        "if", "elif", "else", "for", "while", "in", "and", "or", "not", "def", "return"
+    };
+
     public static bool ValidateInstance(PuzzleTemplate t, PuzzleTemplate skeleton,
                                         out string failureReason)
     {
@@ -502,6 +696,8 @@ public static class PuzzleVariationEngine
         {
             if (string.IsNullOrWhiteSpace(t.correctAnswer))
             { failureReason = "PTO correctAnswer empty"; return false; }
+            if (t.correctAnswer.Contains("\n"))
+            { failureReason = "PTO multi-line output not supported by the UI"; return false; }
 
             simulated = MiniPythonEvaluator.TrySimulate(t.codeLines, out simOutput);
             if (simulated)
@@ -784,10 +980,6 @@ public static class PuzzleVariationEngine
         return false;
     }
 
-    // E1: for LineScramble, every dependency-valid order that simulates to
-    // the SAME output as the canonical order is an acceptable answer. The
-    // F32 gate still rejects scrambles whose dependency-valid orders produce
-    // different outputs; this only widens acceptance within one output.
     public static List<string> ComputeAcceptedOrders(PuzzleTemplate t)
     {
         if (t == null || t.codeLines == null
@@ -830,7 +1022,16 @@ public static class PuzzleVariationEngine
         reason = "ok";
         var lines = t.codeLines;
         int n = lines.Count;
-        if (ContainsControlFlow(lines)) return true;
+        if (ContainsControlFlow(lines))
+        {
+            int topo = LsChunkTopoOrderCount(lines);
+            if (topo != 1)
+            {
+                reason = $"ambiguous scramble (control flow): {topo} chunk-valid orders";
+                return false;
+            }
+            return true;
+        }
         string refOutput;
         bool sim = MiniPythonEvaluator.TrySimulate(lines, out refOutput);
         if (!sim || n > 6)

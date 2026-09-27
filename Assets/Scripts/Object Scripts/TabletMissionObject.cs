@@ -35,6 +35,7 @@ public class TabletMissionObject : InteractableObject
     private bool isCompleted = false;
     private Collider triggerCollider;
     private AudioSource audioSource;
+    private readonly List<Renderer> fxDisabledRenderers = new List<Renderer>();
     // MissionTabletQuests.json loads asynchronously (UnityWebRequest on Android), so
     // only the promptText lookup waits for it; the completion check reads the in-memory set.
     void Start()
@@ -71,13 +72,29 @@ public class TabletMissionObject : InteractableObject
         var data = MissionTabletManager.Instance.GetMissionByID(missionID);
         if (data != null && !string.IsNullOrEmpty(data.promptText))
             promptText = data.promptText;
-        else if (data == null)
+        // One-line wiring report at launch: a tablet that refuses to do its sequence is diagnosable from this alone.
+        Debug.Log($"[TabletMissionObject] '{missionID}' wiring: defaultMesh={(defaultMesh != null ? defaultMesh.name : "NONE")} ({CountMeshes(defaultMesh)} meshes) | " +
+                  $"restoredMesh={(restoredMesh != null ? restoredMesh.name : "NONE")} ({CountMeshes(restoredMesh)} meshes) | " +
+                  $"mission in MissionTabletQuests.json: {(data != null ? "yes" : "NO — the puzzle will refuse to open, fix the missionID or add the entry")}");
+        if (data == null)
             Debug.LogError($"[TabletMissionObject] missionID '{missionID}' not found in MissionTabletQuests.json " +
                            "(the file loaded successfully, so check the ID's spelling/casing in the JSON).");
     }
+    private static int CountMeshes(GameObject root)
+    {
+        if (root == null) return 0;
+        int count = 0;
+        foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            if (renderer is MeshRenderer || renderer is SkinnedMeshRenderer) count++;
+        return count;
+    }
     public override void TriggerInteraction()
     {
-        if (isCompleted) return;
+        if (isCompleted)
+        {
+            Debug.Log($"[TabletMissionObject] '{missionID}' interaction ignored — already restored (completed by an earlier session's autosave?).");
+            return;
+        }
         if (MissionTabletManager.Instance == null)
         {
             Debug.LogError("[TabletMissionObject] No MissionTabletManager exists in this scene.");
@@ -92,7 +109,7 @@ public class TabletMissionObject : InteractableObject
         var data = MissionTabletManager.Instance.GetMissionByID(missionID);
         if (data == null)
         {
-            Debug.LogError($"[TabletMissionObject] missionID '{missionID}' not found.");
+            Debug.LogError($"[TabletMissionObject] missionID '{missionID}' not found in MissionTabletQuests.json — the puzzle cannot open. Fix the missionID or add the entry.");
             return;
         }
         // Hide HUD and prompt
@@ -117,7 +134,8 @@ public class TabletMissionObject : InteractableObject
             // SanctumManager is the only path that logs the completion to StudentLogManager; it must be told separately.
             SanctumManager.Instance?.RegisterTabletMissionComplete(missionID);
 
-            StartCoroutine(PlayRestoreSequence());
+            Debug.Log($"[TabletMissionObject] '{missionID}' solved — starting restore sequence.");
+            RunRestoreSequence();
         }
         else
         {
@@ -138,12 +156,18 @@ public class TabletMissionObject : InteractableObject
     /// VFX + SFX fire together while they are still partially visible, and only
     /// then does the corrupted state hide and the restored state appear. The
     /// old fade-to-black is gone; the effect itself replaces it.
+    /// Runs on a dedicated host object so deactivating the tablet (or any of its
+    /// parents) mid-effect can no longer kill the sequence and soft-lock the player.
     /// </summary>
-    private IEnumerator PlayRestoreSequence()
+    private void RunRestoreSequence()
     {
-        isCompleted = true; // guard against re-entry during the effect
         List<ShrinkTarget> targets = new List<ShrinkTarget>();
         List<GameObject> rootsToHide = new List<GameObject>();
+        BuildTargets(targets, rootsToHide);
+        FxHost.StartCoroutine(RestoreRoutine(targets, rootsToHide));
+    }
+    private void BuildTargets(List<ShrinkTarget> targets, List<GameObject> rootsToHide)
+    {
         if (defaultMesh != null)
         {
             CollectShrinkTargets(defaultMesh.transform, targets);
@@ -159,18 +183,52 @@ public class TabletMissionObject : InteractableObject
                 rootsToHide.Add(root);
             }
         }
-        if (targets.Count > 0)
-            Debug.Log($"[TabletMissionObject] Restoring {missionID}: {targets.Count} corrupted mesh(es) scale down over {restoreShrinkDuration:0.00}s, VFX/SFX fire at {restoreVFXAtScale:P0} remaining scale.");
-        // 1) Scale each corrupted mesh down to nothing.
+        if (targets.Count == 0)
+        {
+            // The assigned defaultMesh held no mesh children (or was NONE) — target whatever is actually visible on the tablet itself.
+            Debug.LogWarning($"[TabletMissionObject] '{missionID}': defaultMesh {(defaultMesh == null ? "is NONE" : "'" + defaultMesh.name + "' has no mesh renderer children")} — falling back to the tablet's own visible renderers. Check the Visual States wiring in the Inspector.");
+            CollectFallbackTargets(targets);
+        }
+        if (targets.Count == 0)
+        {
+            // Nothing renderable at all: still burst VFX + SFX at the tablet's position so the repair is never silent.
+            Vector3 size = triggerCollider != null ? triggerCollider.bounds.size : Vector3.one;
+            targets.Add(new ShrinkTarget { transform = transform, localScale = transform.localScale, worldPosition = transform.position, worldScale = size });
+            Debug.LogWarning($"[TabletMissionObject] '{missionID}': nothing renderable found — playing VFX/SFX only.");
+        }
+    }
+    // Last-resort targeting: any active renderer on the tablet itself, excluding the restored state; falls back to the whole root.
+    private void CollectFallbackTargets(List<ShrinkTarget> targets)
+    {
+        foreach (Renderer renderer in transform.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer == null || !renderer.gameObject.activeInHierarchy) continue;
+            if (renderer is ParticleSystemRenderer) continue;
+            if (restoredMesh != null && renderer.transform.IsChildOf(restoredMesh.transform)) continue;
+            if (IsCovered(renderer.transform, targets)) continue;
+            targets.Add(new ShrinkTarget
+            {
+                transform = renderer.transform,
+                renderer = renderer,
+                localScale = renderer.transform.localScale,
+                worldPosition = renderer.transform.position,
+                worldScale = renderer.transform.lossyScale
+            });
+        }
+    }
+    private IEnumerator RestoreRoutine(List<ShrinkTarget> targets, List<GameObject> rootsToHide)
+    {
+        Debug.Log($"[TabletMissionObject] Restoring {missionID}: {targets.Count} corrupted mesh(es) over {restoreShrinkDuration:0.00}s, VFX/SFX fire at {restoreVFXAtScale:P0} remaining scale.");
         bool fxTriggered = targets.Count == 0;
         float elapsed = 0f;
         while (elapsed < restoreShrinkDuration)
         {
-            elapsed += Time.deltaTime;
+            // Unscaled time so a paused Time.timeScale can never stall the effect.
+            elapsed += Time.unscaledDeltaTime;
             float k = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01(elapsed / restoreShrinkDuration));
             for (int i = 0; i < targets.Count; i++)
                 targets[i].ApplyScale(k);
-            // 2) VFX + SFX fire together while the meshes are still partially visible.
+            // VFX + SFX fire together while the meshes are still partially visible.
             if (!fxTriggered && k <= restoreVFXAtScale)
             {
                 fxTriggered = true;
@@ -183,14 +241,17 @@ public class TabletMissionObject : InteractableObject
             fxTriggered = true;
             TriggerRestoreFX(targets);
         }
-        // 3) Meshes gone — NOW hide the roots, with original scales restored so a New Game replay re-shows corruption intact.
+        // Meshes gone — restore original scales (so a New Game replay re-shows corruption intact), then hide the corrupted state.
         foreach (ShrinkTarget target in targets)
             target.Restore();
         foreach (GameObject root in rootsToHide)
         {
-            if (root != null) root.SetActive(false);
+            // Never deactivate the tablet itself (or any of its ancestors) — that would hide the restored state too.
+            if (root != null && !transform.IsChildOf(root.transform)) root.SetActive(false);
         }
-        // 4) Swap to the restored state (also disables the collider + clears the interact HUD entry).
+        // Visuals that live directly on the tablet root (or outside every hidden root) are switched off renderer-by-renderer instead.
+        HideUncoveredRenderers(targets, rootsToHide);
+        // Swap to the restored state (also disables the collider + clears the interact HUD entry).
         SetRestoredStateImmediate();
         // Self-heal fallback: with no restoreVFX prefab, auto-play any particles living under the restored state.
         if (restoreVFX == null && restoredMesh != null)
@@ -198,12 +259,28 @@ public class TabletMissionObject : InteractableObject
             foreach (ParticleSystem ps in restoredMesh.GetComponentsInChildren<ParticleSystem>(true))
                 ps.Play();
         }
-        // 5) Free the player, HUD, dashboard and raise the success toast.
+        // Free the player, HUD, dashboard and raise the success toast.
         PlayerMovement pm = FindObjectOfType<PlayerMovement>();
         if (pm != null) pm.enabled = true;
         if (hudCanvas != null) hudCanvas.SetActive(true);
         MissionTabletUI.Instance?.Refresh();
         UIManager.Notify($"Mission complete: {GetMissionLabel()}", successToastDuration);
+    }
+    // Disables renderers that no hidden root covers (flat setups where the corrupted mesh sits on the tablet root itself).
+    private void HideUncoveredRenderers(List<ShrinkTarget> targets, List<GameObject> rootsToHide)
+    {
+        foreach (ShrinkTarget target in targets)
+        {
+            if (target.renderer == null) continue;
+            Transform tr = target.renderer.transform;
+            bool covered = false;
+            foreach (GameObject root in rootsToHide)
+                if (root != null && !transform.IsChildOf(root.transform) && tr.IsChildOf(root.transform)) { covered = true; break; }
+            if (covered) continue;
+            if (restoredMesh != null && tr.IsChildOf(restoredMesh.transform)) continue;
+            target.renderer.enabled = false;
+            if (!fxDisabledRenderers.Contains(target.renderer)) fxDisabledRenderers.Add(target.renderer);
+        }
     }
     /// <summary>Fires the repair VFX and SFX simultaneously (one burst per corrupted mesh).</summary>
     private void TriggerRestoreFX(List<ShrinkTarget> targets)
@@ -260,6 +337,7 @@ public class TabletMissionObject : InteractableObject
     private sealed class ShrinkTarget
     {
         public Transform transform;
+        public Renderer renderer;
         public Vector3 localScale;
         public Vector3 worldPosition;
         public Vector3 worldScale;
@@ -292,6 +370,7 @@ public class TabletMissionObject : InteractableObject
             targets.Add(new ShrinkTarget
             {
                 transform = child,
+                renderer = renderer,
                 localScale = child.localScale,
                 worldPosition = child.position,
                 worldScale = child.lossyScale
@@ -304,6 +383,7 @@ public class TabletMissionObject : InteractableObject
             targets.Add(new ShrinkTarget
             {
                 transform = root,
+                renderer = root.GetComponent<MeshRenderer>(),
                 localScale = root.localScale,
                 worldPosition = root.position,
                 worldScale = root.lossyScale
@@ -324,6 +404,10 @@ public class TabletMissionObject : InteractableObject
     private void SetDefaultState()
     {
         isCompleted = false;
+        // Re-enable any renderers the fallback path switched off during a previous restore in this session.
+        foreach (Renderer renderer in fxDisabledRenderers)
+            if (renderer != null) renderer.enabled = true;
+        fxDisabledRenderers.Clear();
         if (defaultMesh != null) defaultMesh.SetActive(true);
         if (restoredMesh != null) restoredMesh.SetActive(false);
         if (triggerCollider != null) triggerCollider.enabled = true;
@@ -362,4 +446,15 @@ public class TabletMissionObject : InteractableObject
         return available[Random.Range(0, available.Length)];
     }
     public bool IsRestored() => isCompleted;
+    // Dedicated host so the effect survives the tablet (or its parents) being deactivated/destroyed mid-sequence.
+    private sealed class TabletFxHost : MonoBehaviour { }
+    private static TabletFxHost _fxHost;
+    private static TabletFxHost FxHost
+    {
+        get
+        {
+            if (_fxHost == null) _fxHost = new GameObject("TabletFxHost").AddComponent<TabletFxHost>();
+            return _fxHost;
+        }
+    }
 }

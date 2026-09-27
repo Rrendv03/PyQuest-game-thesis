@@ -106,8 +106,6 @@ public class PCGEngine : MonoBehaviour
     private PuzzleTemplate DrawFromSkeletons(List<PuzzleTemplate> skeletons,
                                              string bucketKey, int serveTier)
     {
-        // Cover the whole bucket, not just 3 random draws: one bad skeleton
-        // must not exhaust the budget when siblings are healthy.
         int draws = Mathf.Max(MaxGenerationDraws, skeletons.Count);
         for (int draw = 0; draw < draws; draw++)
         {
@@ -138,10 +136,6 @@ public class PCGEngine : MonoBehaviour
         return null;
     }
 
-    // Post-mutation gate: MutatePuzzlePublic runs AFTER validation and can
-    // invalidate its invariants (e.g. an op-flip making a distractor
-    // semantically equal to the answer). Re-validate; on failure serve the
-    // already-validated pre-mutation instance - mutations are cosmetic.
     private PuzzleTemplate ServeMutated(PuzzleTemplate validated,
                                         PuzzleTemplate skeleton)
     {
@@ -189,8 +183,6 @@ public class PCGEngine : MonoBehaviour
     private IEnumerable<List<PuzzleTemplate>> WidenedPools(List<PuzzleTemplate> bucket)
     {
         if (bucket == null || bucket.Count == 0) yield break;
-        // Widening stays INSIDE the knowledge component: a sanctum teaches its
-        // own KCs, so a variables bucket must never leak conditional templates.
         string kc = bucket[0].knowledgeComponent;
         PuzzleType ptype = bucket[0].puzzleType;
         yield return allTemplates.Where(t => t.knowledgeComponent == kc

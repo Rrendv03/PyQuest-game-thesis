@@ -56292,6 +56292,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 5
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  groundStickDistance: 0.5
+  groundStickSpeed: 3
   rotationSmoothTime: 0.12
   walkSpeed: 2
   runSpeed: 6
@@ -63036,7 +63041,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sceneToLoad: ElifLabyrinth
-  spawnPosition: {x: -14.335, y: 2.724, z: 8.64}
+  spawnPosition: {x: 240.678, y: 24.858, z: 325.9}
   fadeOverlay: {fileID: 1686099394}
   fadeDuration: 0.5
 --- !u!65 &1754913124
