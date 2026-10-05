@@ -32803,12 +32803,12 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 481771561}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 875475274}
+  m_Father: {fileID: 1273912019}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -32837,10 +32837,10 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 14
+    m_FontSize: 12
     m_FontStyle: 0
     m_BestFit: 0
-    m_MinSize: 10
+    m_MinSize: 1
     m_MaxSize: 40
     m_Alignment: 4
     m_AlignByGeometry: 0
@@ -66750,7 +66750,6 @@ RectTransform:
   m_Children:
   - {fileID: 1273912019}
   - {fileID: 602998338}
-  - {fileID: 481771562}
   m_Father: {fileID: 1897692496}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -79708,6 +79707,8 @@ MonoBehaviour:
   titleText: {fileID: 1743784885}
   bodyText: {fileID: 1836212431}
   closeButton: {fileID: 322385265}
+  useTwoColumns: 1
+  columnGap: 24
   hudCanvas: {fileID: 1813315704}
 --- !u!114 &1047753288
 MonoBehaviour:
@@ -85654,6 +85655,7 @@ MonoBehaviour:
   enemyNameText: {fileID: 2075905303}
   roundInfoText: {fileID: 1165212429}
   combatLogText: {fileID: 1809166172}
+  errorText: {fileID: 0}
   spiralTransitionOverlay: {fileID: 333289195}
   puzzleUIRoot: {fileID: 1897692495}
   lungeDuration: 1
@@ -97381,6 +97383,7 @@ RectTransform:
   - {fileID: 1804764604}
   - {fileID: 511618784}
   - {fileID: 52125689}
+  - {fileID: 481771562}
   m_Father: {fileID: 875475274}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -118313,6 +118316,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 5
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  groundStickDistance: 0.5
+  groundStickSpeed: 3
   rotationSmoothTime: 0.12
   walkSpeed: 2
   runSpeed: 6
@@ -124580,7 +124588,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 12800000, guid: dba2713a5eb25ee45946d0d53c5b9bba, type: 3}
-    m_FontSize: 16
+    m_FontSize: 12
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 1

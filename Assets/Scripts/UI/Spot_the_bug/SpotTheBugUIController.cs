@@ -33,14 +33,26 @@ public class SpotTheBugUIController : MonoBehaviour
 
     private readonly HashSet<string> warnedMissingClips = new HashSet<string>();
 
+    // Phase C/D round 2: the goal/supposed-output header the format built for
+    // the SERVED puzzle. Cached here so intermediate screens (fix options, the
+    // back-from-fix-options line view) can restore it instead of dropping the
+    // player back on the scene's default text — previously the header was
+    // written into instructionText exactly once and every later screen
+    // overwrote it with a hardcoded fallback.
+    private string contextHeaderText = null;
+
     private SpotTheBugLineButton selectedLine = null;
     private int correctLineIndex = -1;
     private string correctFix = "";
     private List<List<string>> allLineFixOptions;
 
+    // Phase C/D (09 §7): contextHeader carries the machine-verified goal-fact
+    // restatement built by SpotTheBugPuzzleFormat (null on the legacy path —
+    // default keeps 4-argument legacy callers compiling unchanged).
     public void PopulateUI(List<string> codeLines, int bugLineIndex,
                            string correctFixOption,
-                           List<List<string>> lineFixOptions)
+                           List<List<string>> lineFixOptions,
+                           string contextHeader = null)
     {
         correctLineIndex = bugLineIndex;
         correctFix = correctFixOption;
@@ -50,8 +62,11 @@ public class SpotTheBugUIController : MonoBehaviour
         if (linePanelRoot != null) linePanelRoot.SetActive(true);
         if (fixOptionsPanelRoot != null) fixOptionsPanelRoot.SetActive(false);
 
-        if (instructionText != null)
-            instructionText.text = "Click the line that contains the bug.";
+        // Phase C/D (09 §7): when the generative path supplied goal facts,
+        // the instruction line states those VERIFIED facts (const template);
+        // legacy serves keep the original line verbatim.
+        contextHeaderText = contextHeader;
+        RestoreInstructionHeader();
 
         if (backButton != null)
         {
@@ -127,8 +142,12 @@ public class SpotTheBugUIController : MonoBehaviour
         if (fixOptionsPanelRoot != null)
             fixOptionsPanelRoot.SetActive(true);
 
+        // Phase C/D round 2: keep the served header here too — the fix-options
+        // screen only ADDS a hint under it rather than replacing the header.
         if (instructionText != null)
-            instructionText.text = "Select the correct fix for this line.";
+            instructionText.text = string.IsNullOrEmpty(contextHeaderText)
+                ? "Select the correct fix for this line."
+                : contextHeaderText + "\nSelect the correct fix for this line.";
 
         foreach (var btn in fixOptionButtons)
             btn.SetActive(false);
@@ -171,10 +190,23 @@ public class SpotTheBugUIController : MonoBehaviour
         if (backButton != null)
             backButton.gameObject.SetActive(false);
 
-        if (instructionText != null)
-            instructionText.text = "Click the line that contains the bug.";
+        // Phase C/D round 2: restore the served [Goal:...] / [Supposed
+        // Output:...] header instead of the scene's default line — returning
+        // from the fix options must never blank the goal facts.
+        RestoreInstructionHeader();
 
         Debug.Log("[SpotTheBugUIController] Back pressed");
+    }
+
+    /// <summary>Writes the cached served header back into instructionText;
+    /// falls back to the original default line only on the legacy path where
+    /// no header was ever supplied.</summary>
+    private void RestoreInstructionHeader()
+    {
+        if (instructionText != null)
+            instructionText.text = string.IsNullOrEmpty(contextHeaderText)
+                ? "Click the line that contains the bug."
+                : contextHeaderText;
     }
 
     // --- Interaction sounds (clips assigned in the Inspector) ---

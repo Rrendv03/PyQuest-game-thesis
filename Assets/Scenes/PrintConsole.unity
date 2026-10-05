@@ -3990,7 +3990,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 4.76, y: 5.14, z: -0.5}
+  m_Size: {x: 4.76, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &143115363
 MeshRenderer:
@@ -5788,7 +5788,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.8, y: 5.14, z: -0.5}
+  m_Size: {x: 3.8, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &214264787
 MeshRenderer:
@@ -16647,7 +16647,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.8, y: 5.14, z: -0.5}
+  m_Size: {x: 3.8, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &259442724
 MeshRenderer:
@@ -19821,7 +19821,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 6.25, y: 5.14, z: -0.5}
+  m_Size: {x: 6.25, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &342215549
 MeshRenderer:
@@ -20451,7 +20451,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.8, y: 5.14, z: -0.5}
+  m_Size: {x: 3.8, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &350359033
 MeshRenderer:
@@ -24078,7 +24078,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 4.76, y: 5.14, z: -0.5}
+  m_Size: {x: 4.76, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &443239763
 MeshRenderer:
@@ -24714,7 +24714,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.8, y: 5.14, z: -0.5}
+  m_Size: {x: 3.8, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &454878884
 MeshRenderer:
@@ -25226,7 +25226,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.31, y: 5.14, z: -0.5}
+  m_Size: {x: 3.31, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &469671012
 MeshRenderer:
@@ -28143,7 +28143,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 6.04, y: 5.14, z: -0.5}
+  m_Size: {x: 6.04, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &552565807
 MeshRenderer:
@@ -28759,6 +28759,7 @@ RectTransform:
   - {fileID: 452470193}
   - {fileID: 366999214}
   - {fileID: 1945764739}
+  - {fileID: 941356298}
   m_Father: {fileID: 2059750863}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -29870,7 +29871,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.8, y: 5.14, z: -0.5}
+  m_Size: {x: 3.8, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &577798097
 MeshRenderer:
@@ -39969,7 +39970,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 12.7, y: 5.14, z: -3}
+  m_Size: {x: 12.7, y: 5.14, z: 3}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &758749780
 MeshRenderer:
@@ -55286,12 +55287,12 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 941356297}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 2059750863}
+  m_Father: {fileID: 558574067}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
@@ -55320,10 +55321,10 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 12800000, guid: c0b6c25c615e5864a82ef957492d9353, type: 3}
-    m_FontSize: 20
+    m_FontSize: 12
     m_FontStyle: 0
     m_BestFit: 0
-    m_MinSize: 2
+    m_MinSize: 1
     m_MaxSize: 40
     m_Alignment: 4
     m_AlignByGeometry: 0
@@ -66457,6 +66458,7 @@ MonoBehaviour:
   enemyNameText: {fileID: 1677088855}
   roundInfoText: {fileID: 1967288763}
   combatLogText: {fileID: 116166654}
+  errorText: {fileID: 0}
   spiralTransitionOverlay: {fileID: 613431343}
   puzzleUIRoot: {fileID: 2124388738}
   lungeDuration: 1
@@ -74486,7 +74488,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.31, y: 5.14, z: -0.5}
+  m_Size: {x: 3.31, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1363722437
 MeshRenderer:
@@ -75061,6 +75063,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 5
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  groundStickDistance: 0.5
+  groundStickSpeed: 3
   rotationSmoothTime: 0.12
   walkSpeed: 2
   runSpeed: 6
@@ -77024,7 +77031,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.8, y: 5.14, z: -0.5}
+  m_Size: {x: 3.8, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1420024834
 MeshRenderer:
@@ -77366,7 +77373,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.31, y: 5.14, z: -0.5}
+  m_Size: {x: 3.31, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1430383267
 MeshRenderer:
@@ -79432,6 +79439,8 @@ MonoBehaviour:
   titleText: {fileID: 1588391438}
   bodyText: {fileID: 1383420013}
   closeButton: {fileID: 1124126109}
+  useTwoColumns: 1
+  columnGap: 24
   hudCanvas: {fileID: 784202451}
 --- !u!114 &1474188320
 MonoBehaviour:
@@ -80310,7 +80319,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 6.04, y: 5.14, z: -0.5}
+  m_Size: {x: 6.04, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1521200045
 MeshRenderer:
@@ -91715,7 +91724,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 6.25, y: 5.14, z: -0.5}
+  m_Size: {x: 6.25, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1662925836
 MeshRenderer:
@@ -110747,7 +110756,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.31, y: 5.14, z: -0.5}
+  m_Size: {x: 3.31, y: 5.14, z: 0.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1961779660
 MeshRenderer:
@@ -119618,7 +119627,6 @@ RectTransform:
   m_Children:
   - {fileID: 558574067}
   - {fileID: 444445988}
-  - {fileID: 941356298}
   m_Father: {fileID: 2124388739}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -121204,7 +121212,7 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 12800000, guid: dba2713a5eb25ee45946d0d53c5b9bba, type: 3}
-    m_FontSize: 16
+    m_FontSize: 12
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 1

@@ -57,7 +57,31 @@ public class LineScramblePuzzleFormat : IPuzzleFormat
             return;
         }
 
-        uiController.PopulateUI(shuffledLines, shuffledLineRowNumbers);
+        // Phase C/D (09 §7): goalText-for-LineScramble — the context header
+        // tells the player the target output the arrangement must produce.
+        string lsHeader = null;
+        var ctx = template != null ? template.context : null;
+        if (ctx != null && ctx.GoalFacts != null)
+            foreach (string f in ctx.GoalFacts)
+                if (f != null && f.StartsWith("expectedOutput="))
+                {
+                    // 12: goal block wraps the target output (the one fact
+                    // that IS the puzzle's goal here) and adds the input line
+                    // when the puzzle carries one.
+                    lsHeader = PyQuest.Pcg.Ast.DistractorExplanation.GoalBlock(ctx,
+                        "Arrange the lines so the program prints: "
+                        + f.Substring(14).Replace("|", " , ")
+                        + " — keep every construct block intact.");
+                    break;
+                }
+
+        // 12: full goal display — goal block + blank line + the shuffled
+        // code inside the shared `__` fence (the slots are the draggable
+        // copy; the frame is the readable reference while arranging).
+        lsHeader = PyQuest.Pcg.Ast.DistractorExplanation.AssembleGoalDisplay(
+            lsHeader, string.Join("\n", shuffledLines));
+
+        uiController.PopulateUI(shuffledLines, shuffledLineRowNumbers, lsHeader);
         Debug.Log($"[LineScramblePuzzleFormat] Rendered | Lines: {shuffledLines.Count} | " +
                   $"Shuffled row numbers: {string.Join(", ", shuffledLineRowNumbers)}");
     }
@@ -74,6 +98,15 @@ public class LineScramblePuzzleFormat : IPuzzleFormat
                 (template.acceptedOrders != null && template.acceptedOrders.Count > 0)
                     ? template.acceptedOrders.Contains(string.Join(",", proposedOrder))
                     : IsValidDependencyOrder(proposedOrder);
+
+            // 13: AST equivalence net under BOTH validators. When the listed
+            // logic says no, ask the interpreter itself: run the rearranged
+            // program and accept it when its printed output matches the
+            // canonical arrangement's -- a nuance-equivalent solution counts
+            // (critical thinking is graded, not memorized order). Cheap:
+            // only reached when the fast gates rejected the submission.
+            if (!valid && proposedOrder.Count == template.codeLines.Count)
+                valid = OutputEquivalent(proposedOrder);
             Debug.Log($"[LineScramblePuzzleFormat] Proposed order: " +
                       $"{string.Join(",", proposedOrder)} | Valid: {valid}");
             return valid;
@@ -91,6 +124,46 @@ public class LineScramblePuzzleFormat : IPuzzleFormat
                        $"{playerAnswer?.GetType().Name ?? "null"}");
         return false;
     }
+
+    /// <summary>13: true when the proposed arrangement, executed by the
+    /// taught-subset interpreter, prints exactly what the canonical
+    /// arrangement prints (both runs must succeed). Grading by simulation —
+    /// the AST equivalent of "outputs the same code" — so nuance solutions
+    /// (independent print swaps, reordered independent assignments) count.
+    /// Never throws; returns false on any parse/run trouble, leaving the
+    /// order-based verdict standing.</summary>
+    private bool OutputEquivalent(List<int> proposedOrder)
+    {
+        if (template == null || template.codeLines == null || template.codeLines.Count == 0)
+            return false;
+
+        // Guard the index list: an out-of-range or repeated slot index is a
+        // broken submission, not a nuance solution.
+        foreach (int i in proposedOrder)
+            if (i < 0 || i >= template.codeLines.Count) return false;
+
+        string refCode = string.Join("\n", template.codeLines.ToArray());
+        string propCode = string.Join("\n", proposedOrder.Select(i => template.codeLines[i]).ToArray());
+
+        // The input presets are a serve fact (input= goal fact, in order);
+        // legacy templates without a context still validate - equivalence is
+        // a self-comparison and needs no metadata.
+        var inputs = new List<string>();
+        var ctx = template.context;
+        if (ctx != null && ctx.Inputs != null)
+            foreach (var il in ctx.Inputs)
+                if (il != null) inputs.Add(il.Preset);
+
+        // IronPython never enters this file: the bridge owns the run and
+        // answers with a plain printed-output key (line 13 contract).
+        string refKey = PyQuest.Pcg.Ast.DistractorExplanation.RunTraceKey(refCode, inputs);
+        if (refKey == null || refKey.Length == 0)
+            return false; // a puzzle whose canonical run fails printing nothing: no equivalence grading
+
+        string propKey = PyQuest.Pcg.Ast.DistractorExplanation.RunTraceKey(propCode, inputs);
+        return propKey != null && propKey == refKey;
+    }
+
 
     public object GetCorrectAnswer() =>
         "Any ordering where control-flow blocks stay intact and every variable is defined before it is used or reassigned";

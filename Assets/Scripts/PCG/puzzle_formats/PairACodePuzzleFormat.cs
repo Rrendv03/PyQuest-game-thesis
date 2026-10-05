@@ -87,6 +87,15 @@ public class PairACodePuzzleFormat : IPuzzleFormat
         {
             bool isCorrect = strAnswer.Trim() == correctAnswer.Trim();
             Debug.Log($"[PairACodePuzzleFormat] Player: {strAnswer} | Correct: {correctAnswer} | Result: {isCorrect}");
+
+            // Phase C/D (09 §8): why-wrong pipe on a wrong pick.
+            if (!isCorrect && template != null && template.context != null)
+            {
+                foreach (var o in template.context.Options)
+                    if (!o.Correct && o.Text != null && o.Text.Trim() == strAnswer.Trim())
+                        PyQuest.Pcg.Ast.PuzzleFeedback.ReportWrongOption(o.MisconceptionKind);
+                PyQuest.Pcg.Ast.PuzzleFeedback.ServedContext = template.context;
+            }
             return isCorrect;
         }
 
@@ -114,16 +123,36 @@ public class PairACodePuzzleFormat : IPuzzleFormat
         // arguments, wrong operator, wrong value) are wrong for reasons a
         // player can state: "the goal says message first", "the goal says
         // add". Templates that never set goalText keep the legacy headers.
-        string header = string.IsNullOrEmpty(template.goalText)
-            ? (template.codeLines.Count == 1
-                ? "# What is the missing line?"
-                : "# Complete the missing line:")
-            : "# Goal: " + template.goalText;
+        // 12: generative path shows the player-facing goal block (the fact
+        // join used to print verbatim); legacy templates keep their authored
+        // goal text or the const header.
+        string header = template.context != null
+            ? PyQuest.Pcg.Ast.DistractorExplanation.GoalBlock(
+                template.context, "Fill the missing part to complete the code")
+            : (string.IsNullOrEmpty(template.goalText)
+                ? (template.codeLines.Count == 1
+                    ? "# What is the missing line?"
+                    : "# Complete the missing line:")
+                : "# Goal: " + template.goalText);
+
+        // 13: player-facing layout exactly as specified —
+        //     [Goal: "..."]
+        //     (blank)
+        //     __\ncode\n__
+        //     (blank)
+        //     [Output: "..."]       <- only when the serve carries the fact
+        // Legacy templates have no output fact; they keep the bare
+        // goal+frame display verbatim.
+        string outputFooter = template.context != null
+            ? PyQuest.Pcg.Ast.DistractorExplanation.OutputLine(template.context, "Output")
+            : null;
 
         if (template.codeLines.Count == 1)
         {
             correctAnswer = template.codeLines[0];
-            codeSnippetWithBlank = header + "\n[ DRAG HERE ]";
+            codeSnippetWithBlank = PyQuest.Pcg.Ast.DistractorExplanation.AssembleGoalDisplay(
+                header, "[ DRAG HERE ]", outputFooter)
+                ?? header + "\n\n" + PyQuest.Pcg.Ast.DistractorExplanation.CodeFrame("[ DRAG HERE ]");
         }
         else
         {
@@ -132,7 +161,10 @@ public class PairACodePuzzleFormat : IPuzzleFormat
             // Build display: show all lines except the blanked one
             List<string> displayLines = new List<string>(template.codeLines);
             displayLines[blankIndex] = "[ ? ]";
-            codeSnippetWithBlank = header + "\n" + string.Join("\n", displayLines);
+            codeSnippetWithBlank = PyQuest.Pcg.Ast.DistractorExplanation.AssembleGoalDisplay(
+                header, string.Join("\n", displayLines), outputFooter)
+                ?? header + "\n\n" + PyQuest.Pcg.Ast.DistractorExplanation.CodeFrame(
+                    string.Join("\n", displayLines));
         }
 
         // Build options: correct answer + distractors. Distractors arrive

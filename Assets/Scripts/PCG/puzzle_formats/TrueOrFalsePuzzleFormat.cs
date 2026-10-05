@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,11 +34,37 @@ public class TrueOrFalsePuzzleFormat : IPuzzleFormat
             return;
         }
 
-        // Format the code snippet for display with a question prompt
-        string prompt = "Is the following code snippet correct?\n\n";
+        // 13 verdict layout (same shape as PairACode/FillInTheBlank):
+        //     [Goal: "..."]
+        //     (blank)
+        //     __\ncode\n__
+        //     (blank)
+        //     [Output: "..."]      <- only when the serve carries the fact
+        // The assembly helper returns null when the header is null (legacy
+        // path), and legacy callers then keep their original text verbatim.
+        string header = template.context != null
+            ? PyQuest.Pcg.Ast.DistractorExplanation.GoalBlock(
+                template.context, "Is this code correct, or does it contain a bug?")
+            : null;
         string codeBlock = string.Join("\n", template.codeLines);
+        string footer = template.context != null
+            ? PyQuest.Pcg.Ast.DistractorExplanation.OutputLine(template.context, "Output")
+            : null;
 
-        displayField.text = prompt + "```\n" + codeBlock + "\n```\n\n[True] [False]";
+        string assembled = PyQuest.Pcg.Ast.DistractorExplanation.AssembleGoalDisplay(
+            header, codeBlock, footer);
+        if (assembled != null)
+        {
+            // The scene's True/False buttons are the answer surface
+            // (TrueOrFalseButtonController) — no [True] [False] text hint.
+            displayField.text = assembled;
+        }
+        else
+        {
+            displayField.text = "Is the following code snippet correct?\n\n"
+                + PyQuest.Pcg.Ast.DistractorExplanation.CodeFrame(codeBlock)
+                + "\n\n[True] [False]";
+        }
     }
 
     public bool EvaluateAnswer(object playerAnswer)
@@ -63,6 +90,22 @@ public class TrueOrFalsePuzzleFormat : IPuzzleFormat
     /// </summary>
     private void GenerateCodeSnippet()
     {
+        // Phase C/D (09 §10): metadata-driven path. The generative pipeline
+        // already executed BOTH traces and keyed the verdict; the displayed
+        // code is the post-mutation source, so verdict and display can never
+        // disagree (kills the undecidable-false-annotation class at the root).
+        // No re-mutation, no bug surgery. Legacy templates: 100% today's path.
+        var ctx = template.context;
+        if (ctx != null)
+        {
+            correctAnswer = string.Equals(ctx.CorrectAnswer ?? "True", "True");
+            string[] ctxLines = (ctx.Code ?? "").Split('\n');
+            if (ctxLines.Length > 0 && ctxLines[ctxLines.Length - 1].Trim().Length > 0)
+                template.codeLines = new List<string>(ctxLines);
+            Debug.Log($"[TrueOrFalsePuzzleFormat] Metadata-driven verdict: {correctAnswer} | Code:\n{string.Join("\n", template.codeLines)}");
+            return;
+        }
+
         // Always mutate the template first (swap variable names/values)
         template = PCGEngine.Instance.MutatePuzzlePublic(template);
 

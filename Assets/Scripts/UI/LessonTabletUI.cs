@@ -96,7 +96,8 @@ public class LessonTabletUI : MonoBehaviour
                 "  ? age = input() ? result is text, not a number\n" +
                 "  ? total = age + 5 ? TypeError: str + int",
             correctForm = "  ? age = int(input(\"Age: \"))",
-            remember = "  input() always returns a string. Convert with int() or float() before doing any arithmetic.",
+            remember = "  input() always returns a string. Convert with int() or float() before doing any arithmetic.\n" +
+                "  In PyQuest, input() always gives you text — we print, join, and compare it. Converting it to a number is not covered.",
             nextUp = "? Next: Conditionals let you branch based on that input."
         },
         ["conditionals"] = new LessonContent

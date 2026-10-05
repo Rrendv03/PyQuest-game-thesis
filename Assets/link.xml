@@ -1,0 +1,7 @@
+<linker>
+  <assembly fullname="IronPython" preserve="all" />
+  <assembly fullname="IronPython.Modules" preserve="all" />
+  <assembly fullname="Microsoft.Dynamic" preserve="all" />
+  <assembly fullname="Microsoft.Scripting" preserve="all" />
+  <assembly fullname="System.CodeDom" preserve="all" />
+</linker>

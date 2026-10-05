@@ -128,11 +128,30 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
             return;
         }
 
+        // Phase C/D (09 §7): the context header restates machine-verified goal
+        // facts; the const wording template lives in the bridge file.
+        // 13: EXACTLY TWO lines — the UI component only fits two — and no
+        // code in the header (the buggy code IS the displayed panel; showing
+        // it twice would give the answer away). The KC never prefixes the
+        // goal: the format label was debug prose, not a player fact.
+        string header = null;
+        var ctx = template != null ? template.context : null;
+        if (ctx != null && ctx.GoalFacts != null)
+        {
+            header = PyQuest.Pcg.Ast.DistractorExplanation.HeaderWithOutput(
+                ctx,
+                "One line misbehaves — the program should still run; find it.",
+                "Supposed Output");
+            // HeaderWithOutput emits [Goal: ...] + [Supposed Output: ...]
+            // only; the input preset stays engine-side for this format.
+        }
+
         uiController.PopulateUI(
             template.codeLines,
             correctLineIndex,
             correctFix,
-            allLineFixOptions);
+            allLineFixOptions,
+            header);
 
         Debug.Log($"[SpotTheBugPuzzleFormat] Rendered | Bug line: {correctLineIndex} | Fix: {correctFix}");
     }
@@ -145,6 +164,20 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
             bool fixCorrect = !string.IsNullOrEmpty(submission.selectedFixText)
                               && submission.selectedFixText.Trim() == correctFix.Trim();
             bool result = lineCorrect && fixCorrect;
+
+            // Phase C/D (09 §8): feed the why-wrong pipe on a wrong pick.
+            if (!result)
+            {
+                var ctx = template != null ? template.context : null;
+                if (ctx != null && ctx.Options != null)
+                    foreach (var o in ctx.Options)
+                        if (!o.Correct && string.Equals(o.Text.Trim(), submission.selectedFixText.Trim()))
+                        {
+                            PyQuest.Pcg.Ast.PuzzleFeedback.ReportWrongOption(o.MisconceptionKind);
+                            break;
+                        }
+                PyQuest.Pcg.Ast.PuzzleFeedback.ServedContext = ctx;
+            }
 
             Debug.Log($"[SpotTheBugPuzzleFormat] Evaluated structured submission | " +
                       $"Line: {submission.selectedLineIndex} ({(lineCorrect ? "correct" : "wrong")}) | " +
@@ -256,7 +289,13 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
                 // anything else and nothing ever removes index 0), then
                 // wrong options.
                 lineOptions.Add(correctFix);
-                foreach (string w in GenerateWrongOptions(correctFix, buggedLine))
+                // Phase C/D (09 §10): the generative path carries PROVEN-wrong
+                // fixes on the context (each one was executed in place and
+                // changed the trace). They displace the format's heuristic
+                // decoys; the named fallback keeps every legacy template on
+                // today's behavior verbatim.
+                List<string> provenFixes = ProvenWrongFixes(correctFix, buggedLine);
+                foreach (string w in provenFixes)
                     AddDistinct(lineOptions, w, 3);
             }
             else
@@ -280,6 +319,25 @@ public class SpotTheBugPuzzleFormat : IPuzzleFormat
         Debug.Log($"[SpotTheBugPuzzleFormat] Bug line: {correctLineIndex} " +
                   $"({(authoredBug ? "authored" : "generated/" + LastKindName())}) | " +
                   $"Clean: {correctFix} | Bugged: {buggedLine}");
+    }
+
+    // ------------------------------------------------------------------
+    // Phase C/D: proven-wrong fixes from the machine-derived context (null on
+    // the legacy path ? count 0 ? caller keeps GenerateWrongOptions.
+    // ------------------------------------------------------------------
+    private List<string> ProvenWrongFixes(string correctFix, string buggedLine)
+    {
+        var result = new List<string>();
+        PyQuest.Pcg.Ast.PuzzleContextMetadata ctx = template != null ? template.context : null;
+        if (ctx == null || ctx.Options == null) return result;
+        foreach (var o in ctx.Options)
+        {
+            if (o.Correct) continue;
+            if (string.IsNullOrEmpty(o.Text)) continue;
+            if (o.Text.Trim() == correctFix.Trim()) continue; // never the answer itself
+            result.Add(o.Text);
+        }
+        return result;
     }
 
     // ------------------------------------------------------------------

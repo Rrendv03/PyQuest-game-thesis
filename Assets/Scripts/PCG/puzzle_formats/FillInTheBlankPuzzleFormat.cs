@@ -88,6 +88,15 @@ public class FillInTheBlankPuzzleFormat : IPuzzleFormat
         {
             bool isCorrect = strAnswer.Trim() == correctAnswer.Trim();
             Debug.Log($"[FillInTheBlankPuzzleFormat] Player: {strAnswer} | Correct: {correctAnswer} | Result: {isCorrect}");
+
+            // Phase C/D (09 §8): why-wrong pipe on a wrong pick.
+            if (!isCorrect && template != null && template.context != null)
+            {
+                foreach (var o in template.context.Options)
+                    if (!o.Correct && o.Text != null && o.Text.Trim() == strAnswer.Trim())
+                        PyQuest.Pcg.Ast.PuzzleFeedback.ReportWrongOption(o.MisconceptionKind);
+                PyQuest.Pcg.Ast.PuzzleFeedback.ServedContext = template.context;
+            }
             return isCorrect;
         }
 
@@ -108,6 +117,50 @@ public class FillInTheBlankPuzzleFormat : IPuzzleFormat
 
         int targetLine = -1;
         string foundKeyword = null;
+
+        // Phase C/D (09 §10): metadata-driven blank. The generative path chose
+        // a literal token, chose the line, and proved 3 wrong tokens by
+        // executing each substitution. Blank + tokens keyed off the context;
+        // header comes from the machine-derived goal facts. Legacy templates
+        // (context null) keep this file's full keyword-rotation path verbatim.
+        var meta = template.context;
+        if (meta != null && !string.IsNullOrEmpty(meta.CorrectAnswer)
+            && meta.CodeChangedLine >= 0 && meta.CodeChangedLine < template.codeLines.Count
+            && template.codeLines[meta.CodeChangedLine].Contains(meta.CorrectAnswer))
+        {
+            targetLine = meta.CodeChangedLine;
+            foundKeyword = meta.CorrectAnswer;
+            correctAnswer = foundKeyword;
+
+            List<string> metaDisplay = new List<string>(template.codeLines);
+            metaDisplay[targetLine] = ReplaceFirstOccurrence(
+                metaDisplay[targetLine], foundKeyword, "____");
+
+            // 12/13: player-facing goal block + shared `__` code frame, and —
+            // only on the goal-block era — a trailing [Output: "..."] footer
+            // (same layout as PairACode; legacy templates keep their bare
+            // goal+frame display verbatim below).
+            string metaHeader = PyQuest.Pcg.Ast.DistractorExplanation.GoalBlock(
+                meta, "Complete the program: type the one missing token.");
+            string metaFooter = PyQuest.Pcg.Ast.DistractorExplanation.OutputLine(meta, "Output");
+            codeSnippetWithBlank = PyQuest.Pcg.Ast.DistractorExplanation.AssembleGoalDisplay(
+                metaHeader ?? "# Fill in the missing token:",
+                string.Join("\n", metaDisplay),
+                metaFooter);
+
+            tokens = new List<string>();
+            tokens.Add(correctAnswer);
+            if (meta.Options != null)
+                foreach (var o in meta.Options)
+                    if (!o.Correct) AddDistractor(o.Text);
+            foreach (string d in GetKeywordDistractors(correctAnswer))
+            {
+                if (tokens.Count >= 4) break;
+                AddDistractor(d);
+            }
+            Debug.Log($"[FillInTheBlankPuzzleFormat] Metadata-driven blank: '{foundKeyword}' on line {targetLine} | Tokens: {string.Join(", ", tokens)}");
+            return;
+        }
 
         // 1) Honor the engine's rotated blank. RotateFitbBlank names the
         //    token in correctAnswer and the line that holds it in

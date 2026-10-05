@@ -21,6 +21,9 @@ public class EncounterManager : MonoBehaviour
     public Text enemyNameText;
     public Text roundInfoText;
     public Text combatLogText;
+    [Header("Wrong-Answer Feedback (Phase D, 09 §8) — the ONLY field this upgrade adds")]
+    [Tooltip("Dedicated why-wrong line shown on a wrong answer, cleared at round start. Never a combat-log reuse.")]
+    public Text errorText;
 
     [Header("UI Transition Setup")]
     public Image spiralTransitionOverlay;
@@ -370,6 +373,10 @@ public class EncounterManager : MonoBehaviour
         currentPuzzleID = $"{currentEncounterID}_r{currentRound}";
         StudentLogManager.Instance?.StartPuzzleTracking(currentPuzzleID);
 
+        // Phase D (09 §8): no stale why-wrong feedback across rounds.
+        if (errorText != null) errorText.text = "";
+        PyQuest.Pcg.Ast.PuzzleFeedback.Clear();
+
         PuzzleManager.Instance.OnZoneEntered(
             currentKnowledgeComponent, currentRoundFormat, lockedEncounterTier);
     }
@@ -447,6 +454,15 @@ public class EncounterManager : MonoBehaviour
         }
         else
         {
+            // Phase D (09 §8): the dedicated errorText shows the why-wrong line
+            // derived from the picked option's misconception kind. The combat
+            // log keeps its damage text untouched.
+            if (errorText != null)
+            {
+                var ctx = PyQuest.Pcg.Ast.PuzzleFeedback.ServedContext;
+                errorText.text = PyQuest.Pcg.Ast.DistractorExplanation.FreshSentence(ctx);
+            }
+
             bool enemyDodged = Random.value < currentEnemy.dodgeChance;
             if (!enemyDodged)
             {

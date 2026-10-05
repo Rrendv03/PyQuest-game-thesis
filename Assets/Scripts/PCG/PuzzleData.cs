@@ -13,6 +13,19 @@ public class PuzzleData
     [System.NonSerialized]
     public IPuzzleFormat formatHandler;
 
+    // Phase C/D (09 §7/§10): machine-derived context on the generative path.
+    // Null on the legacy path — every consumer must null-check and fall back
+    // to today's headers. Also carries the served metadata so EncounterManager
+    // / UI controllers never guess (single source of truth).
+
+    /// <summary>Machine-derived puzzle context (PuzzleContextMetadata) or null.</summary>
+    [System.NonSerialized]
+    public PyQuest.Pcg.Ast.PuzzleContextMetadata context;
+
+    /// <summary>Set by the serving path when the player picks a proven-wrong
+    /// option: the misconception kind feeding DistractorExplanation / errorText.</summary>
+    public string PickedWrongKind;
+
     public string knowledgeComponent => template?.knowledgeComponent ?? "";
     public PuzzleType puzzleType => template?.puzzleType ?? PuzzleType.SpotTheBug;
     public DifficultyTier difficulty => template?.difficulty ?? DifficultyTier.Beginner;

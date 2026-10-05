@@ -148,7 +148,8 @@ public class LineScrambleUIController : MonoBehaviour
             "Assign it under Interaction Sounds on the LineScrambleUIController.");
     }
 
-    public void PopulateUI(List<string> shuffledLines, List<int> shuffledRowNumbers)
+    public void PopulateUI(List<string> shuffledLines, List<int> shuffledRowNumbers,
+                           string contextHeader = null)
     {
         // A fresh populate invalidates any in-flight swap animation and any
         // deferred layout sync from the previous puzzle. It also ends any
@@ -163,8 +164,13 @@ public class LineScrambleUIController : MonoBehaviour
 
         orderedSlots = new List<LineScrambleSlot>();
 
+        // Phase C/D (09 §7): when the generative path supplied goal facts the
+        // instruction states the machine-verified ORDERING intent (multi-print
+        // snippets make order implicit otherwise). Legacy serves: original line.
         if (instructionText != null)
-            instructionText.text = "Drag the code line on top of the other code to reorder them, then press Execute.";
+            instructionText.text = string.IsNullOrEmpty(contextHeader)
+                ? "Drag the code line on top of the other code to reorder them, then press Execute."
+                : contextHeader;
 
         foreach (var obj in slotObjects)
             obj.SetActive(false);

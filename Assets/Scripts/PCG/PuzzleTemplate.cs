@@ -51,6 +51,13 @@ public class PuzzleTemplate
     // Slot tokens like {name} are filled by PuzzleVariationEngine.
     public string goalText;
 
+    // Phase C/D (09 §10): machine-derived context carried through the
+    // generative path only (PCGEngine attaches it before
+    // PuzzleFormatFactory.CreatePuzzleFormat runs). Null on the legacy path;
+    // [NonSerialized] so JsonUtility round-trips stay byte-identical.
+    [System.NonSerialized]
+    public PyQuest.Pcg.Ast.PuzzleContextMetadata context;
+
     // LineScramble only: every dependency-valid permutation of codeLines
     // that simulates to the SAME output as the canonical order, computed by
     // PuzzleVariationEngine.ComputeAcceptedOrders. Keys are comma-joined row

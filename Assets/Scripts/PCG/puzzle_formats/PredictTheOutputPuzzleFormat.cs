@@ -31,10 +31,16 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
             return;
         }
 
-        string header = isErrorVariant
-            ? "# What error does this code produce?"
-            : "# What is the output of this code?";
+        // 12: player-facing goal block (const sentence) + shared `__` frame;
+        // the answer/expected-output fact is never rendered here (spoil risk).
+        string question = isErrorVariant
+            ? "What error does this code produce?"
+            : "What is the output of this code?";
+        string header = template.context != null
+            ? PyQuest.Pcg.Ast.DistractorExplanation.GoalBlock(template.context, question)
+            : "# " + question;
 
+        // 2026-10 compact: header lines then raw code, no fence/blank lines
         string codeSnippet = header + "\n" + string.Join("\n", template.codeLines);
 
         uiController.PopulateUI(codeSnippet, options);
@@ -47,6 +53,15 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
         {
             bool isCorrect = strAnswer.Trim() == correctAnswer.Trim();
             Debug.Log($"[PredictTheOutputPuzzleFormat] Player: {strAnswer} | Correct: {correctAnswer} | Result: {isCorrect}");
+
+            // Phase C/D (09 §8): why-wrong pipe on a wrong pick.
+            if (!isCorrect && template != null && template.context != null)
+            {
+                foreach (var o in template.context.Options)
+                    if (!o.Correct && o.Text != null && o.Text.Trim() == strAnswer.Trim())
+                        PyQuest.Pcg.Ast.PuzzleFeedback.ReportWrongOption(o.MisconceptionKind);
+                PyQuest.Pcg.Ast.PuzzleFeedback.ServedContext = template.context;
+            }
             return isCorrect;
         }
 
@@ -59,6 +74,27 @@ public class PredictTheOutputPuzzleFormat : IPuzzleFormat
     private void GeneratePuzzle()
     {
         Debug.Log($"[PredictTheOutputPuzzleFormat] template.variableValue={template.variableValue} | template.correctAnswer={template.correctAnswer}");
+
+        // Phase C/D (09 §10): metadata-driven option forging. The generative
+        // path already executed every option; proven distractors displace the
+        // heuristic families below. Legacy templates (context null) keep this
+        // file's whole code path verbatim.
+        var ctx = template.context;
+        if (ctx != null && ctx.Options != null && ctx.Options.Count >= 3)
+        {
+            correctAnswer = template.correctAnswer;
+            options = new List<string> { correctAnswer };
+            foreach (var o in ctx.Options)
+                if (!o.Correct && !options.Contains(o.Text) && options.Count < 3)
+                    options.Add(o.Text);
+            if (options.Count >= 3)
+            {
+                isErrorVariant = false;
+                Debug.Log($"[PredictTheOutputPuzzleFormat] Metadata-driven | Correct: {correctAnswer} | Options: {string.Join(", ", options)}");
+                return;
+            }
+        }
+
         correctAnswer = template.correctAnswer;
         isErrorVariant = correctAnswer == "NameError"
                       || correctAnswer == "TypeError"

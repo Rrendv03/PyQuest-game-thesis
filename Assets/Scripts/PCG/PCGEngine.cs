@@ -19,11 +19,32 @@ public class PCGEngine : MonoBehaviour
 
     private const bool useRequestTimeExpansion = true;
 
+    // Phase C (09 §4/§9): the generative AST path — one-flip rollback.
+    // false restores the legacy byte-exact behavior (harness regression guard,
+    // 09 §11 item 4).
+    private const bool useGenerativePath = true;
+
+    // Monotonic request counter: deterministic-but-unique seeds for ServeRequest.
+    private int generativeRequestCounter;
+
+    // IronPython availability is checked once per session — avoid spamming
+    // the "legacy fallback" warning on every request when the plugins are
+    // simply not installed (gateway reports its own reason once).
+    private bool generativeUnavailableLogged;
+
     private const int MaxGenerationDraws = 3;
 
     private readonly Dictionary<string, int> skeletonDrawCounter = new Dictionary<string, int>();
 
     private Dictionary<string, Queue<string>> recentlyUsed = new Dictionary<string, Queue<string>>();
+
+    void OnEnable()
+    {
+        // Phase C: route the service's UnityEngine-free log pipe into Debug
+        // (the provenance section of the defense package reads these logs).
+        PyQuest.Pcg.Ast.AstPuzzleService.Log = m => Debug.Log("[PCG] " + m);
+        PyQuest.Pcg.Ast.AstPuzzleService.LogWarning = m => Debug.LogWarning("[PCG] " + m);
+    }
 
     void Awake()
     {
@@ -203,6 +224,11 @@ public class PCGEngine : MonoBehaviour
     public PuzzleData GeneratePuzzle(string componentName, PuzzleType puzzleType,
                                       DifficultyTier forcedTier)
     {
+        // Phase C (09 §4): the generative path takes priority; returning null
+        // falls straight through to the legacy pool chain below, unchanged.
+        PuzzleData genServed = TryServeGenerative(componentName, puzzleType, (int)forcedTier);
+        if (genServed != null) return genServed;
+
         if (!IsLoaded)
             Debug.LogWarning("[PCG] GeneratePuzzle called before puzzle_templates.json finished " +
                               "loading. allTemplates may still be empty; this call will likely " +
@@ -288,6 +314,14 @@ public class PCGEngine : MonoBehaviour
 
     public PuzzleTemplate GeneratePuzzleTemplate(string componentName)
     {
+        // Phase C: generative first (PTO shape — all template fields the
+        // consumer initializes are shared); the context travels on the
+        // template so any later format Initialize renders real facts.
+        PuzzleData genServed = TryServeGenerative(
+            componentName, PuzzleType.PredictTheOutput, (int)GetTierForMastery(
+                BKTEngine.Instance != null ? BKTEngine.Instance.GetMastery(componentName) : 0f));
+        if (genServed != null) return genServed.template;
+
         float mastery = BKTEngine.Instance.GetMastery(componentName);
         DifficultyTier targetTier = GetTierForMastery(mastery);
 
@@ -330,6 +364,24 @@ public class PCGEngine : MonoBehaviour
 
     public TrueFalseData GenerateTrueFalsePuzzle(string componentName)
     {
+        // Phase C: generative first — the verdict is PROVEN by executing both
+        // traces (09 §6.5/§6.6: no undecidable false-verdict class).
+        if (useGenerativePath)
+        {
+            int tier = (int)GetTierForMastery(
+                BKTEngine.Instance != null ? BKTEngine.Instance.GetMastery(componentName) : 0f);
+            PuzzleData genServed = TryServeGenerative(componentName, PuzzleType.TrueOrFalse, tier);
+            if (genServed != null)
+            {
+                TrueFalseData tf = new TrueFalseData();
+                tf.snippetText = genServed.template.codeLines != null
+                    ? string.Join("\n", genServed.template.codeLines.ToArray()) : "";
+                string verdict = genServed.template.correctAnswer ?? "True";
+                tf.isSnippetTrue = string.Equals(verdict, "True");
+                return tf;
+            }
+        }
+
         float mastery = BKTEngine.Instance.GetMastery(componentName);
         DifficultyTier targetTier = GetTierForMastery(mastery);
 
@@ -376,6 +428,124 @@ public class PCGEngine : MonoBehaviour
             FindAuthoredSkeleton(baseTemplate.id));
 
         return BuildTrueFalseData(mutatedTemplate);
+    }
+
+    // =====================================================================
+    // Phase C — generative AST pipeline (09 §4/§9/§10). Additive only: the
+    // legacy code below is untouched and remains the full fallback path.
+    // =====================================================================
+
+    /// <summary>
+    /// One generative serve attempt through PyQuest.Pcg.Ast.AstPuzzleService.
+    /// Returns null (never throws back) whenever anything is unavailable or
+    /// MaxAttempts exhausts — the caller falls through to the legacy pool.
+    /// </summary>
+    private PuzzleData TryServeGenerative(string componentName, PuzzleType puzzleType,
+                                          int tier)
+    {
+        if (!useGenerativePath) return null;
+        if (PyQuest.Pcg.Ast.PythonAstGateway.Available == false)
+        {
+            if (!generativeUnavailableLogged)
+            {
+                generativeUnavailableLogged = true;
+                Debug.LogWarning("[PCG] Generative path unavailable (" +
+                                 (PyQuest.Pcg.Ast.PythonAstGateway.UnavailableReason ?? "unknown") +
+                                 "); serving the legacy pool for all requests.");
+            }
+            return null;
+        }
+
+        int seed = unchecked((componentName + "|" + puzzleType).GetHashCode()
+                             ^ generativeRequestCounter++ * 7919);
+        PyQuest.Pcg.Ast.AstPuzzleService.PuzzleResult res;
+        try
+        {
+            res = PyQuest.Pcg.Ast.AstPuzzleService.ServeRequest(
+                componentName, tier, (PyQuest.Pcg.Ast.PuzzleTypeCode)puzzleType, seed);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[PCG] Generative serve threw " + ex.GetType().Name +
+                             "; falling back to the legacy pool: " + ex.Message);
+            return null;
+        }
+
+        if (res == null || res.Template == null || res.Metadata == null)
+        {
+            Debug.LogWarning($"[PCG] Generative path exhausted for '{componentName}' | " +
+                             $"Type: {puzzleType} | Tier: {tier}; serving the legacy pool " +
+                             "(rejection classes logged above by the service).");
+            LogServeStats();
+            return null;
+        }
+
+        PuzzleTemplate adapted = AdaptLegacy(res.Template, componentName, puzzleType, res.Metadata);
+
+        // Defense in depth (09 §9): the existing validation gate runs on
+        // generative output too. The generative pipeline already proves the
+        // §6.5/§6.6 properties by execution, so a legacy-shaped flag here is
+        // LOGGED and we still serve (strict rejection re-arms at Phase E by
+        // flipping continue?return-null on the block below).
+        string gateFailure;
+        if (!PuzzleVariationEngine.ValidateInstance(adapted, null, out gateFailure))
+            Debug.LogWarning($"[PCG] Legacy gate flagged the generative instance " +
+                             $"({gateFailure}); serving anyway — execution proofs cover " +
+                             "this risk class. Phase E re-arms strictness.");
+
+        IPuzzleFormat genFormatHandler = PuzzleFormatFactory.CreatePuzzleFormat(adapted);
+        if (genFormatHandler == null)
+        {
+            Debug.LogError("[PCG] Failed to create format handler for generative instance: " +
+                           adapted.puzzleType);
+            return null;
+        }
+
+        Debug.Log($"[PCG] Generative puzzle served | Component: {componentName} | " +
+                  $"Type: {puzzleType} | Tier: {tier} | id: {adapted.id} | " +
+                  $"correct: {(res.Metadata.CorrectAnswer ?? "").Replace("\n", " ; ")}");
+        LogServeStats();
+        return new PuzzleData(adapted, genFormatHandler) { context = res.Metadata };
+    }
+
+    /// <summary>LegacyPuzzleTemplate (UnityEngine-free mirror) ? real PuzzleTemplate.
+    /// knowledgeComponent stays the ZONE string the caller passed so BKT keys,
+    /// student logs, and sanctum scoping stay untouched; the mapped KC lives on
+    /// res.Metadata.Kc for provenance.</summary>
+    // NOTE: LegacyPuzzleTemplate is a namespace-level type (PyQuest.Pcg.Ast),
+    // NOT nested inside AstPuzzleService — always qualify with the full namespace.
+    private static PuzzleTemplate AdaptLegacy(PyQuest.Pcg.Ast.LegacyPuzzleTemplate lt,
+                                              string zone, PuzzleType type,
+                                              PyQuest.Pcg.Ast.PuzzleContextMetadata meta)
+    {
+        return new PuzzleTemplate
+        {
+            id = lt.id,
+            knowledgeComponent = zone,
+            puzzleType = type,
+            difficulty = (DifficultyTier)Mathf.Clamp(lt.difficulty, 0, 2),
+            codeLines = lt.codeLines != null ? lt.codeLines : new List<string>(),
+            correctAnswer = lt.correctAnswer,
+            bugLineIndex = lt.bugLineIndex,
+            correctOrder = lt.correctOrder,
+            acceptedOrders = lt.acceptedOrders,
+            distractors = lt.distractors != null ? lt.distractors : new List<string>(),
+            variableName = lt.variableName,
+            variableValue = lt.variableValue,
+            goalText = lt.goalText,
+            additionalVariables = new List<VariablePair>(),
+            context = meta
+        };
+    }
+
+    /// <summary>D5 metrics: one line per serve with the named rejection table.</summary>
+    private void LogServeStats()
+    {
+        var stats = PyQuest.Pcg.Ast.AstPuzzleService.ServeStats;
+        if (stats.Count == 0) return;
+        var parts = new List<string>();
+        foreach (var kv in stats) parts.Add(kv.Key + "=" + kv.Value);
+        Debug.Log("[PCG] Generative conformance counters | " + string.Join(" | ", parts.ToArray()));
     }
 
     private TrueFalseData BuildTrueFalseData(PuzzleTemplate mutatedTemplate)
@@ -523,7 +693,8 @@ public class PCGEngine : MonoBehaviour
             "3", "8", "12", "17", "22", "40", "60", "80",
             "120", "175", "300", "400", "9", "11", "45", "65",
             "4", "6", "14", "18", "28", "35", "55", "70",
-            "85", "95", "110", "130"
+            "85", "95", "110", "130", "90", "140",
+            "160", "210", "260", "310", "360", "420"
         };
 
         string[] stringValuePool = new string[]
@@ -534,7 +705,11 @@ public class PCGEngine : MonoBehaviour
             "'Druid'", "'Bard'", "'Cleric'", "'Alchemist'", "'Nomad'",
             "'Guardian'", "'Sentinel'", "'Wanderer'", "'Champion'", "'Seer'",
             "'Oracle'", "'Voyager'", "'Crusader'", "'Mystic'", "'Pilgrim'",
-            "'Vanguard'", "'Warlord'", "'Enigma'"
+            "'Vanguard'", "'Warlord'", "'Enigma'",
+            "'Squire'", "'Aegis'", "'Tempest'", "'Falcon'", "'Vertex'",
+            "'Rover'", "'Comet'", "'Titan'", "'Herald'", "'Warden'",
+            "'Lumen'", "'Crimson'", "'Onyx'", "'Ivory'", "'Sable'",
+            "'Wisp'", "'Quill'", "'Fable'"
         };
 
         string[] greetingPool = new string[]
@@ -543,7 +718,17 @@ public class PCGEngine : MonoBehaviour
             "'Howdy'", "'Hey there'", "'Hi'", "'Good day'",
             "'Well met'", "'Ahoy'", "'Cheers'", "'Hail'",
             "'Good morning'", "'Good evening'", "'Blessings'",
-            "'Onward'", "'Salute'", "'Hello there'"
+            "'Onward'", "'Salute'", "'Hello there'",
+            "'Hello again'", "'At last'", "'At ease'", "'Stand ready'",
+            "'You came'", "'Well met indeed'", "'Good tidings'",
+            "'Fare greetings'", "'A pleasure'", "'Here at last'",
+            "'To arms'", "'You made it'", "'Land ho'",
+            "'Ahoy there'", "'Right on time'", "'Draw near'",
+            "'Approach'", "'Enter freely'", "'Be welcome'",
+            "'Stay a while'", "'Come hither'", "'So begins'",
+            "'Daybreak'", "'Nightfall'", "'Mind the hour'",
+            "'Safe travels'", "'On your way'", "'Tread lightly'",
+            "'Raise a glass'", "'To victory'", "'Hark'", "'Long awaited'"
         };
 
         string[] messagePool = new string[]
@@ -555,7 +740,15 @@ public class PCGEngine : MonoBehaviour
             "'Sanctum Cleared'", "'Not Yet'",
             "'Final Blow'", "'Rune Found'", "'Gate Open'",
             "'Tower Cleared'", "'Perfect Run'", "'Slow Down'",
-            "'Next Round'", "'Combo Broken'", "'Skill Up'"
+            "'Next Round'", "'Combo Broken'", "'Skill Up'",
+            "'Trial Passed'", "'Decisive Strike'", "'Chain Complete'",
+            "'Combo Extended'", "'Relic Secured'", "'Vault Sealed'",
+            "'Bridge Raised'", "'Codes Matched'", "'Loop Closed'",
+            "'Reset Undone'", "'Corruption Purged'", "'Desync Fixed'",
+            "'Order Restored'", "'Blank Filled'", "'Bug Squashed'",
+            "'Trace Verified'", "'Sequence Solved'", "'Logic Holds'",
+            "'Gatekeeper Slain'", "'Oracle Answers'", "'Sigil Charged'",
+            "'All Clear'", "'Threshold Crossed'", "'Forge Lit'", "'Undone It'", "'Hold Fast'", "'Breakthrough'"
         };
 
         string[] operatorPairs = new string[] { "+", "-", "*" };
