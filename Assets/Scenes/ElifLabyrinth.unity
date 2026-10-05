@@ -71895,7 +71895,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 504562992}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -105908,7 +105908,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 765178248}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -198487,7 +198487,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 98edca0697352cb4fac0f8bbad47ae82, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 25.47
+      value: 25.55
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 98edca0697352cb4fac0f8bbad47ae82, type: 3}
       propertyPath: m_LocalPosition.z
@@ -198562,8 +198562,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 6, y: 1.4080868, z: 6}
-  m_Center: {x: 0, y: 0.7040434, z: 0}
+  m_Size: {x: 5.999999, y: 1.0167373, z: 5.999999}
+  m_Center: {x: 0, y: 0.5083687, z: 0}
 --- !u!1001 &1250210532
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -223428,7 +223428,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -23.824463, y: 1.1515503}
+  m_AnchoredPosition: {x: -23.824524, y: 1.1515503}
   m_SizeDelta: {x: 10, y: 10}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &1377187312
