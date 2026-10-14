@@ -1,10 +1,52 @@
 {
-  "components": [
-    { "name": "print_statements", "p_init": 0.20, "p_transit": 0.03, "p_guess": 0.50, "p_slip": 0.08, "mastery_threshold": 0.85 },
-    { "name": "variables", "p_init": 0.20, "p_transit": 0.03, "p_guess": 0.15, "p_slip": 0.08, "mastery_threshold": 0.85 },
-    { "name": "input_handling", "p_init": 0.18, "p_transit": 0.03, "p_guess": 0.15, "p_slip": 0.08, "mastery_threshold": 0.85 },
-    { "name": "conditionals", "p_init": 0.15, "p_transit": 0.03, "p_guess": 0.15, "p_slip": 0.08, "mastery_threshold": 0.85 },
-    { "name": "loops", "p_init": 0.10, "p_transit": 0.03, "p_guess": 0.15, "p_slip": 0.08, "mastery_threshold": 0.85 },
-    { "name": "basic_operations", "p_init": 0.22, "p_transit": 0.03, "p_guess": 0.15, "p_slip": 0.08, "mastery_threshold": 0.85 }
-  ]
+    "components": [
+        {
+            "name": "print_statements",
+            "p_init": 0.20000000298023225,
+            "p_transit": 0.15000000596046449,
+            "p_guess": 0.25,
+            "p_slip": 0.10000000149011612,
+            "mastery_threshold": 0.949999988079071
+        },
+        {
+            "name": "variables",
+            "p_init": 0.20000000298023225,
+            "p_transit": 0.15000000596046449,
+            "p_guess": 0.25,
+            "p_slip": 0.10000000149011612,
+            "mastery_threshold": 0.949999988079071
+        },
+        {
+            "name": "input_handling",
+            "p_init": 0.20000000298023225,
+            "p_transit": 0.15000000596046449,
+            "p_guess": 0.25,
+            "p_slip": 0.10000000149011612,
+            "mastery_threshold": 0.949999988079071
+        },
+        {
+            "name": "conditionals",
+            "p_init": 0.20000000298023225,
+            "p_transit": 0.15000000596046449,
+            "p_guess": 0.25,
+            "p_slip": 0.10000000149011612,
+            "mastery_threshold": 0.949999988079071
+        },
+        {
+            "name": "loops",
+            "p_init": 0.20000000298023225,
+            "p_transit": 0.15000000596046449,
+            "p_guess": 0.25,
+            "p_slip": 0.10000000149011612,
+            "mastery_threshold": 0.949999988079071
+        },
+        {
+            "name": "basic_operations",
+            "p_init": 0.20000000298023225,
+            "p_transit": 0.15000000596046449,
+            "p_guess": 0.25,
+            "p_slip": 0.10000000149011612,
+            "mastery_threshold": 0.949999988079071
+        }
+    ]
 }

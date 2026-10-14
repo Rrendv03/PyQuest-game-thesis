@@ -9,6 +9,10 @@ using UnityEngine.SceneManagement;
 /// Autosave never overwrites manual slots.
 /// Fires every 5 minutes while IsSafeToSave is true.
 ///
+/// Manual saves also refresh the student's canonical log CSV, but only
+/// when the current playthrough is not behind a more-progressed
+/// playthrough already recorded (see TryExportCanonicalCsv).
+///
 /// Canonical single source of truth for SaveSlotData - do not keep
 /// a second copy of this class anywhere else in the project, having
 /// two SaveLoadManager/SaveSlotData definitions is what caused the
@@ -26,6 +30,23 @@ public class SaveLoadManager : MonoBehaviour
 
     private float autosaveTimer = 0f;
     private const string AutosaveFilename = "save_autosave.json";
+
+    // Canonical CSV overwrite protection (see TryExportCanonicalCsv).
+    // The student log is ONE fixed-name CSV per student that is
+    // overwritten wholesale on every export, so an export must never
+    // fire while the current playthrough is behind the data already in
+    // that file (a replayed, less-progressed storyline would otherwise
+    // destroy the recorded playthrough's data).
+    private const string LastExportFilename = "studentlog_export_progress.json";
+
+    // Clearing this sanctum is what fires the epilogue (see
+    // EpilogueSequenceController.finalSanctumID), so "this playthrough
+    // has defeated it" is the same statement as "this playthrough
+    // reached the epilogue".
+    private const string FinalSanctumID = "elif_labyrinth";
+
+    private static string LastExportPath
+        => Path.Combine(Application.persistentDataPath, LastExportFilename);
 
     private static string SlotFilename(int slot)
         => slot == 0 ? AutosaveFilename : $"save_slot_{slot}.json";
@@ -74,6 +95,15 @@ public class SaveLoadManager : MonoBehaviour
             return;
         }
 
+        // Snapshot what the existing save files hold BEFORE this save
+        // rewrites one of them. These snapshots are the reference points
+        // for the canonical CSV protection: if any of them holds a more
+        // progressed playthrough than the one being saved now, the CSV
+        // currently on disk may belong to that more progressed play, so
+        // the export must not fire. This must therefore run BEFORE
+        // File.WriteAllText below, never after.
+        List<CsvProgressSnapshot> priorSaves = SnapshotExistingSaves();
+
         SaveSlotData data = BuildSaveData(slot);
         string json = JsonUtility.ToJson(data, true);
 
@@ -88,8 +118,16 @@ public class SaveLoadManager : MonoBehaviour
             // not on the 5-minute timer. ExportCanonicalCsv() overwrites
             // one fixed-name file every time, it does not append, so
             // calling it on every manual save cannot produce duplicate rows.
+            //
+            // It also CANNOT overwrite a more-progressed playthrough's
+            // data with a replay's log without losing that playthrough, so
+            // the export call is threaded through TryExportCanonicalCsv,
+            // which refuses to export while the current playthrough's
+            // story progression is behind any more-progressed playthrough
+            // already recorded (existing saves, last export, or a finished
+            // epilogue on this device).
             if (slot != 0)
-                StudentLogManager.Instance?.ExportCanonicalCsv();
+                TryExportCanonicalCsv(slot, data, priorSaves);
         }
         catch (Exception e)
         {
@@ -325,6 +363,268 @@ public class SaveLoadManager : MonoBehaviour
             default: return string.IsNullOrEmpty(sceneName) ? "Unknown" : sceneName;
         }
     }
+
+    // == Canonical CSV overwrite protection ====================
+
+    /// <summary>
+    /// Storyline-progress fingerprint of one playthrough. Quests
+    /// completed are the primary measure of how far through the
+    /// storyline a play got; defeated bosses are only the tie-breaker
+    /// for two plays with the same quest count.
+    /// </summary>
+    private static void ProgressOf(SaveSlotData data, out int quests, out int bosses)
+    {
+        if (data == null)
+        {
+            quests = 0;
+            bosses = 0;
+            return;
+        }
+
+        quests = data.completedQuestIDs != null ? data.completedQuestIDs.Count : 0;
+        bosses = data.storyProgression != null && data.storyProgression.defeatedBosses != null
+            ? data.storyProgression.defeatedBosses.Count
+            : 0;
+    }
+
+    /// <summary>
+    /// True when playthrough A got further through the storyline than
+    /// playthrough B (lexicographic on quests, then bosses). Equal
+    /// progress is NOT "more progressed": a replay that has caught up
+    /// to the same point is allowed to export, it is the freshest data
+    /// at that progress level.
+    /// </summary>
+    private static bool IsMoreProgressed(int aQuests, int aBosses, int bQuests, int bBosses)
+    {
+        if (aQuests != bQuests) return aQuests > bQuests;
+        return aBosses > bBosses;
+    }
+
+    /// <summary>
+    /// Reads every save slot file that exists BEFORE the caller
+    /// overwrites one of them, so the protection in
+    /// ExportAllowedByReferences still sees the playthrough this save
+    /// is about to replace. Slots that are missing or fail to parse
+    /// are skipped, not fatal.
+    /// </summary>
+    private List<CsvProgressSnapshot> SnapshotExistingSaves()
+    {
+        var snapshots = new List<CsvProgressSnapshot>();
+        for (int slot = 0; slot <= 3; slot++)
+        {
+            SaveSlotData existing = LoadFromSlot(slot);
+            if (existing == null) continue;
+
+            ProgressOf(existing, out int quests, out int bosses);
+            snapshots.Add(new CsvProgressSnapshot
+            {
+                slot = slot,
+                questCount = quests,
+                bossCount = bosses,
+                dateSavedISO = existing.dateSavedISO,
+                currentScene = existing.currentScene
+            });
+        }
+        return snapshots;
+    }
+
+    /// <summary>
+    /// Save-triggered canonical export. Called from SaveToSlot on
+    /// manual saves only, with the snapshots taken before the slot
+    /// file was rewritten. Decides via ExportAllowedByReferences,
+    /// then delegates to StudentLogManager.ExportCanonicalCsv and
+    /// stamps the export-progress marker on success.
+    /// </summary>
+    private void TryExportCanonicalCsv(int slot, SaveSlotData data, List<CsvProgressSnapshot> priorSaves)
+    {
+        if (StudentLogManager.Instance == null)
+        {
+            Debug.LogWarning("[SaveLoadManager] StudentLogManager missing; canonical CSV export not attempted.");
+            return;
+        }
+
+        ProgressOf(data, out int curQuests, out int curBosses);
+
+        bool thisRunFinished = data != null
+            && data.storyProgression != null
+            && data.storyProgression.defeatedBosses != null
+            && data.storyProgression.defeatedBosses.Contains(FinalSanctumID);
+
+        string studentID = StudentLogManager.Instance.studentID;
+
+        if (!ExportAllowedByReferences(curQuests, curBosses, thisRunFinished, studentID,
+                priorSaves, out string blockReason))
+        {
+            Debug.LogWarning("[SaveLoadManager] Canonical CSV export SKIPPED (slot " + slot + "): " +
+                "this playthrough has " + curQuests + " quests / " + curBosses + " bosses, but " +
+                blockReason + ". The existing pyquest_log CSV is kept so the earlier, " +
+                "more-progressed playthrough's data is not lost.");
+            return;
+        }
+
+        string path = StudentLogManager.Instance.ExportCanonicalCsv();
+        if (path == null) return; // Exporter already logged the write failure.
+
+        WriteExportMarker(studentID, curQuests, curBosses);
+        Debug.Log("[SaveLoadManager] Canonical CSV exported (slot " + slot + "): " + path);
+    }
+
+    /// <summary>
+    /// UI-triggered canonical export (results / share screens), used by
+    /// ResultsExportHelper. Same protection as the save-triggered
+    /// export, but reads the CURRENT live playthrough state from
+    /// StoryProgressionManager instead of a save slot. Returns false
+    /// with a human-readable blockReason when exporting would clobber
+    /// a more-progressed playthrough's recorded CSV; on success returns
+    /// the path that was written.
+    /// </summary>
+    public static bool TryExportCanonicalCsv(out string path, out string blockReason)
+    {
+        path = null;
+        blockReason = null;
+
+        if (Instance == null)
+        {
+            blockReason = "SaveLoadManager is not in the scene";
+            return false;
+        }
+        if (StudentLogManager.Instance == null)
+        {
+            blockReason = "StudentLogManager is not in the scene";
+            return false;
+        }
+
+        int curQuests = 0;
+        int curBosses = 0;
+        bool thisRunFinished = false;
+
+        if (StoryProgressionManager.Instance != null)
+        {
+            List<string> questsDone = StoryProgressionManager.Instance.ExportCompletedQuestIDs();
+            curQuests = questsDone != null ? questsDone.Count : 0;
+
+            List<string> bossesDone = StoryProgressionManager.Instance.ExportDefeatedBosses();
+            curBosses = bossesDone != null ? bossesDone.Count : 0;
+            thisRunFinished = bossesDone != null && bossesDone.Contains(FinalSanctumID);
+        }
+
+        string studentID = StudentLogManager.Instance.studentID;
+
+        if (!ExportAllowedByReferences(curQuests, curBosses, thisRunFinished, studentID,
+                Instance.SnapshotExistingSaves(), out blockReason))
+            return false;
+
+        path = StudentLogManager.Instance.ExportCanonicalCsv();
+        if (path == null)
+        {
+            blockReason = "the CSV write failed (see the log)";
+            return false;
+        }
+
+        WriteExportMarker(studentID, curQuests, curBosses);
+        return true;
+    }
+
+    /// <summary>
+    /// The actual protection decision. The canonical CSV may only be
+    /// overwritten when every progress reference this device still
+    /// holds is no further through the storyline than the playthrough
+    /// about to be exported:
+    ///   1. every save slot file currently on disk (including the slot
+    ///      this save is overwriting, since SnapshotExistingSaves ran
+    ///      before the rewrite),
+    ///   2. the last-export marker - what the canonical CSV holds right
+    ///      now, which survives even when every save slot has since
+    ///      been reused by a replay or deleted, and
+    ///   3. the finished-epilogue flag, because completing the game
+    ///      once on this device means an unfinished replay must never
+    ///      overwrite that run.
+    /// References 1 and 2 are keyed to the current student ID, so a
+    /// different respondent on the same device starts with a fresh
+    /// baseline. Reference 3 is a device-level PlayerPrefs flag and
+    /// assumes one respondent per device, matching how
+    /// StudentLogManager identifies students.
+    /// </summary>
+    private static bool ExportAllowedByReferences(
+        int curQuests, int curBosses, bool thisRunFinished, string studentID,
+        List<CsvProgressSnapshot> priorSaves, out string blockReason)
+    {
+        blockReason = null;
+
+        // (1) Save slots as they existed on disk.
+        if (priorSaves != null)
+        {
+            foreach (CsvProgressSnapshot snap in priorSaves)
+            {
+                if (snap == null) continue;
+                if (IsMoreProgressed(snap.questCount, snap.bossCount, curQuests, curBosses))
+                {
+                    blockReason = "save slot " + snap.slot + " holds a playthrough further " +
+                        "along the storyline (saved " + snap.dateSavedISO + ", " +
+                        snap.questCount + " quests / " + snap.bossCount + " bosses, in " +
+                        snap.currentScene + ")";
+                    return false;
+                }
+            }
+        }
+
+        // (2) What the canonical CSV holds right now.
+        ExportProgressMarker marker = ReadExportMarker();
+        if (marker != null
+            && marker.studentID == studentID
+            && IsMoreProgressed(marker.questCount, marker.bossCount, curQuests, curBosses))
+        {
+            blockReason = "the canonical CSV already records a playthrough further " +
+                "along the storyline (exported " + marker.dateISO + ", " +
+                marker.questCount + " quests / " + marker.bossCount + " bosses)";
+            return false;
+        }
+
+        // (3) A finished run exists on this device.
+        if (GameCompletionState.HasCompletedGame() && !thisRunFinished)
+        {
+            blockReason = "the game was already completed on this device and this " +
+                "playthrough has not reached the epilogue (" + FinalSanctumID + " not cleared)";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static ExportProgressMarker ReadExportMarker()
+    {
+        try
+        {
+            if (!File.Exists(LastExportPath)) return null;
+            return JsonUtility.FromJson<ExportProgressMarker>(File.ReadAllText(LastExportPath));
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("[SaveLoadManager] Could not read export-progress marker: " + e.Message);
+            return null;
+        }
+    }
+
+    private static void WriteExportMarker(string studentID, int quests, int bosses)
+    {
+        try
+        {
+            ExportProgressMarker marker = new ExportProgressMarker
+            {
+                studentID = studentID,
+                questCount = quests,
+                bossCount = bosses,
+                dateISO = DateTime.UtcNow.ToString("o")
+            };
+            File.WriteAllText(LastExportPath, JsonUtility.ToJson(marker, true));
+        }
+        catch (Exception e)
+        {
+            // The export itself already succeeded; a missing marker only
+            // weakens future protection, it never loses data.
+            Debug.LogWarning("[SaveLoadManager] Could not write export-progress marker: " + e.Message);
+        }
+    }
 }
 
 // == Data Structures ==========================================
@@ -374,4 +674,37 @@ public class StoryProgressionData
 {
     public List<string> visitedSanctums = new List<string>();
     public List<string> defeatedBosses = new List<string>();
+}
+
+/// <summary>
+/// Storyline-progress fingerprint of one save slot file, taken by
+/// SnapshotExistingSaves before a save rewrites that slot. In-memory
+/// only, never serialized itself - QuestCount/BossCount mirror what
+/// SaveLoadManager.ProgressOf extracts from a full SaveSlotData.
+/// </summary>
+[Serializable]
+public class CsvProgressSnapshot
+{
+    public int slot;
+    public int questCount;
+    public int bossCount;
+    public string dateSavedISO;
+    public string currentScene;
+}
+
+/// <summary>
+/// Persistent record of how far through the storyline the playthrough
+/// was the last time the canonical student-log CSV was successfully
+/// exported (studentlog_export_progress.json in persistentDataPath).
+/// This is what the overwrite protection can still consult when no
+/// save slot holds the earlier playthrough anymore, because unlike the
+/// slot files this marker is never touched by Save/Delete/New Game.
+/// </summary>
+[Serializable]
+public class ExportProgressMarker
+{
+    public string studentID;
+    public int questCount;
+    public int bossCount;
+    public string dateISO;
 }

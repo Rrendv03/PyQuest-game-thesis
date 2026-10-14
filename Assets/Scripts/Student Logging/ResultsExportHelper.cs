@@ -9,7 +9,10 @@ using System.Runtime.InteropServices;
 /// Extracted from EpilogueEndScreenController so the results-export/share
 /// flow has exactly one implementation, called from both the epilogue end
 /// screen's button and the failsafe button on the general Settings screen.
-/// Behavior and every status message are unchanged from the original.
+/// Behavior and every status message are unchanged from the original,
+/// except one deliberate change: the canonical export now goes through
+/// SaveLoadManager.TryExportCanonicalCsv so a replay that is earlier in
+/// the story can never overwrite the finished playthrough's CSV.
 ///
 /// Static and scene-independent by design: the Settings-screen button
 /// needs to work from any scene, not just MainMap, where
@@ -60,9 +63,18 @@ public static class ResultsExportHelper
             onStatus?.Invoke("Could not find results, StudentLogManager missing.");
             return;
         }
-        else
+        else if (!SaveLoadManager.TryExportCanonicalCsv(out path, out string blockReason))
         {
-            path = StudentLogManager.Instance.ExportCanonicalCsv();
+            // Canonical-CSV overwrite protection: the file already holds a
+            // more-progressed playthrough (typically the respondent's
+            // finished run) and this current playthrough is earlier in
+            // the story, so the export is refused instead of clobbering
+            // that recorded data. Normally unreachable from the epilogue
+            // end screen (that play just finished), it only bites on the
+            // Settings-screen failsafe mid-replay.
+            onStatus?.Invoke("This run is earlier in the story than your finished "
+                + "playthrough, so your existing results file was kept safe.");
+            return;
         }
 
         if (string.IsNullOrEmpty(path) || !File.Exists(path))

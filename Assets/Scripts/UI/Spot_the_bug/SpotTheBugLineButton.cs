@@ -31,7 +31,13 @@ public class SpotTheBugLineButton : MonoBehaviour, IPointerClickHandler,
         lineLabel = GetComponentInChildren<Text>();
 
         if (lineLabel != null)
-            lineLabel.text = (index + 1) + ".  " + text;
+        {
+            // Display-only styling: the "N." gutter prefix stays plain and the
+            // raw code line itself is styled exactly like the other code
+            // displays. lineText (the raw string) is unchanged and remains
+            // what evaluation compares, so answers can never be affected.
+            lineLabel.text = (index + 1) + ".  " + PythonSyntaxHighlighter.Highlight(text);
+        }
 
         SetState_Default();
     }

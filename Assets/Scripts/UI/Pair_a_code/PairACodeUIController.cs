@@ -50,7 +50,7 @@ public class PairACodeUIController : MonoBehaviour, IDraggableOptionSounds
     {
         // Display code snippet on left
         if (codeDisplayText != null)
-            codeDisplayText.text = codeSnippet;
+            PythonSyntaxHighlighter.Apply(codeDisplayText, codeSnippet);
 
         // Clear all option cards first
         foreach (var card in optionCards)

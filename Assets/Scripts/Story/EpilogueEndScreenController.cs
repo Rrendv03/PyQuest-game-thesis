@@ -25,12 +25,39 @@ using UnityEngine.UI;
 /// </summary>
 public class EpilogueEndScreenController : MonoBehaviour
 {
+    /// <summary>Scene singleton so QuestionnaireController can hand the player
+    /// back here after a successful submission. Null-safe at call sites.</summary>
+    public static EpilogueEndScreenController Instance { get; private set; }
+
+    private bool questionnaireFinished;
+
+    /// <summary>QuestionnaireController asks who the player is, and after
+    /// its confirmation Continue it tells us to fully retire the end screen
+    /// (it never comes back once the questionnaire is submitted).</summary>
+    public GameObject GetPlayer()
+    {
+        var found = GameObject.FindGameObjectWithTag("Player");
+        return found;
+    }
+
+    public void HideEndScreenPermanently()
+    {
+        questionnaireFinished = true;
+        if (endScreenPanel != null) endScreenPanel.SetActive(false);
+        if (sendResultsButton != null) sendResultsButton.gameObject.SetActive(false);
+        if (questionnaireButton != null) questionnaireButton.gameObject.SetActive(false);
+    }
+
     [Header("UI References")]
     public GameObject endScreenPanel;
     public TextMeshProUGUI sendResultsButtonLabel;
     public Button sendResultsButton;
     public Button continueButton;
     public TextMeshProUGUI statusText;
+    [Tooltip("Optional. Shows the BKT engine's final mastery belief per knowledge component, labeled by tier (no raw percentages, so the post-game questionnaire isn't anchored by a number). Left empty, the block is skipped.")]
+    public TextMeshProUGUI masterySummaryText;
+    [Tooltip("Button that redirects to the post-game questionnaire. If left unassigned, Continue opens the questionnaire instead of returning to the game.")]
+    public Button questionnaireButton;
 
     [Header("Config")]
     [Tooltip("Chooser title shown above the Android share sheet.")]
@@ -58,10 +85,13 @@ public class EpilogueEndScreenController : MonoBehaviour
 
     private void Awake()
     {
+        Instance = this;
+
         if (endScreenPanel != null) endScreenPanel.SetActive(false);
 
         if (sendResultsButton != null) sendResultsButton.onClick.AddListener(OnSendResultsClicked);
         if (continueButton != null) continueButton.onClick.AddListener(OnContinueClicked);
+        if (questionnaireButton != null) questionnaireButton.onClick.AddListener(OnQuestionnaireClicked);
 
         if (sendResultsButtonLabel != null)
         {
@@ -93,6 +123,101 @@ public class EpilogueEndScreenController : MonoBehaviour
         GameCompletionState.MarkGameCompleted();
 
         if (statusText != null) statusText.text = defaultStatusMessage;
+
+        // Data-gathering flow: while the questionnaire is pending, the student
+        // only gets the questionnaire button (plus the mastery summary). The
+        // send-results button is hidden, NOT deleted, and both it and the
+        // questionnaire button come back only if you reset
+        // questionnaireFinished below.
+        if (!questionnaireFinished && sendResultsButton != null)
+            sendResultsButton.gameObject.SetActive(false);
+
+        // BKT visibility (adviser request): surface the engine's own mastery
+        // beliefs on the end screen. READ-ONLY: this only calls GetMastery /
+        // GetTierForMasteryPublic, it never writes engine state, so the frozen
+        // bkt_params.json (SHA-256 85314702...c26) and engine behavior are
+        // untouched. Tier labels only, no raw percentages: the post-game
+        // questionnaire follows this screen and a number could anchor it.
+        if (masterySummaryText != null)
+        {
+            masterySummaryText.text = BuildMasterySummary();
+        }
+
+        if (endScreenPanel != null) endScreenPanel.SetActive(true);
+    }
+
+    /// <summary>
+    /// One line per knowledge component: "Print Statements - Advanced".
+    /// Reads the engine's live belief via its own public API. If the engine
+    /// or a component is missing, that line is simply skipped, and the text
+    /// stays empty when nothing can be read (fail-silent by design: this is
+    /// informational UI, not data collection - the CSV carries the numbers).
+    /// </summary>
+    private string BuildMasterySummary()
+    {
+        var engine = BKTEngine.Instance;
+        if (engine == null) return "";
+
+        string[] components =
+        {
+            "print_statements", "variables", "input_handling",
+            "conditionals", "loops", "basic_operations"
+        };
+
+        // Tier rule lives in PCGEngine, not BKTEngine (same call the
+        // encounter spawner uses: PCGEngine.Instance.GetTierForMasteryPublic).
+        var pcg = PCGEngine.Instance;
+        if (pcg == null) return "";
+
+        var lines = new System.Collections.Generic.List<string>();
+        foreach (string kc in components)
+        {
+            // GetMastery returns 0f for a component this run never touched,
+            // which reads honestly as "Beginner" - a zero belief IS zero.
+            float mastery = engine.GetMastery(kc);
+            DifficultyTier tier = pcg.GetTierForMasteryPublic(mastery);
+            lines.Add($"{PrettifyKc(kc)} - {tier}");
+        }
+        return lines.Count > 0 ? string.Join("\n", lines) : "";
+    }
+
+    private static string PrettifyKc(string kc)
+    {
+        // "print_statements" -> "Print Statements"
+        string[] parts = kc.Split('_');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (parts[i].Length > 0)
+                parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i].Substring(1);
+        }
+        return string.Join(" ", parts);
+    }
+
+    private void OnQuestionnaireClicked()
+    {
+        if (endScreenPanel != null) endScreenPanel.SetActive(false);
+        QuestionnaireController.Instance?.Show();
+    }
+
+    /// <summary>
+    /// Called by QuestionnaireController's confirmation Continue. Re-shows the
+    /// end screen with ONLY the Continue button active: send-results stays
+    /// hidden and the questionnaire button is dismissed, because the
+    /// questionnaire is already submitted. World handback stays the end
+    /// screen's own Continue (same blockers as before).
+    /// </summary>
+    public void ShowAfterQuestionnaire()
+    {
+        questionnaireFinished = true;
+
+        if (sendResultsButton != null) sendResultsButton.gameObject.SetActive(false);
+        if (questionnaireButton != null) questionnaireButton.gameObject.SetActive(false);
+
+        // Do NOT re-lock or re-hide anything: the end screen's Show() already
+        // locked the player and hid the HUD and nothing in between restored
+        // them (the questionnaire never does). Only bring the panel back.
+        if (statusText != null)
+            statusText.text = defaultStatusMessage + "\nThank you for completing the questionnaire!";
         if (endScreenPanel != null) endScreenPanel.SetActive(true);
     }
 

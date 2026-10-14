@@ -35,8 +35,43 @@ public class HUDController : MonoBehaviour
 
     // SetVisible never touches the interact button.
     // InteractButtonController owns its own visibility based on NPC range.
+    //
+    // WHO asked to hide the HUD is tracked in two separate flags. The gameplay code
+    // (enemy encounters, cutscenes) goes through SetVisible; the minimap goes
+    // through SetHiddenByMap. The net SetActive is the AND of both, so:
+    //   - a caller that hid the HUD is never "overwritten" by someone else's
+    //     SetVisible(true) while it still needs it hidden,
+    //   - the minimap can tell "the encounter hid the HUD" apart from "I hid the
+    //     HUD", even when both flags are down at once.
+    bool hiddenByGameplay;
+    bool hiddenByMinimap;
+
     public void SetVisible(bool visible)
     {
+        hiddenByGameplay = !visible;
+        ApplyCombinedVisibility();
+    }
+
+    /// <summary>
+    /// The minimap's own hide state, so its fullscreen close cannot resurrect a HUD
+    /// an encounter still needs hidden, and so its visibility poll can listen to
+    /// gameplay-side hides only.
+    /// </summary>
+    public void SetHiddenByMap(bool hidden)
+    {
+        hiddenByMinimap = hidden;
+        ApplyCombinedVisibility();
+    }
+
+    /// <summary>True while the last non-minimap SetVisible call asked for hidden.</summary>
+    public bool GameplayWantsHudHidden { get { return hiddenByGameplay; } }
+
+    /// <summary>The combined truth of the gameplay HUD root GameObject.</summary>
+    public bool IsVisible { get { return !hiddenByGameplay && !hiddenByMinimap; } }
+
+    void ApplyCombinedVisibility()
+    {
+        bool visible = !hiddenByGameplay && !hiddenByMinimap;
         if (hudCanvas != null)
             hudCanvas.SetActive(visible);
         else

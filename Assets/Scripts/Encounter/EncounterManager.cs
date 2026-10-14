@@ -14,6 +14,11 @@ public class EncounterManager : MonoBehaviour
     public GameObject encounterPanel;
     [Tooltip("Image with Image Type = Filled, Fill Method = Horizontal (like the XP bar).")]
     public Image playerHPFill;
+    [Header("Player HP Fill Color (NEW)")]
+    [Tooltip("Color of the player HP fill at full health. Assigned here once, so every scene's UI picks it up automatically - no per-scene edits needed.")]
+    public Color playerHPColorFullHealth = new Color32(25, 255, 25, 255);
+    [Tooltip("Color of the player HP fill at low (zero) health. Assigned here once, so every scene's UI picks it up automatically - no per-scene edits needed.")]
+    public Color playerHPColorLowHealth = new Color32(185, 54, 54, 255);
     [Tooltip("Image with Image Type = Filled, Fill Method = Horizontal (like the XP bar).")]
     public Image enemyHPFill;
     public Text playerHPText;
@@ -1056,8 +1061,13 @@ public class EncounterManager : MonoBehaviour
     {
         int playerMaxHP = playerStats.maxHP + playerStats.bonusHP;
         if (playerHPFill != null)
-            playerHPFill.fillAmount = playerMaxHP > 0
+        {
+            float playerHPFraction = playerMaxHP > 0
                 ? Mathf.Clamp01((float)playerStats.currentHP / playerMaxHP) : 1f;
+            playerHPFill.fillAmount = playerHPFraction;
+            // Gradual shift from full-health green to low-health red as HP drops.
+            playerHPFill.color = Color.Lerp(playerHPColorLowHealth, playerHPColorFullHealth, playerHPFraction);
+        }
         if (enemyHPFill != null)
             enemyHPFill.fillAmount = currentEnemy != null && currentEnemy.maxHP > 0
                 ? Mathf.Clamp01((float)currentEnemyHP / currentEnemy.maxHP) : 0f;

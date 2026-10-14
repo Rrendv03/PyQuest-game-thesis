@@ -81,7 +81,11 @@ public class LineScrambleSlot : MonoBehaviour, IPointerDownHandler, IBeginDragHa
         canvasGroup.blocksRaycasts = true;
 
         if (lineLabel != null)
-            lineLabel.text = text;
+        {
+            // Display-only styling of the scrambled code line. lineText (raw)
+            // is unchanged and stays the string evaluation checks.
+            PythonSyntaxHighlighter.Apply(lineLabel, text);
+        }
 
         SetState_Default();
     }

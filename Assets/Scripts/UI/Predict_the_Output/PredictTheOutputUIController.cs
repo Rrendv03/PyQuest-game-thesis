@@ -49,7 +49,7 @@ public class PredictTheOutputUIController : MonoBehaviour, IDraggableOptionSound
     public void PopulateUI(string codeSnippet, List<string> options)
     {
         if (codeDisplayText != null)
-            codeDisplayText.text = codeSnippet;
+            PythonSyntaxHighlighter.Apply(codeDisplayText, codeSnippet);
 
         // Deactivate all option cards first
         foreach (var card in optionCards)

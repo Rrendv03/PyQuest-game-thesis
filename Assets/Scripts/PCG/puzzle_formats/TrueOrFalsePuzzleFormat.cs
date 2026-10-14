@@ -57,13 +57,14 @@ public class TrueOrFalsePuzzleFormat : IPuzzleFormat
         {
             // The scene's True/False buttons are the answer surface
             // (TrueOrFalseButtonController) — no [True] [False] text hint.
-            displayField.text = assembled;
+            // Same display-only styling as every other code display.
+            PythonSyntaxHighlighter.Apply(displayField, assembled);
         }
         else
         {
-            displayField.text = "Is the following code snippet correct?\n\n"
+            PythonSyntaxHighlighter.Apply(displayField, "Is the following code snippet correct?\n\n"
                 + PyQuest.Pcg.Ast.DistractorExplanation.CodeFrame(codeBlock)
-                + "\n\n[True] [False]";
+                + "\n\n[True] [False]");
         }
     }
 

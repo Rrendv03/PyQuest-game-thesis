@@ -26,7 +26,12 @@ public class SpotTheBugFixOption : MonoBehaviour, IPointerClickHandler,
         optionLabel = GetComponentInChildren<Text>();
 
         if (optionLabel != null)
-            optionLabel.text = text;
+        {
+            // Fix options are code lines, so they get the same display-only
+            // styling. optionText (raw) is unchanged -- evaluation compares
+            // that, never the styled label.
+            PythonSyntaxHighlighter.Apply(optionLabel, text);
+        }
 
         SetState_Default();
     }

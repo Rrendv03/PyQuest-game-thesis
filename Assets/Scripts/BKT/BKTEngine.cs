@@ -138,6 +138,7 @@ public class BKTEngine : MonoBehaviour
         return newPL;
     }
 
+
     public float GetMastery(string componentName)
         => masteryProbabilities.ContainsKey(componentName) ? masteryProbabilities[componentName] : 0f;
 
@@ -145,6 +146,37 @@ public class BKTEngine : MonoBehaviour
     {
         if (!parameters.ContainsKey(componentName)) return false;
         return GetMastery(componentName) >= parameters[componentName].mastery_threshold;
+    }
+
+    /// <summary>
+    /// Persists the current parameters to bkt_params.json.
+    /// Call this ONLY after an encounter ends, never mid-encounter.
+    /// </summary>
+    public void SaveUpdatedParameters()
+    {
+        if (parameters == null || parameters.Count == 0)
+        {
+            Debug.LogError("[BKT] No parameters to save.");
+            return;
+        }
+
+        var wrapper = new BKTParamWrapper
+        {
+            components = new List<KnowledgeComponent>(parameters.Values)
+        };
+
+        string json = JsonUtility.ToJson(wrapper, prettyPrint: true);
+        string path = Path.Combine(Application.streamingAssetsPath, "bkt_params.json");
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // Android: write to persistentDataPath instead of StreamingAssets
+        string androidPath = Path.Combine(Application.persistentDataPath, "bkt_params.json");
+        File.WriteAllText(androidPath, json);
+        Debug.Log($"[BKT] Saved updated parameters to persistentDataPath: {androidPath}");
+#else
+        File.WriteAllText(path, json);
+        Debug.Log($"[BKT] Saved updated parameters to StreamingAssets: {path}");
+#endif
     }
 
     public Dictionary<string, float> GetAllMasteryScores()

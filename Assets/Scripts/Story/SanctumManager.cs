@@ -247,6 +247,10 @@ public class SanctumManager : MonoBehaviour
         OnBossDefeatedEvent?.Invoke(sanctumID);
         if (SaveRestrictionEnforcer.Instance != null)
             SaveRestrictionEnforcer.Instance.RemoveBlocker("boss_fight");
+
+        // --- NEW LINE ---
+        BKTEngine.Instance.SaveUpdatedParameters();
+
         StartCoroutine(BossRewardSequence());
     }
     private IEnumerator BossRewardSequence()
@@ -309,9 +313,10 @@ public class SanctumManager : MonoBehaviour
             SaveLoadManager.Instance.AutoSave();
         }
         OnSanctumExited?.Invoke(sanctumID);
-        // Note: no blocker removal before scene load intentionally -
-        // SaveRestrictionEnforcer is DontDestroyOnLoad, so a stale
-        // "sanctum_exit" blocker would persist into MainMap otherwise.
+
+        // --- NEW LINE ---
+        BKTEngine.Instance.SaveUpdatedParameters();
+
         SaveRestrictionEnforcer.Instance?.RemoveBlocker("sanctum_exit");
         SceneManager.LoadScene(mainMapSceneName);
     }
