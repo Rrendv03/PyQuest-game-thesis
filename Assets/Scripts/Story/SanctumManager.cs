@@ -24,6 +24,23 @@ public class SanctumManager : MonoBehaviour
     public Transform playerSpawnPoint;
     [Tooltip("Transform where player returns to MainMap")]
     public Transform exitPortalPoint;
+    [Header("Guide NPC Lock (Issue 1 fix)")]
+    [Tooltip("Optional: root GameObject holding this sanctum's guide NPC(s), e.g. npc_Printessa. The root plus every child NPC gets an intro marker until its intro dialogue completes; the exit is sealed until the boss is defeated. If left empty, every NPCController in the scene is treated as a guide.")]
+    public GameObject guideNpcRoot;
+    [Tooltip("Optional: material for the guide NPC's floating marker (e.g. Assets/Prefabs/UI_assets/NPCmarker.mat). Falls back to a generated golden glow when left empty.")]
+    public Material npcMarkerMaterial;
+    [Header("Guide Room Trap Lock (Issue 1 fix)")]
+    [Tooltip("Optional: transforms marking where invisible trap walls spawn to keep the player in the guide's room until they finish the guide's intro dialogue. Each wall uses the transform's position AND rotation, so angle it like you would a real wall.")]
+    public Transform[] guideRoomTrapPoints;
+    [Tooltip("Size (width, height, thickness) of each guide-room trap wall, in the transform's local space.")]
+    public Vector3 guideRoomTrapWallSize = new Vector3(6f, 6f, 0.5f);
+    [Header("Intro Lesson Tablet (Issue 3 fix)")]
+    [Tooltip("Knowledge component lesson shown automatically right after the guide's intro dialogue finishes (must match a key in LessonTabletUI.Content, e.g. print_statements, variables, input, conditionals, while_loops, basic_operations). Empty = feature off.")]
+    public string introLessonKnowledgeComponentID = "print_statements";
+    [Tooltip("Optional questID auto-completed when the intro lesson tablet opens (e.g. a 'read the lesson tablet' objective). Empty = no auto-complete.")]
+    public string introLessonQuestToAutoComplete = "";
+    [Tooltip("Optional follow-up lessons (LessonTabletUI.Content keys, comma separated) shown one after another when the player closes the intro lesson tablet. A follow-up whose knowledge component already has a completed tablet mission in this sanctum is skipped. Empty = single lesson only. Example for the conditionals sanctum: 'while_loops, conditionals' or 'basic_operations, loops'.")]
+    public string introFollowupLessonKnowledgeComponentIDs = "";
     [Header("Progression Gates")]
     [Tooltip("XP threshold for boss unlock (should match XPManager)")]
     public int bossUnlockXPThreshold = 150;
@@ -72,6 +89,7 @@ public class SanctumManager : MonoBehaviour
     {
         InitializeSanctumState();
         StartCoroutine(SanctumEntrySequence());
+        EnsureSanctumEntryLock();
     }
     private void OnDestroy()
     {
@@ -297,6 +315,16 @@ public class SanctumManager : MonoBehaviour
     public void ExitSanctum()
     {
         if (currentState == SanctumState.Exiting) return;
+        // ISSUE-1/6 HARD GATE: refuse to leave while the sanctum lock verdict
+        // says sealed (guide intro not done, or boss not defeated). Without
+        // this a player could leave the sanctum — and finish the whole game —
+        // without ever meeting the guide or playing the sanctum quest.
+        if (IsExitLocked())
+        {
+            UIManager.Instance?.ShowNotification("The exit is sealed. " + GetExitBlockReason(), 3f);
+            Debug.Log($"[SanctumManager] ExitSanctum refused in {sanctumID}: {GetExitBlockReason()}");
+            return;
+        }
         StartCoroutine(ExitSequence());
     }
     private IEnumerator ExitSequence()
@@ -319,6 +347,55 @@ public class SanctumManager : MonoBehaviour
 
         SaveRestrictionEnforcer.Instance?.RemoveBlocker("sanctum_exit");
         SceneManager.LoadScene(mainMapSceneName);
+    }
+    #endregion
+    #region Sanctum Entry Lock (Issue 1 fix)
+    private SanctumEntryLock sanctumEntryLock;
+    /// <summary>
+    /// ISSUE-1 FIX: creates the runtime entry/exit lock for this sanctum.
+    /// Deliberately runs after the entry coroutine's synchronous half, so
+    /// the player is already standing at the spawn point that the lock
+    /// guarantees never lands inside a barrier enclosure.
+    /// </summary>
+    private void EnsureSanctumEntryLock()
+    {
+        sanctumEntryLock = GetComponent<SanctumEntryLock>();
+        if (sanctumEntryLock == null)
+            sanctumEntryLock = gameObject.AddComponent<SanctumEntryLock>();
+        sanctumEntryLock.Initialize(this, guideNpcRoot, npcMarkerMaterial,
+                                    guideRoomTrapPoints, guideRoomTrapWallSize);
+        // Issue 3: keep the Initialize signature stable (5 args) and pass the
+        // lesson id as a property so stale local copies cannot desync again.
+        sanctumEntryLock.IntroLessonKnowledgeComponentID = introLessonKnowledgeComponentID;
+        sanctumEntryLock.IntroLessonQuestToAutoComplete = introLessonQuestToAutoComplete;
+        sanctumEntryLock.SetFollowupLessons(introFollowupLessonKnowledgeComponentIDs);
+    }
+    /// <summary>
+    /// TRUE while the sanctum exit must stay sealed. Semantics (issue 6
+    /// hard rule): once the player enters, the exit stays locked until the
+    /// boss is defeated. Re-entering an already-cleared sanctum stays open.
+    /// </summary>
+    public bool IsExitLocked()
+    {
+        return sanctumEntryLock != null
+            ? sanctumEntryLock.IsExitLocked()
+            : !bossDefeated; // defensive fallback if lock creation ever fails
+    }
+    /// <summary>Human-readable reason backing IsExitLocked (used by exit notifications).</summary>
+    public string GetExitBlockReason()
+    {
+        return sanctumEntryLock != null
+            ? sanctumEntryLock.GetExitBlockReason()
+            : "Defeat this sanctum's guardian to unlock the exit.";
+    }
+    /// <summary>
+    /// TRUE once every guide NPC's intro dialogue is accounted complete
+    /// (played, skipped, advanced by a save restore, or mooted by boss
+    /// defeat). Later issues hook the auto-lesson tablet here.
+    /// </summary>
+    public bool IntroDialogueComplete()
+    {
+        return sanctumEntryLock == null || sanctumEntryLock.AllGuidesIntroComplete();
     }
     #endregion
     #region State Queries

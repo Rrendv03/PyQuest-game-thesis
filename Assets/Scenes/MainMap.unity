@@ -44550,7 +44550,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1388836038}
   m_HandleRect: {fileID: 1388836036}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -70380,7 +70380,7 @@ MonoBehaviour:
   markerRescanInterval: 2
   statePollInterval: 0.25
   toggleKey: 109
-  mapTextureResolution: 1024
+  mapTextureResolution: 256
   mapCameraHeight: 240
   mapBackgroundColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
   ignoredLayerNames:

@@ -108,6 +108,13 @@ public class DialogueManager : MonoBehaviour
 
     public bool IsRegistryLoaded { get; private set; } = false;
 
+    /// <summary>
+    /// True from Play() until the sequence fully ends (natural finish or skip).
+    /// Lets other systems (e.g. the sanctum intro lesson) know when a dialogue
+    /// sequence is on screen instead of guessing from panel state.
+    /// </summary>
+    public bool IsSequenceActive { get; private set; } = false;
+
     private Dictionary<string, DialogueSequence> registry = new Dictionary<string, DialogueSequence>();
     private DialogueSequence currentSequence;
     private int currentLineIndex;
@@ -419,6 +426,7 @@ public class DialogueManager : MonoBehaviour
 
         currentSequence = sequence;
         currentLineIndex = 0;
+        IsSequenceActive = true;
 
         // A fresh sequence always starts with the confirm panel closed and the
         // skip button available again.
@@ -903,6 +911,7 @@ public class DialogueManager : MonoBehaviour
 
         isTyping = false;
         isSkipConfirmOpen = false;
+        IsSequenceActive = false;
         if (skipConfirmPanel != null) skipConfirmPanel.SetActive(false);
         if (skipDialogueButton != null) skipDialogueButton.gameObject.SetActive(false);
 

@@ -2245,6 +2245,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 559830332169401846, guid: 89d6816f524b88b4c9968fd91bc3322b, type: 3}
   m_PrefabInstance: {fileID: 1911784071}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &47256448
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 47256449}
+  m_Layer: 0
+  m_Name: GameObject (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &47256449
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 47256448}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: -29.63, y: 1.75, z: -2.05}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 497395488}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1001 &47922418
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10558,6 +10589,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 373466443468233704, guid: 5f694b26b76ac6e4f84df4df4cc4cefb, type: 3}
   m_PrefabInstance: {fileID: 297785297}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &105245769
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 105245770}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &105245770
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 105245769}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: -13.54, y: 1.75, z: -2.05}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 497395488}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1 &105382306
 GameObject:
   m_ObjectHideFlags: 0
@@ -32795,7 +32857,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &481771562
 RectTransform:
   m_ObjectHideFlags: 0
@@ -32828,7 +32890,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -33896,7 +33958,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 105245770}
+  - {fileID: 47256449}
   m_Father: {fileID: 998744710}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &497395489
@@ -33917,6 +33981,15 @@ MonoBehaviour:
   mainMapSceneName: MainMap
   playerSpawnPoint: {fileID: 1282230282}
   exitPortalPoint: {fileID: 1850075041}
+  guideNpcRoot: {fileID: 700164315}
+  npcMarkerMaterial: {fileID: 2100000, guid: a8f4f86a3c90b8b4cb2c8cadbd859c03, type: 2}
+  guideRoomTrapPoints:
+  - {fileID: 105245770}
+  - {fileID: 47256449}
+  guideRoomTrapWallSize: {x: 6, y: 6, z: 0.5}
+  introLessonKnowledgeComponentID: variables
+  introLessonQuestToAutoComplete: 
+  introFollowupLessonKnowledgeComponentIDs: basic_operations
   bossUnlockXPThreshold: 350
   requiredTabletMissions: 3
   bossBonusXP: 50
@@ -85657,7 +85730,7 @@ MonoBehaviour:
   enemyNameText: {fileID: 2075905303}
   roundInfoText: {fileID: 1165212429}
   combatLogText: {fileID: 1809166172}
-  errorText: {fileID: 0}
+  errorText: {fileID: 1806717818}
   spiralTransitionOverlay: {fileID: 333289195}
   puzzleUIRoot: {fileID: 1897692495}
   lungeDuration: 1
@@ -111979,7 +112052,7 @@ MonoBehaviour:
   markerRescanInterval: 2
   statePollInterval: 0.25
   toggleKey: 109
-  mapTextureResolution: 1024
+  mapTextureResolution: 256
   mapCameraHeight: 240
   mapBackgroundColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
   ignoredLayerNames:
@@ -148984,7 +149057,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Victory
+  m_Text: 
 --- !u!222 &1806717819
 CanvasRenderer:
   m_ObjectHideFlags: 0

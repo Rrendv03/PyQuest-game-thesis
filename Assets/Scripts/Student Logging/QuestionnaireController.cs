@@ -585,8 +585,8 @@ public class QuestionnaireController : MonoBehaviour
         var header2 = SpawnRow(headerRowTemplate, "Header Row 2");
         BuildHeaderRow(header2, "", "4", "3", "2", "1", "", false);
 
-        // --- Row 0: prior programming experience (its own scale) ---
-        AddItemRow("", priorExperiencePrompt);
+        // --- Row 0: prior programming experience (its own 1-3 scale) ---
+        AddItemRow("", priorExperiencePrompt, 3);
 
         // --- Sections + items ---
         foreach (var section in sections)
@@ -616,6 +616,12 @@ public class QuestionnaireController : MonoBehaviour
     /// Every cell is generated in code; the template only supplies styling.</summary>
     private void AddItemRow(string section, string prompt)
     {
+        AddItemRow(section, prompt, 4);
+    }
+
+    /// <param name="optionCount">3 or 4; score options beyond this are built but DISABLED (kept for column alignment).</param>
+    private void AddItemRow(string section, string prompt, int optionCount)
+    {
         GameObject row = SpawnRow(itemRowTemplate, "Item Row");
         var hlg = row.GetComponent<HorizontalLayoutGroup>() ?? row.AddComponent<HorizontalLayoutGroup>();
         ConfigureRowLayout(hlg);
@@ -642,6 +648,11 @@ public class QuestionnaireController : MonoBehaviour
             var toggle = BuildToggle(cell);
             toggle.isOn = false;
             toggle.group = group;
+            // For 3-option rows the LEFTMOST cell (Score 1) is disabled and
+            // Scores 2/3/4 stay selectable, so the CSV can only ever contain
+            // 2, 3, or 4. The cell itself stays so the columns still align
+            // with the header and the remarks column.
+            toggle.interactable = optionCount >= 4 || i > 0;
             state.toggles[i] = toggle;
         }
         if (!toggleGroups.Contains(group)) toggleGroups.Add(group);

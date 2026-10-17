@@ -272,6 +272,9 @@ public class MinimapController : MonoBehaviour
     // === Colours ========================================================================
 
     static readonly Color TabletColor = new Color(1f, 0.82f, 0.25f, 1f);
+    // Issue 1/6 flow: green guide marker shown while the player still has to
+    // speak with the sanctum's NPC guide (before tablets are revealed).
+    static readonly Color GuideColor = new Color(0.45f, 1f, 0.55f, 1f);
     static readonly Color BossColor = new Color(1f, 0.3f, 0.3f, 1f);
     static readonly Color BossDefeatedColor = new Color(0.45f, 0.47f, 0.52f, 1f);
     static readonly Color BossLockedColor = new Color(0.5f, 0.28f, 0.28f, 1f);
@@ -619,12 +622,15 @@ public class MinimapController : MonoBehaviour
         }
 
         bool boss = showBossMarker && FindBossZone() != null;
+        // Intro-pending state flips the guide/tablet marker set, so it must be
+        // part of the fingerprint — the 2s rescan rebuilds when dialogue ends.
+        bool introPending = showTabletMarkers && !isMainMapScene && GuideIntroPending();
         int entrances = isMainMapScene ? ResolveEntrances().Count : 0;
         string extent = hasSceneBounds
             ? Mathf.RoundToInt(sceneBounds.size.x) + "x" + Mathf.RoundToInt(sceneBounds.size.z)
             : "unbound";
 
-        return tablets + ":" + (boss ? "b" : "-") + ":" + entrances + ":" + extent;
+        return tablets + ":" + (boss ? "b" : "-") + (introPending ? ":g" : "") + ":" + entrances + ":" + extent;
     }
 
     void ResolveSceneContext()
@@ -1586,11 +1592,20 @@ public class MinimapController : MonoBehaviour
         if (showPlayerMarker)
             AddMarker("player", MarkerShape.Arrow, PlayerColor, 30f, Vector3.zero, true, null);
 
-        if (showTabletMarkers && !isMainMapScene && !string.IsNullOrEmpty(resolvedSanctumID))
+        bool introPending = GuideIntroPending();
+
+        // Tablet markers stay hidden until the guide's intro dialogue has been
+        // finished — the quest flow is: find the guide, talk, THEN the tablets
+        // light up on the map.
+        if (showTabletMarkers && !introPending && !isMainMapScene && !string.IsNullOrEmpty(resolvedSanctumID))
             AddTabletMarkers();
 
         if (showBossMarker && !isMainMapScene && !string.IsNullOrEmpty(resolvedSanctumID))
             AddBossMarker();
+
+        // While the guide still has to be spoken to, point the player at them.
+        if (!isMainMapScene && introPending)
+            AddGuideMarker();
 
         if (showSanctumMarkersOnMainMap && isMainMapScene)
             AddSanctumMarkers();
@@ -1598,6 +1613,8 @@ public class MinimapController : MonoBehaviour
 
     void AddTabletMarkers()
     {
+        if (GuideIntroPending()) return; // defence in depth: tablets post-dialogue only
+
         TabletMissionObject[] tablets = FindObjectsOfType<TabletMissionObject>();
         if (tablets == null) return;
 
@@ -1626,6 +1643,43 @@ public class MinimapController : MonoBehaviour
 
             AddMarker(key, MarkerShape.Diamond, TabletColor, 22f, tablet.transform.position, false, label);
         }
+    }
+
+    /// <summary>
+    /// True while this sanctum's NPC guide still has to be spoken to. Uses the
+    /// same completion signal as the Issue 1 entry lock (dialogue-complete
+    /// event, quest proxy, or sequence-advanced proxy), so map, world marker
+    /// and exit seal always agree. No SanctumManager in the scene (menus,
+    /// MainMap) means nothing is pending.
+    /// </summary>
+    bool GuideIntroPending()
+    {
+        if (isMainMapScene) return false;
+        SanctumManager manager = FindObjectOfType<SanctumManager>();
+        if (manager == null) return false;
+        return !manager.IntroDialogueComplete();
+    }
+
+    /// <summary>
+    /// Single green star at the guide NPC's position while their intro dialogue
+    /// is pending. Uses SanctumManager.guideNpcRoot when assigned (matches the
+    /// Issue 1 lock's guide list), falling back to the scene's NPCController —
+    /// the scene survey showed every sanctum has exactly one guide.
+    /// </summary>
+    void AddGuideMarker()
+    {
+        SanctumManager manager = FindObjectOfType<SanctumManager>();
+        Transform guide = null;
+        if (manager != null && manager.guideNpcRoot != null)
+            guide = manager.guideNpcRoot.transform;
+        if (guide == null)
+        {
+            NPCController npc = FindObjectOfType<NPCController>();
+            if (npc != null) guide = npc.transform;
+        }
+        if (guide == null) return;
+
+        AddMarker("guide", MarkerShape.Star, GuideColor, 30f, guide.position, false, "Speak to the guide");
     }
 
     void AddBossMarker()

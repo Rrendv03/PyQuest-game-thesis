@@ -11156,7 +11156,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 374714634}
+  - {fileID: 1168503733}
   m_Father: {fileID: 1856681594}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &228160433
@@ -11177,6 +11179,15 @@ MonoBehaviour:
   mainMapSceneName: MainMap
   playerSpawnPoint: {fileID: 1130301147}
   exitPortalPoint: {fileID: 2055985086}
+  guideNpcRoot: {fileID: 1566361839}
+  npcMarkerMaterial: {fileID: 2100000, guid: a8f4f86a3c90b8b4cb2c8cadbd859c03, type: 2}
+  guideRoomTrapPoints:
+  - {fileID: 374714634}
+  - {fileID: 1168503733}
+  guideRoomTrapWallSize: {x: 6, y: 6, z: 0.5}
+  introLessonKnowledgeComponentID: input_handling
+  introLessonQuestToAutoComplete: 
+  introFollowupLessonKnowledgeComponentIDs: 
   bossUnlockXPThreshold: 600
   requiredTabletMissions: 3
   bossBonusXP: 50
@@ -30001,6 +30012,59 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 374348570}
   m_CullTransparentMesh: 1
+--- !u!1 &374714633
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 374714634}
+  - component: {fileID: 374714635}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &374714634
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 374714633}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 14.88, y: 2.15, z: 49.89}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 228160432}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+--- !u!65 &374714635
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 374714633}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 0
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1001 &384910452
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -71084,7 +71148,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Victory
+  m_Text: 
 --- !u!222 &1099615802
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -73193,7 +73257,7 @@ MonoBehaviour:
   enemyNameText: {fileID: 421601262}
   roundInfoText: {fileID: 1381985844}
   combatLogText: {fileID: 2001401822}
-  errorText: {fileID: 0}
+  errorText: {fileID: 1099615801}
   spiralTransitionOverlay: {fileID: 1324724636}
   puzzleUIRoot: {fileID: 1666525221}
   lungeDuration: 1
@@ -74379,6 +74443,59 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!1 &1168503732
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1168503733}
+  - component: {fileID: 1168503734}
+  m_Layer: 0
+  m_Name: GameObject (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1168503733
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1168503732}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 14.88, y: 2.15, z: 53.21}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 228160432}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+--- !u!65 &1168503734
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1168503732}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 0
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &1170898222
 GameObject:
   m_ObjectHideFlags: 0
@@ -86023,7 +86140,7 @@ MonoBehaviour:
   markerRescanInterval: 2
   statePollInterval: 0.25
   toggleKey: 109
-  mapTextureResolution: 1024
+  mapTextureResolution: 256
   mapCameraHeight: 240
   mapBackgroundColor: {r: 0.1254902, g: 0.1254902, b: 0.1254902, a: 1}
   ignoredLayerNames:
